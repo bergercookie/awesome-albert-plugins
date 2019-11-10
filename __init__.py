@@ -20,11 +20,6 @@ __dependencies__ = []
 __homepage__ = "https://github.com/bergercookie/xkcd-albert-plugin"
 
 
-# TODO pyproject toml file
-# TODO xkcd-dl executable?
-# TODO Upload to github - change support url on error
-# TODO Send to albert plugins
-
 if not which("xkcd-dl"):
     raise RuntimeError("xkcd-dl not in $PATH - Please install it via pip3 first.")
 
