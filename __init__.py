@@ -12,9 +12,9 @@ from fuzzywuzzy import process
 from shutil import which
 
 __iid__ = "PythonInterface/v0.2"
-__prettyname__ = "xkcd"
+__prettyname__ = "Xkcd Comics Fetcher"
 __version__ = "0.1"
-__trigger__ = "xkcd"
+__trigger__ = "xkcd "
 __author__ = "Nikos Koukis"
 __dependencies__ = []
 __homepage__ = "https://github.com/bergercookie/xkcd-albert-plugin"
@@ -63,9 +63,14 @@ def handleQuery(query):
         update_xkcd_db()
 
     if query.isTriggered:
+        # be backwards compatible with v0.2
+        if "disableSort" in dir(query):
+            query.disableSort()
+
         try:
             with open(XKCD_DICT, "r", encoding="utf-8") as f:
                 d = json.load(f)
+
 
             if len(query.string) in [0, 1]:  # Display all items
                 for k, v in d.items():
