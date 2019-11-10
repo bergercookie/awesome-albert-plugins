@@ -17,6 +17,7 @@ __version__ = "0.1"
 __trigger__ = "xkcd"
 __author__ = "Nikos Koukis"
 __dependencies__ = []
+__homepage__ = "https://github.com/bergercookie/xkcd-albert-plugin"
 
 
 # TODO pyproject toml file
@@ -89,8 +90,8 @@ def handleQuery(query):
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
                         v0.ClipAction(
-                            f"Copy error - report it to github.com/bergercookie/{__prettyname__}",
-                            f"{repr(e)}",
+                            f"Copy error - report it to {__homepage__[8:]}",
+                            f"{sys.exc_info()}",
                         )
                     ],
                 ),
