@@ -11,7 +11,6 @@ import albertv0 as v0
 from fuzzywuzzy import process
 from shutil import which
 
-# __iid__ = "PythonInterface/v0.1"
 __iid__ = "PythonInterface/v0.2"
 __prettyname__ = "xkcd"
 __version__ = "0.1"
@@ -20,7 +19,6 @@ __author__ = "Nikos Koukis"
 __dependencies__ = []
 
 
-# TODO Make small gif
 # TODO pyproject toml file
 # TODO xkcd-dl executable?
 # TODO Upload to github - change support url on error
