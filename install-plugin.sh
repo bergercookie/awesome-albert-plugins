@@ -57,7 +57,8 @@ then
 fi
 
 # Install ----------------------------------------------------------------------
-# install_pkg git+https://github.com/...
+install_pkg git+https://github.com/bergercookie/taskw
+install_pkg git+https://github.com/bergercookie/taskw_gcal_sync
 
 PLUGIN_DIR="$DST/taskwarrior"
 if [ -d "$PLUGIN_DIR" ]

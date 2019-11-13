@@ -1,4 +1,4 @@
-# taskwarrior - Albert plugin
+# Taskwarrior - Albert plugin
 
 ## TODO - Register on codacy - replace HTML link
 ## TODO - Add demo gif
