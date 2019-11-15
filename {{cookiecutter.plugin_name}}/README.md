@@ -21,16 +21,17 @@
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-  - Albert Python Interface: ``{{ cookiecutter.albert_plugin_interface }}``
-- Python version >= 3.5
+    - Albert Python Interface: ``{{ cookiecutter.albert_plugin_interface }}``
 
+- Python version >= 3.5
 
 Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
-``````sh
+```sh
 curl https://raw.githubusercontent.com/bergercookie/{{ cookiecutter.repo_name }}/master/install-plugin.sh | bash
-``````
+```
+
 ## Self Promotion
 
 If you find this tool useful, please [star it on
