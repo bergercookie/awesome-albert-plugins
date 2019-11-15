@@ -57,15 +57,15 @@ then
 fi
 
 # Install ----------------------------------------------------------------------
-# install_pkg git+https://github.com/...
+install_pkg zoopla
 
-PLUGIN_DIR="$DST/Zoopla - Search Properties"
+PLUGIN_DIR="$DST/zoopla"
 if [ -d "$PLUGIN_DIR" ]
 then
     rm -rf "$PLUGIN_DIR"
 fi
-announce "Cloning and installing Zoopla - Search Properties -> $PLUGIN_DIR"
-git clone "https://github.com/bergercookie/Zoopla - Search Properties" "$PLUGIN_DIR"
-announce "Installed Zoopla - Search Properties -> $PLUGIN_DIR"
+announce "Cloning and installing zoopla -> $PLUGIN_DIR"
+git clone "https://github.com/bergercookie/zoopla-albert-plugin" "$PLUGIN_DIR"
+announce "Installed zoopla -> $PLUGIN_DIR"
 
 announce "Plugin ready - Enable it from the Albert settings"
