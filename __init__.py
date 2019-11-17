@@ -1,4 +1,41 @@
-""" Jira """
+""" Jira Issue Tracking.
+
+On first run, you'll be guided through a series of setup steps:
+
+- server to connect to e.g.,"https://an-example-jira-server.atlassian.net".
+- user, e.g., youremailforjira@gmail.com
+
+You also have to create an API key: https://id.atlassian.com/manage/api-tokens
+
+- To make sure the api key is stored safely, the plugin expects to find it gpg-encrypted using
+  your default gpg-id under the following path:
+
+  ```
+  ~/.password-store/jira-albert-plugin/api-key.gpg
+  ```
+
+  You can do that either manually `gpg --encrypt... -o ...` or consider using `Pass`, the UNIX
+  password manager: https://www.passwordstore.org/
+
+After having setup the plugin, on trigger the plugin will fetch all the issues assigned to the
+current user. You also get an option of creating a new issue from scratch.
+
+By pressing on one of the issues you'll be redirected to the its jira page.  On [ALT] you have
+options to copy the jira URL, or to transition it, e.g., "Backlog" -> "In Progress" or "Select
+From Development" -> "Done".
+
+Issues are sorted according to priority and each issue has its icon colored according to its
+priority.
+
+You can narrow down the search to the most relevant items by typing additional letters/words.
+The plugin uses fuzzy search to find the most relevant issues to show.
+
+Additional information:
+
+* To reset/use a different account, delete the config location (by default
+    ~/.config/albert/jira) and change the gpg-encrypted api-key.
+
+"""
 
 from pathlib import Path
 import os
@@ -32,10 +69,7 @@ cache_path = Path(v0.cacheLocation()) / "jira"
 config_path = Path(v0.configLocation()) / "jira"
 data_path = Path(v0.dataLocation()) / "jira"
 
-# TODO - Document the config location
-# TODO - Test with work - create API key
-# TODO - Add to cookiecutter
-# TODO - Add funding URL to cookiecutter, jira plugins, taskw_gcal_sync
+# TODO - Sort by priority
 
 pass_path = Path().home() / ".password-store"
 user_path = config_path / "user"
@@ -91,6 +125,7 @@ def handleQuery(query):
                 maxResults=max_results_to_request,
                 fields=",".join(fields_to_include),
             )
+            issues.sort(key=lambda issue: issue.fields.priority.id, reverse=False)
 
             results.append(
                 v0.Item(
