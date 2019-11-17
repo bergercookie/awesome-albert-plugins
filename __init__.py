@@ -20,18 +20,17 @@ __author__ = "Nikos Koukis"
 __dependencies__ = []
 __homepage__ = "https://github.com/bergercookie/jira-albert-plugin"
 
-icon_path = os.path.join(os.path.dirname(__file__), "jira_yellow")
+icon_path = os.path.join(os.path.dirname(__file__), "jira_blue")
 icon_path_br = os.path.join(os.path.dirname(__file__), "jira_bold_red")
 icon_path_r = os.path.join(os.path.dirname(__file__), "jira_red")
 icon_path_y = os.path.join(os.path.dirname(__file__), "jira_yellow")
 icon_path_g = os.path.join(os.path.dirname(__file__), "jira_green")
-icon_path_lg = os.path.join(os.path.dirname(__file__), "jira_ligth_green")
+icon_path_lg = os.path.join(os.path.dirname(__file__), "jira_light_green")
 
 # plugin locations
 cache_path = Path(v0.cacheLocation()) / "jira"
 config_path = Path(v0.configLocation()) / "jira"
 data_path = Path(v0.dataLocation()) / "jira"
-print("data_path: ", data_path)
 
 # TODO - Document the config location
 # TODO - Test with work - create API key
@@ -119,7 +118,7 @@ def handleQuery(query):
                 0,
                 v0.Item(
                     id=__prettyname__,
-                    icon=icon_path_br,
+                    icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
                         v0.ClipAction(
@@ -178,7 +177,7 @@ def setup(query):
         results.append(
             v0.Item(
                 id=__prettyname__,
-                icon=icon_path_br,
+                icon=icon_path,
                 text=f'"pass" is not installed.',
                 subtext='Please install and configure "pass" accordingly.',
                 actions=[
@@ -193,7 +192,7 @@ def setup(query):
         results.append(
             v0.Item(
                 id=__prettyname__,
-                icon=icon_path_br,
+                icon=icon_path,
                 text=f"Please specify your email address for JIRA",
                 subtext="Fill and press [ENTER]",
                 actions=[v0.FuncAction("Save user", lambda: save_data(query.string, "user"))],
@@ -206,7 +205,7 @@ def setup(query):
         results.append(
             v0.Item(
                 id=__prettyname__,
-                icon=icon_path_br,
+                icon=icon_path,
                 text=f"Please specify the JIRA server to connect to",
                 subtext="Fill and press [ENTER]",
                 actions=[
@@ -223,7 +222,7 @@ def setup(query):
         results.append(
             v0.Item(
                 id=__prettyname__,
-                icon=icon_path_br,
+                icon=icon_path,
                 text=f"Please add api_key",
                 subtext="Press to copy the command to run",
                 actions=[
