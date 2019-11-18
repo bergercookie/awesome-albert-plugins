@@ -76,15 +76,19 @@ user_path = config_path / "user"
 server_path = config_path / "server"
 api_key_path = pass_path / "jira-albert-plugin" / "api-key.gpg"
 
-max_results_to_request = 20
+max_results_to_request = 50
 max_results_to_show = 5
 fields_to_include = ["assignee", "issuetype", "priority", "project", "status", "summary"]
 
-prio_to_icon = {"Highest": icon_path_br,
-                "High": icon_path_r,
-                "Medium": icon_path_y,
-                "Low": icon_path_g,
-                "Lowest": icon_path_lg, }
+prio_to_icon = {
+    "Highest": icon_path_br,
+    "High": icon_path_r,
+    "Medium": icon_path_y,
+    "Low": icon_path_g,
+    "Lowest": icon_path_lg,
+}
+
+prio_to_text = {"Highest": "↑", "High": "↗", "Medium": "-", "Low": "↘", "Lowest": "↓"}
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -286,6 +290,11 @@ def get_as_subtext_field(field, field_title=None):
     return s
 
 
+def make_transition(jira, issue, a_transition_id):
+    print(f'Transitioning issue "{issue.fields.summary[:10]}" -> {a_transition_id}')
+    jira.transition_issue(issue, a_transition_id)
+
+
 def get_as_item(issue: resources.Issue, jira):
     field = get_as_subtext_field
 
@@ -302,8 +311,8 @@ def get_as_item(issue: resources.Issue, jira):
             actions.append(
                 v0.FuncAction(
                     f'Mark as "{a_transition["name"]}"',
-                    lambda a_transition_id=a_transition["id"]: jira.transition_issue(
-                        issue, a_transition_id
+                    lambda a_transition_id=a_transition["id"]: make_transition(
+                        jira, issue, a_transition_id
                     ),
                 )
             )
@@ -312,7 +321,9 @@ def get_as_item(issue: resources.Issue, jira):
         field(issue.fields.assignee),
         field(issue.fields.status.name),
         field(issue.fields.issuetype.name),
-        field(issue.fields.project.key, "proj"))[:-2]
+        field(issue.fields.project.key, "proj"),
+    )
+    subtext += prio_to_text[issue.fields.priority.name]
 
     return v0.Item(
         id=__prettyname__,
