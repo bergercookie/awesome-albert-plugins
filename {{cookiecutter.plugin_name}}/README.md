@@ -2,17 +2,16 @@
 
 ## TODO Plugin is not ready yet - README info may be inaccurate
 ## TODO - Register on codacy - replace HTML link
-## TODO - Add demo gif
+## TODO - Add demo gif/pictures
 
-<a href="{{ cookiecutter.repo_base_url }}/{{ cookiecutter.repo_name }}">
+<a href="https://www.codacy.com/manual/bergercookie/{{ cookiecutter.plugin_name }}">
 <img src="https://api.codacy.com/project/badge/Grade/126122966e844bed8e61e7cfbf7023c3"/></a>
 <a href={{ cookiecutter.repo_base_url }}/{{ cookiecutter.repo_name }}/blob/master/LICENSE" alt="LICENCE">
 <img src="https://img.shields.io/github/license/bergercookie/{{ cookiecutter.repo_name }}.svg" /></a>
 <a href="https://github.com/psf/black">
 <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-
 <a href=" {{ cookiecutter.repo_base_url }}/{{ cookiecutter.repo_name }}/issues">
-<img src="https://img.shields.io/github/issues/bergercookie/{{ cookiecutter.repo_name }}/jira.svg"></a>
+<img src="https://img.shields.io/github/issues/bergercookie/{{ cookiecutter.repo_name }}/{{ cookiecutter.plugin_name }}.svg"></a>
 
 ## Description
 
