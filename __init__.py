@@ -26,17 +26,17 @@ if not which("xkcd-dl"):
 iconPath = v0.iconLookup("xkcd")
 if not iconPath:
     iconPath = os.path.join(os.path.dirname(__file__), "image.png")
-SETTINGS_PATH = Path(v0.cacheLocation()) / "xkcd"
-LAST_UPDATE_PATH = SETTINGS_PATH / "last_update"
-XKCD_DICT = Path.home() / ".xkcd_dict.json"
+settings_path = Path(v0.cacheLocation()) / "xkcd"
+last_update_path = settings_path / "last_update"
+xkcd_dict = Path.home() / ".xkcd_dict.json"
 
 
 def initialize():
     # Called when the extension is loaded (ticked in the settings) - blocking
 
     # create cache location
-    SETTINGS_PATH.mkdir(parents=False, exist_ok=True)
-    if not LAST_UPDATE_PATH.is_file():
+    settings_path.mkdir(parents=False, exist_ok=True)
+    if not last_update_path.is_file():
         update_date_file()
         update_xkcd_db()
 
@@ -49,7 +49,7 @@ def handleQuery(query):
     results = []
 
     # check whether I have downlaoded the latest metadata
-    with open(LAST_UPDATE_PATH, "r") as f:
+    with open(last_update_path, "r") as f:
         date_str = float(f.readline().strip())
 
     last_date = datetime.fromtimestamp(date_str)
@@ -63,7 +63,7 @@ def handleQuery(query):
             query.disableSort()
 
         try:
-            with open(XKCD_DICT, "r", encoding="utf-8") as f:
+            with open(xkcd_dict, "r", encoding="utf-8") as f:
                 d = json.load(f)
 
 
@@ -116,7 +116,7 @@ def get_as_item(k: str, v: dict):
 
 def update_date_file():
     now = (datetime.now() - datetime(1970, 1, 1)).total_seconds()
-    with open(LAST_UPDATE_PATH, "w") as f:
+    with open(last_update_path, "w") as f:
         f.write(str(now))
 
 
