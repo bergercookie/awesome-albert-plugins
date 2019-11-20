@@ -22,7 +22,7 @@ Currently the list of plugins includes:
 * Zoopla - Search Property to Buy, Rent, House Prices
 * Xkcd - Fetch xkcd comics like a boss
 * :construction: Taskwarrior - Interact with Taskwarrior
-* :construction: GoogleMaps - Fetch instructions from/to a specific place
+* :construction: GMaps - Fetch instructions from/to a specific place
 * :construction: URLShortener - Shorten a URL of your choice
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Google - Do a google search - get suggestions
