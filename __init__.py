@@ -76,7 +76,7 @@ icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan")
 icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green")
 
 # initial configuration -----------------------------------------------------------------------
-settings_path = Path(v0.cacheLocation()) / " taskwarrior"
+settings_path = Path(v0.cacheLocation()) / "taskwarrior"
 
 tw_side = TaskWarriorSide()
 tw_side.start()
