@@ -1,0 +1,9 @@
+{
+    "author": "Guybrush Threepwood",
+    "plugin_name": "albert_plugin",
+    "repo_name": "albert_plugin",
+    "repo_base_url": "https://github.com/bergercookie",
+    "plugin_short_description": "Some title for your plugin",
+    "albert_plugin_interface": "v0.2",
+    "version": "0.1.0"
+}
