@@ -15,7 +15,7 @@ __version__ = "{{ cookiecutter.version }}"
 __trigger__ = "{{ cookiecutter.plugin_name }} "
 __author__ = "{{ cookiecutter.author }}"
 __dependencies__ = []
-__homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.repo_name }}"
+__homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
 
 icon_path = v0.iconLookup("{{ cookiecutter.plugin_name }}")
 if not icon_path:

@@ -1,8 +1,8 @@
 {
-    "author": "Guybrush Threepwood",
+    "author": "Nikos Koukis",
     "plugin_name": "albert_plugin",
-    "repo_name": "albert_plugin",
-    "repo_base_url": "https://github.com/bergercookie",
+    "parent_repo_url": "https://github.com/bergercookie/awesome-albert-plugins",
+    "repo_base_url": "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/",
     "plugin_short_description": "Some title for your plugin",
     "albert_plugin_interface": "v0.2",
     "version": "0.1.0"

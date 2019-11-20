@@ -3,6 +3,7 @@ set -Eeuo pipefail
 ## do this if there's any error with the installation and you want to report a bug
 # set -x
 
+
 # supplementary funs -----------------------------------------------------------
 function announce
 {
@@ -49,6 +50,13 @@ then
     return 1
 fi
 
+ret=$(git config --get remote.origin.url 2>/dev/null)
+if [ "${ret:34}" != "awesome-albert-plugins" ]
+then
+    announce_err "You have to first download awesome-albert-plugins to run this script"
+    return 1
+fi
+
 DST="$HOME/.local/share/albert/org.albert.extension.python/modules"
 if [[ ! -d "$DST" ]]
 then
@@ -64,8 +72,9 @@ if [ -d "$PLUGIN_DIR" ]
 then
     rm -rf "$PLUGIN_DIR"
 fi
-announce "Cloning and installing {{ cookiecutter.plugin_name }} -> $PLUGIN_DIR"
-git clone "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}" "$PLUGIN_DIR"
+
+announce "Installing {{ cookiecutter.plugin_name }} -> $PLUGIN_DIR"
+cp -r "$(dirname "${BASH_SOURCE[0]}")" "$PLUGIN_DIR"
 announce "Installed {{ cookiecutter.plugin_name }} -> $PLUGIN_DIR"
 
 announce "Plugin ready - Enable it from the Albert settings"
