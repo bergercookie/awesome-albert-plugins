@@ -32,8 +32,6 @@ cache_path = Path(v0.cacheLocation()) / "jira"
 config_path = Path(v0.configLocation()) / "jira"
 data_path = Path(v0.dataLocation()) / "jira"
 
-# TODO - Sort by priority
-
 pass_path = Path().home() / ".password-store"
 user_path = config_path / "user"
 server_path = config_path / "server"
@@ -142,12 +140,13 @@ def get_create_issue_page(server: str) -> str:
 
 
 def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory"""
+    """Save a piece of data in the configuration directory."""
     with open(config_path / data_name, "w") as f:
         f.write(data)
 
 
 def load_data(data_name) -> str:
+    """Load a piece of data from the configuration directory."""
     with open(config_path / data_name, "r") as f:
         data = f.readline().strip().split()[0]
 
