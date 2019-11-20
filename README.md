@@ -1,11 +1,9 @@
-# awesome-albert-plugins - Albert plugin
+# Awesome Albert Plugins
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Register on codacy - replace HTML link
 ## TODO - Add demo gif/pictures
 
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
-<img src="https://api.codacy.com/project/badge/Grade/126122966e844bed8e61e7cfbf7023c3"/></a>
+<img src="https://api.codacy.com/project/badge/Grade/dbefc49bb5f446488da561c7497bb821"/></a>
 <a href=https://github.com/bergercookie/awesome-albert-plugins/blob/master/LICENSE" alt="LICENCE">
 <img src="https://img.shields.io/github/license/bergercookie/awesome-albert-plugins.svg" /></a>
 <a href="https://github.com/psf/black">
@@ -20,6 +18,20 @@ This is a collection of plugins for the
 
 Currently the list of plugins includes:
 
+* Jira - Issue Tracking
+* Zoopla - Search Property to Buy, Rent, House Prices
+* Xkcd - Fetch xkcd comics like a boss
+* :construction: Taskwarrior - Interact with Taskwarrior
+* :construction: GoogleMaps - Fetch instructions from/to a specific place
+* :construction: URLShortener - Shorten a URL of your choice
+* :construction: Giphy - https://github.com/Giphy/giphy-python-client
+* :construction: Google - Do a google search - get suggestions
+* :construction: Youtube - Do a youtube search - get suggestions
+* :construction: Github - Do a youtube search - get suggestions
+* :construction: Doxygen APIs - Do a search in a doxygen db - get suggestions
+* :construction: Amazon - Do a search in an Amazon website
+* :construction: Ebay - Do a search in Ebay
+
 Plugins have been tested with the Albert python `v0.3` interface but there's no
 reason they shouldn't work with the `v0.2` as well (if they don't raise an
 issue). I'm using Python `3.6.8` (again, raise an issue if it doesn't work in
@@ -33,8 +45,7 @@ TODO
 ## Motivation
 
 It's really so easy writing plugins and automating parts of your workflow using
-Albert and its python extensions. That's pretty much the reason I started
-writing them.
+Albert and its python extensions. That's the very reason I started writing them.
 
 ## Manual installation instructions
 
@@ -49,6 +60,9 @@ that automatically:
 ```sh
 curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/install-plugin.sh | bash
 ```
+
+This will clone the current repo and then will delegate execution to the
+`install-plugin.sh` of each one of the plugins to be installed
 
 ## Self Promotion
 
