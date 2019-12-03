@@ -11,8 +11,10 @@
 
 ## Description
 
-This is a collection of plugins for the
+This is a collection of plugins and themes for the
 [Albert](https://albertlauncher.github.io/) launcher.
+
+### Plugins
 
 Currently the list of plugins includes:
 
@@ -34,6 +36,10 @@ reason they shouldn't work with the `v0.2` as well (if they don't raise an
 issue). I'm using Python `3.6.8` (again, raise an issue if it doesn't work in
 your case).
 
+### Themes
+
+* [Mozhi](https://github.com/Hsins/Albert-Mozhi) - A flat, transparent and dark theme for Albert (A fast and flexible keyboard launcher for Linux). ([DEMO](https://github.com/Hsins/Albert-Mozhi/blob/master/demo/demo.gif))
+
 ## Demo
 
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
@@ -42,8 +48,7 @@ your case).
 
 ## Motivation
 
-It's really so easy writing plugins and automating parts of your workflow using
-Albert and its python extensions. That's the very reason I started writing them.
+It's really so easy writing plugins and automating parts of your workflow using Albert and its python extensions. That's the very reason I started writing them.
 
 ## Manual installation instructions
 
