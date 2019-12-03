@@ -1,0 +1,3 @@
+[submodule "themes/Mozhi"]
+	path = themes/Mozhi
+	url = https://github.com/Hsins/Albert-Mozhi.git
