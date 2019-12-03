@@ -1,7 +1,5 @@
 # Awesome Albert Plugins
 
-## TODO - Add demo gif/pictures
-
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
 <img src="https://api.codacy.com/project/badge/Grade/dbefc49bb5f446488da561c7497bb821"/></a>
 <a href=https://github.com/bergercookie/awesome-albert-plugins/blob/master/LICENSE" alt="LICENCE">
@@ -21,9 +19,8 @@ Currently the list of plugins includes:
 * Jira - Issue Tracking
 * Zoopla - Search Property to Buy, Rent, House Prices
 * Xkcd - Fetch xkcd comics like a boss
-* :construction: Taskwarrior - Interact with Taskwarrior
+* Taskwarrior - Interact with Taskwarrior
 * :construction: GMaps - Fetch instructions from/to a specific place
-* :construction: URLShortener - Shorten a URL of your choice
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Google - Do a google search - get suggestions
 * :construction: Youtube - Do a youtube search - get suggestions
@@ -39,8 +36,9 @@ your case).
 
 ## Demo
 
-TODO
-> ![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/demo.gif)
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
+|:---:|:---:|
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/zoopla/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
 
 ## Motivation
 

@@ -1,7 +1,6 @@
 # Taskwarrior - Albert plugin
 
 ## TODO - Register on codacy - replace HTML link
-## TODO - Add demo gif
 
 <a href="https://github.com/bergercookie/taskwarrior-albert-plugin">
 <img src="https://api.codacy.com/project/badge/Grade/126122966e844bed8e61e7cfbf7023c3"/></a>

@@ -19,6 +19,7 @@ __trigger__ = "jira "
 __author__ = "Nikos Koukis"
 __dependencies__ = []
 __homepage__ = "https://github.com/bergercookie/jira-albert-plugin"
+__simplename__ = "jira"
 
 icon_path = os.path.join(os.path.dirname(__file__), "jira_blue")
 icon_path_br = os.path.join(os.path.dirname(__file__), "jira_bold_red")
@@ -28,9 +29,9 @@ icon_path_g = os.path.join(os.path.dirname(__file__), "jira_green")
 icon_path_lg = os.path.join(os.path.dirname(__file__), "jira_light_green")
 
 # plugin locations
-cache_path = Path(v0.cacheLocation()) / "jira"
-config_path = Path(v0.configLocation()) / "jira"
-data_path = Path(v0.dataLocation()) / "jira"
+cache_path = Path(v0.cacheLocation()) / __simplename__
+config_path = Path(v0.configLocation()) / __simplename__
+data_path = Path(v0.dataLocation()) / __simplename__
 
 pass_path = Path().home() / ".password-store"
 user_path = config_path / "user"
@@ -247,7 +248,7 @@ def get_as_subtext_field(field, field_title=None):
         return ""
 
     if field_title:
-        s = f"{field_title} :" + s
+        s = f"{field_title}:" + s
 
     return s
 
