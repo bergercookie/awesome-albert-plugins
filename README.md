@@ -26,7 +26,7 @@ Currently the list of plugins includes:
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Google - Do a google search - get suggestions
 * :construction: Youtube - Do a youtube search - get suggestions
-* :construction: Github - Do a youtube search - get suggestions
+* :construction: GitHub - Do a GitHub search - get suggestions
 * :construction: Doxygen APIs - Do a search in a doxygen db - get suggestions
 * :construction: Amazon - Do a search in an Amazon website
 * :construction: Ebay - Do a search in Ebay
