@@ -18,7 +18,7 @@ import taskw
 
 # metadata ------------------------------------------------------------------------------------
 __iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Interact with Taskwarrior"
+__prettyname__ = "Taskwarrior interaction"
 __version__ = "0.1.0"
 __trigger__ = "t "
 __author__ = "Nikos Koukis"

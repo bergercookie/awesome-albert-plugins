@@ -11,7 +11,7 @@ import albertv0 as v0
 import shutil
 
 __iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Access UNIX Password Manager Items using fuzzy search"
+__prettyname__ = "Pass - UNIX Password Manager - fuzzy search"
 __version__ = "0.1.0"
 __trigger__ = "pass2 "
 __author__ = "Nikos Koukis"
