@@ -77,6 +77,7 @@ def handleQuery(query):
             query_text = query.string
 
             if len(query.string) < 2:
+                tw_side.reload_items = True
                 results.extend(
                     [
                         get_as_item(text=val, completion=f"{__trigger__} {key} ")
@@ -194,7 +195,7 @@ def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path
 
 def run_tw_action(args_list: list):
     args_list = ["task", "rc.recurrence.confirmation=no", "rc.confirmation=off", *args_list]
-    call(args_list, stdout=PIPE, stderr=PIPE)
+    call(args_list)
     tw_side.reload_items = True
 
 
