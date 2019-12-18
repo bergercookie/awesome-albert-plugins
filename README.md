@@ -22,6 +22,7 @@ Currently the list of plugins includes:
 * Zoopla - Search Property to Buy, Rent, House Prices
 * Xkcd - Fetch xkcd comics like a boss
 * Taskwarrior - Interact with Taskwarrior
+* Remmina - Search and start remmina connections easily
 * :construction: GMaps - Fetch instructions from/to a specific place
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Google - Do a google search - get suggestions
