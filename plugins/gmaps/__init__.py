@@ -66,7 +66,6 @@ def handleQuery(query):
         src, dst = extract_src_dst(query_str)
         if src and dst:
             actions = []
-            import pdb; pdb.set_trace()
             for m in available_means:
                 actions.append(
                     v0.FuncAction(
