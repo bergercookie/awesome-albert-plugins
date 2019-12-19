@@ -27,7 +27,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --fix-missing
           sudo apt-get install xvfb firefox-geckodriver
-          pip install --user --upgrade pyvirtualdisplay selenium
+          pip install --user --upgrade pytest pyvirtualdisplay selenium
 
       - name: Run Test Suite
         run: |

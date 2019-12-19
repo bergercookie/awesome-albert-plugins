@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
-from typing import List, Tuple
 import argparse
 import time
+import webbrowser
+from pathlib import Path
+from typing import Tuple
 
 from pyvirtualdisplay import Display
 from selenium import webdriver
-import webbrowser
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 GMAPS = "https://maps.google.com"
+USE_VIRTUAL_DISPLAY = False
 
 # supplementary functions ---------------------------------------------------------------------
 def add_parser_arg(parser: argparse.ArgumentParser, arg_name: str, **kargs):
@@ -22,12 +21,15 @@ def add_parser_arg(parser: argparse.ArgumentParser, arg_name: str, **kargs):
 
 def start_selenium() -> Tuple[webdriver.firefox.webdriver.WebDriver, Display]:
     """Initialise selenium and return a WebDriver instance."""
-    # change it with fake display
-    display = Display(visible=0, size=(1366, 768))
-    display.start()
-    # display = None
+    display = None
+    if USE_VIRTUAL_DISPLAY:
+        display = Display(visible=0, size=(1366, 768))
+        display.start()
+
     driver = webdriver.Firefox()
-    driver.set_window_size(1366, 768)
+    if USE_VIRTUAL_DISPLAY:
+        driver.set_window_size(1366, 768)
+
     driver.get(GMAPS)
 
     return driver, display
@@ -58,8 +60,11 @@ def route(driver, src: str, dst: str, travel_by: str) -> str:
     travel_mode_btn.click()
     time.sleep(1.0)
 
-    print("driver.current_url: ", driver.current_url)
     return driver.current_url
+
+
+def autocomplete_place():
+    raise NotImplementedError()
 
 
 def main():
@@ -91,7 +96,8 @@ def main():
     )
 
     parser_autocomplete_place = subparsers.add_parser(
-        "autocomplete-place", help="Get place autocompletion based on the given text"
+        "autocomplete-place",
+        help="[NOT WORKING] Get place autocompletion based on the given text",
     )
     parser_autocomplete_place.add_argument(
         "search_string", type=str, help="String to autocomplete"
@@ -108,11 +114,13 @@ def main():
             dst=parser_args["destination"],
             travel_by=parser_args["travel_by"],
         )
+        print("gmaps_url: ", gmaps_url)
     else:
         autocomplete_place(driver, search_string=parser_args["search_string"])
 
     driver.quit()
-    display.stop()
+    if USE_VIRTUAL_DISPLAY:
+        display.stop()
 
     if gmaps_url and parser_args["open"]:
         webbrowser.open(gmaps_url)
