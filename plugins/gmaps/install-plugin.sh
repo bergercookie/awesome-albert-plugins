@@ -65,7 +65,7 @@ then
 fi
 
 # Install ----------------------------------------------------------------------
-# install_pkg git+https://github.com/...
+# install_pkg algolia-places-python
 
 PLUGIN_DIR="$DST/gmaps"
 if [ -d "$PLUGIN_DIR" ]
