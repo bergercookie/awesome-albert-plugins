@@ -53,52 +53,52 @@ def handleQuery(query):
     results = []
 
     if query.isTriggered:
-        # try:
-        # be backwards compatible with v0.2
-        if "disableSort" in dir(query):
-            query.disableSort()
+        try:
+            # be backwards compatible with v0.2
+            if "disableSort" in dir(query):
+                query.disableSort()
 
-        results_setup = setup(query)
-        if results_setup:
-            return results_setup
+            results_setup = setup(query)
+            if results_setup:
+                return results_setup
 
-        query_str = query.string
-        src, dst = extract_src_dst(query_str)
-        if src and dst:
-            actions = []
-            for m in available_means:
-                actions.append(
-                    v0.FuncAction(
-                        m.capitalize(),
-                        lambda src=src, dst=dst, m=m: spawn_and_launch_route(src, dst, means=m)
+            query_str = query.string
+            src, dst = extract_src_dst(query_str)
+            if src and dst:
+                actions = []
+                for m in available_means:
+                    actions.append(
+                        v0.FuncAction(
+                            m.capitalize(),
+                            lambda src=src, dst=dst, m=m: spawn_and_launch_route(src, dst, means=m)
+                        )
+                    )
+
+                results.append(
+                    v0.Item(
+                        id=__prettyname__,
+                        icon=icon_path,
+                        text=f"Open route (takes ~5s)",
+                        subtext=f"{src} -> {dst}",
+                        actions=actions,
                     )
                 )
 
-            results.append(
+        except Exception:  # user to report error
+            results.insert(
+                0,
                 v0.Item(
                     id=__prettyname__,
                     icon=icon_path,
-                    text=f"Open route (takes ~5s)",
-                    subtext=f"{src} -> {dst}",
-                    actions=actions,
-                )
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        v0.ClipAction(
+                            f"Copy error - report it to {__homepage__[8:]}",
+                            f"{sys.exc_info()}",
+                        )
+                    ],
+                ),
             )
-
-        # except Exception:  # user to report error
-        #     results.insert(
-        #         0,
-        #         v0.Item(
-        #             id=__prettyname__,
-        #             icon=icon_path,
-        #             text="Something went wrong! Press [ENTER] to copy error and report it",
-        #             actions=[
-        #                 v0.ClipAction(
-        #                     f"Copy error - report it to {__homepage__[8:]}",
-        #                     f"{sys.exc_info()}",
-        #                 )
-        #             ],
-        #         ),
-        #     )
 
     return results
 
