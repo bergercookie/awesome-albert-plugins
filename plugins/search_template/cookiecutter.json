@@ -1,0 +1,12 @@
+{
+    "author": "Nikos Koukis",
+    "plugin_name": "search_template",
+    "trigger": "s",
+    "googler_at": "",
+    "github_user": "bergercookie",
+    "repo_base_url": "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/",
+    "download_url_base": "https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/search_template/",
+    "plugin_short_description": "Some description",
+    "albert_plugin_interface": "v0.2",
+    "version": "0.1.0"
+}

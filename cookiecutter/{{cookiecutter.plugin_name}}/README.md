@@ -24,7 +24,7 @@ Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
 ```sh
-curl {{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}/install-plugin.sh | bash
+curl {{ cookiecutter.download_url_base }}/install-plugin.sh | bash
 ```
 
 ## Self Promotion

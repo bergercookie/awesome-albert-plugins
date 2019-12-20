@@ -1,10 +1,18 @@
+"""
+Current file was autogeneratd by the search_template and the `create_googler_plugins.py`
+script. In case you find a bug please submit a patch to the aforementioned directories and file
+instead.
+"""
+
 """{{ cookiecutter.plugin_short_description }}."""
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 import traceback
+from io import StringIO
 from pathlib import Path
 
 from fuzzywuzzy import process
@@ -13,17 +21,21 @@ import albertv0 as v0
 
 __iid__ = "PythonInterface/{{ cookiecutter.albert_plugin_interface }}"
 __prettyname__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "{{ cookiecutter.version }}"
-__trigger__ = "{{ cookiecutter.plugin_name }} "
-__author__ = "{{ cookiecutter.author }}"
+__version__ = "0.1.0"
+__trigger__ = "{{ cookiecutter.trigger }} "
+__author__ = "Nikos Koukis"
 __dependencies__ = []
-__homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
+__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
-
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
+
+
+# set it to the corresponding site for the search at hand
+# see: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
+googler_at = "{{ cookiecutter.googler_at }}"
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -43,7 +55,17 @@ def finalize():
 def handleQuery(query) -> list:
     results = []
 
-    if query.isTriggered:
+    if not query.isTriggered:
+        if not query.string:
+            results.append(
+                v0.Item(
+                    id=__prettyname__,
+                    icon=icon_path,
+                    text=f'Search {"_".join("{{ cookiecutter.plugin_name }}".split("_")[1:])}',
+                    completion=__trigger__,
+                )
+            )
+    else:
         try:
             # be backwards compatible with v0.2
             if "disableSort" in dir(query):
@@ -54,7 +76,16 @@ def handleQuery(query) -> list:
                 return results_setup
 
             # modify this...
-            results.append(get_as_item())
+            query_str = query.string
+            if not query_str:
+                return
+
+            json_results = query_googler(query_str)
+            googler_results = [
+                get_googler_result_as_item(googler_result) for googler_result in json_results
+            ]
+
+            results.extend(googler_results)
 
         except Exception:  # user to report error
             results.insert(
@@ -78,17 +109,35 @@ def handleQuery(query) -> list:
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_as_item():
+def query_googler(query_str) -> dict:
+    """Make a query to googler and return the results in json."""
+
+    li = ["googler", "--unfilter", "--json", query_str]
+    if googler_at:
+        li = li[:2] + ["-w", googler_at] + li[2:]
+
+    p = subprocess.Popen(li, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, stder = p.communicate()
+    if not stdout:
+        return {}
+    json_ret = json.load(StringIO(stdout.decode("utf-8")))
+
+    return json_ret
+
+
+def get_googler_result_as_item(googler_item: dict):
+    actions = [
+        v0.UrlAction("Open in browser", googler_item["url"]),
+        v0.ClipAction("Copy URL", googler_item["url"]),
+    ]
+
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,
-        text=f"{sys.version}",
-        subtext="Python version",
-        completion="",
-        actions=[
-            v0.UrlAction("Open in xkcd.com", "https://www.xkcd.com/"),
-            v0.ClipAction("Copy URL", f"https://www.xkcd.com/"),
-        ],
+        text=googler_item["title"],
+        subtext=googler_item["abstract"],
+        actions=actions,
     )
 
 
@@ -129,4 +178,17 @@ def setup(query):
     """
 
     results = []
-    return results
+
+    if not shutil.which("googler"):
+        results.append(
+            v0.Item(
+                id=__prettyname__,
+                icon=icon_path,
+                text=f'"googler" is not installed.',
+                subtext='Please install and configure "googler" accordingly.',
+                actions=[
+                    v0.UrlAction('Open "googler" website', "https://github.com/jarun/googler")
+                ],
+            )
+        )
+        return results

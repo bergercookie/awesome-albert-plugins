@@ -23,14 +23,18 @@ Currently the list of plugins includes:
 * Xkcd - Fetch xkcd comics like a boss
 * Taskwarrior - Interact with Taskwarrior
 * Remmina - Search and start remmina connections easily
-* :construction: GMaps - Fetch instructions from/to a specific place
+* Google Maps - Fetch instructions from/to a specific place
+* Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
+  * Google
+  * Amazon
+  * Youtube
+  * Github
+  * Ebay
+  * ...
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
-* :construction: Google - Do a google search - get suggestions
-* :construction: Youtube - Do a youtube search - get suggestions
-* :construction: GitHub - Do a GitHub search - get suggestions
 * :construction: Doxygen APIs - Do a search in a doxygen db - get suggestions
-* :construction: Amazon - Do a search in an Amazon website
-* :construction: Ebay - Do a search in Ebay
+* :construction: Abbreviations/Slang lookup
+* :construction: Directory listing
 
 Plugins have been tested with the Albert python `v0.3` interface but there's no
 reason they shouldn't work with the `v0.2` as well (if they don't raise an

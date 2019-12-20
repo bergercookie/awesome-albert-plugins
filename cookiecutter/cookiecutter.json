@@ -3,6 +3,7 @@
     "plugin_name": "albert_plugin",
     "parent_repo_url": "https://github.com/bergercookie/awesome-albert-plugins",
     "repo_base_url": "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/",
+    "download_url_base": "https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/{{ cookiecutter.plugin_name }}/",
     "plugin_short_description": "Some title for your plugin",
     "albert_plugin_interface": "v0.2",
     "version": "0.1.0"
