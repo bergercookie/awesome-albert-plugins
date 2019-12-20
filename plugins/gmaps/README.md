@@ -1,15 +1,13 @@
-# pass_rlded - Albert plugin
-
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Add demo gif/pictures
+# gmaps - Albert plugin
 
 ## Description
 
-## Demo
+Specify and open a route in Google Maps.
 
-![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
-
-## Motivation
+Current plugin, although working is in kind of a rough state. It uses Selenium
+on the background to simulate the user presses, compute the corresponding Google
+Maps URL and return it. After that the URL is opened with the default user
+browser.
 
 ## Manual installation instructions
 
@@ -24,7 +22,7 @@ Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
 ```sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/pass_rlded/install-plugin.sh | bash
+curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/gmaps/install-plugin.sh | bash
 ```
 
 ## Self Promotion
