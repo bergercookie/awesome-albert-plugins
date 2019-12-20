@@ -27,9 +27,9 @@ Requirements:
 Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
-``````sh
-curl https://raw.githubusercontent.com/bergercookie/taskwarrior-albert-plugin/master/install-plugin.sh | bash
-``````
+```sh
+curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/taskwarrior/install-plugin.sh | bash
+```
 ## Self Promotion
 
 If you find this tool useful, please [star it on

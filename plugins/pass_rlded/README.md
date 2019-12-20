@@ -24,7 +24,7 @@ Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
 ```sh
-curl https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//pass_rlded/install-plugin.sh | bash
+curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/pass_rlded/install-plugin.sh | bash
 ```
 
 ## Self Promotion

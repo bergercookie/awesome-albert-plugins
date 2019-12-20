@@ -1,12 +1,13 @@
 # gmaps - Albert plugin
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-
 ## Description
 
-Specify and open a route in Google Maps - Use Selenium on the background.
+Specify and open a route in Google Maps.
 
-## Motivation
+Current plugin, although working is in kind of a rough state. It uses Selenium
+on the background to simulate the user presses, compute the corresponding Google
+Maps URL and return it. After that the URL is opened with the default user
+browser.
 
 ## Manual installation instructions
 
@@ -21,7 +22,7 @@ Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
 ```sh
-curl https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//gmaps/install-plugin.sh | bash
+curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/gmaps/install-plugin.sh | bash
 ```
 
 ## Self Promotion

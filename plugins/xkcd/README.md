@@ -37,7 +37,7 @@ Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
 
 ``````sh
-curl https://raw.githubusercontent.com/bergercookie/xkcd-albert-plugin/master/install-plugin.sh | bash
+curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/xkcd/install-plugin.sh | bash
 ``````
 
 ## Self Promotion
