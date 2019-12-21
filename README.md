@@ -30,7 +30,12 @@ Currently the list of plugins includes:
   * Youtube
   * Github
   * Ebay
+  * IMDB
   * ...
+  * :warning: To avoid getting blocked by Google, a search request is only sent
+      when there is a 0.3 seconds difference between keystrokes. Thus, it's
+      common when you actually want to send a request to wait a bit and then
+      append a space character at the end of the query.
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Doxygen APIs - Do a search in a doxygen db - get suggestions
 * :construction: Abbreviations/Slang lookup

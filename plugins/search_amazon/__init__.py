@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 from io import StringIO
 from pathlib import Path
@@ -32,7 +33,6 @@ cache_path = Path(v0.cacheLocation()) / "search_amazon"
 config_path = Path(v0.configLocation()) / "search_amazon"
 data_path = Path(v0.dataLocation()) / "search_amazon"
 
-
 # set it to the corresponding site for the search at hand
 # see: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
 googler_at = "amazon.co.uk"
@@ -50,6 +50,35 @@ def initialize():
 
 def finalize():
     pass
+
+
+class KeystrokeMonitor:
+    def __init__(self):
+        super(KeystrokeMonitor, self)
+        self.thres = 0.3  # s
+        self.prev_time = time.time()
+        self.curr_time = time.time()
+
+    def report(self):
+        self.prev_time = time.time()
+        self.curr_time = time.time()
+        self.report = self.report_after_first
+
+    def report_after_first(self):
+        # update prev, curr time
+        self.prev_time = self.curr_time
+        self.curr_time = time.time()
+
+    def triggered(self) -> bool:
+        return self.curr_time - self.prev_time > self.thres
+
+    def reset(self) -> None:
+        self.report = self.report_after_first
+
+
+# I 'm only sending a reques to Google once the user has stopped typing, otherwise Google
+# blocks my IP.
+keys_monitor = KeystrokeMonitor()
 
 
 def handleQuery(query) -> list:
@@ -71,23 +100,31 @@ def handleQuery(query) -> list:
             if "disableSort" in dir(query):
                 query.disableSort()
 
+            # setup stage ---------------------------------------------------------------------
             results_setup = setup(query)
             if results_setup:
                 return results_setup
 
-            # modify this...
-            query_str = query.string
-            if not query_str:
-                return
+            query_str = query.string.strip()
 
-            json_results = query_googler(query_str)
-            googler_results = [
-                get_googler_result_as_item(googler_result) for googler_result in json_results
-            ]
+            # too small request - don't even send it.
+            if len(query_str) < 2:
+                keys_monitor.reset()
+                return results
 
-            results.extend(googler_results)
+            # determine if we can make the request --------------------------------------------
+            keys_monitor.report()
+            if keys_monitor.triggered():
+                json_results = query_googler(query_str)
+                googler_results = [
+                    get_googler_result_as_item(googler_result)
+                    for googler_result in json_results
+                ]
+
+                results.extend(googler_results)
 
         except Exception:  # user to report error
+            raise
             results.insert(
                 0,
                 v0.Item(

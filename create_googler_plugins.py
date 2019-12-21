@@ -23,30 +23,46 @@ from cookiecutter.main import cookiecutter
 # Get all the websites that work with googler or manually specify websites to create a plugin
 # for.
 generate_plugins_only_for = [
-    "alternativesto",
     "alternativeto",
     "amazon",
     "askubuntu",
-    "askubuntu",
     "aur.archlinux",
+    "bbc",
     "cnn",
     "cracked",
     "crunchbase",
     "distrowatch",
+    "dpkg",
     "ebay",
     "en.cppreference",
+    "facebook",
     "github",
     "gnu",
-    "google",
+    "hackaday",
+    "howstuffworks",
     "imdb",
     "kernel",
+    "last",
     "linux",
+    "opensubtitles",
+    "python",
+    "quora",
+    "reddit",
+    "rottentomatoes",
+    "sourceforge",
+    "stackoverflow",
+    "ted",
     "wiki.archlinux",
     "wikipedia",
+    "wikiquote",
+    "yahoo",
     "youtube",
 ]
 
-custom_plugins = {"search_amazon": {"trigger": "ama", "googler_at": "amazon.co.uk"}}
+custom_plugins = {
+    "search_amazon": {"trigger": "ama", "googler_at": "amazon.co.uk"},
+    "search_google": {"trigger": "gg", "googler_at": ""},
+}
 
 
 # generate_plugins_only_for = []
