@@ -1,11 +1,5 @@
 # Search Plugin Template
 
-Current directory comprises of a template plugin that is used to create actual
-plugins for doing search in various websites.
-
-To do that it utilises the powerful [googler](https://github.com/jarun/googler)
-tool and its `@` notation
-
-## Add a new plugin for Albert
-
-TODO
+Current plugin was created using the
+[search_template](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/search_template/%7B%7B%20cookiecutter.plugin_name%20%7D%7D).
+and the [googler](https://github.com/jarun/googler) tool.

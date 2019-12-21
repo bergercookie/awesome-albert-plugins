@@ -36,10 +36,12 @@ Currently the list of plugins includes:
       when there is a 0.3 seconds difference between keystrokes. Thus, it's
       common when you actually want to send a request to wait a bit and then
       append a space character at the end of the query.
-* :construction: Giphy - https://github.com/Giphy/giphy-python-client
-* :construction: Doxygen APIs - Do a search in a doxygen db - get suggestions
-* :construction: Abbreviations/Slang lookup
-* :construction: Directory listing
+
+
+Here's a view of the albert prompt after having enabled several of the
+search-suggestion plugins:
+
+![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/search_plugins.png)
 
 Plugins have been tested with the Albert python `v0.3` interface but there's no
 reason they shouldn't work with the `v0.2` as well (if they don't raise an
@@ -50,7 +52,7 @@ your case).
 
 * [Mozhi](https://github.com/Hsins/Albert-Mozhi) - A flat, transparent and dark theme for Albert (A fast and flexible keyboard launcher for Linux). ([DEMO](https://github.com/Hsins/Albert-Mozhi/blob/master/demo/demo.gif))
 
-## Demo
+## Demos
 
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
 |:---:|:---:|
@@ -90,3 +92,9 @@ See [ISSUES list](https://github.com/bergercookie/awesome-albert-plugins/issues)
 that I'm currently either working on or interested in implementing in the near
 future. In case there's something you are interesting in working on, don't
 hesitate to either ask for clarifications or just do it and directly make a PR.
+
+### Plugin ideas
+
+* :construction: Giphy - https://github.com/Giphy/giphy-python-client
+* :construction: Abbreviations/Slang lookup
+* :construction: Linux directory listing
