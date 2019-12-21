@@ -34,7 +34,6 @@ generate_plugins_only_for = [
     "distrowatch",
     "dpkg",
     "ebay",
-    "cppreference",
     "facebook",
     "github",
     "gnu",
@@ -43,6 +42,7 @@ generate_plugins_only_for = [
     "imdb",
     "kernel",
     "last",
+    "linkedin",
     "linux",
     "opensubtitles",
     "python",
@@ -62,6 +62,7 @@ generate_plugins_only_for = [
 custom_plugins = {
     "search_amazon": {"trigger": "ama", "googler_at": "amazon.co.uk"},
     "search_google": {"trigger": "gg", "googler_at": ""},
+    "search_cppreference": {"trigger": "cpp", "googler_at": "en.cppreference.com"},
 }
 
 
