@@ -34,7 +34,7 @@ generate_plugins_only_for = [
     "distrowatch",
     "dpkg",
     "ebay",
-    "en.cppreference",
+    "cppreference",
     "facebook",
     "github",
     "gnu",
