@@ -23,7 +23,6 @@ if not which("remmina"):
     raise Exception("`remmina` is not in $PATH.")
 
 MODULE_PATH = os.path.dirname(__file__)
-ICON_PATH = MODULE_PATH + "/icons/remmina.svg"
 PROTOCOL_ICONS_PATH = MODULE_PATH + "/icons/remmina-%s-symbolic.svg"
 CONNECTIONS_PATH = "%s/.local/share/remmina" % os.environ["HOME"]
 
@@ -76,15 +75,5 @@ def handleQuery(query):
         else:  # nothing specified yet, show all possible connections
             for p in all_connections:
                 results.append(getAsItem(*p))
-
-        results.append(
-            Item(
-                id=__prettyname__,
-                icon=ICON_PATH,
-                text=__prettyname__,
-                subtext=__doc__,
-                actions=[FuncAction("Open Remmina", runRemmina)],
-            )
-        )
 
         return results
