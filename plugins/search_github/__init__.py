@@ -124,7 +124,6 @@ def handleQuery(query) -> list:
                 results.extend(googler_results)
 
         except Exception:  # user to report error
-            raise
             results.insert(
                 0,
                 v0.Item(

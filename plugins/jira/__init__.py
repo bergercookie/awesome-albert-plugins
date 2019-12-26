@@ -1,13 +1,14 @@
 """ Jira Issue Tracking."""
 
-from pathlib import Path
 import os
+import shutil
 import subprocess
-import sys
+import traceback
+from pathlib import Path
 
 from fuzzywuzzy import process
 from jira import JIRA, resources
-import shutil
+
 import albertv0 as v0
 
 # initial configuration -----------------------------------------------------------------------
@@ -124,7 +125,7 @@ def handleQuery(query):
                     actions=[
                         v0.ClipAction(
                             f"Copy error - report it to {__homepage__[8:]}",
-                            f"{sys.exc_info()}",
+                            f"{traceback.format_exc()}",
                         )
                     ],
                 ),

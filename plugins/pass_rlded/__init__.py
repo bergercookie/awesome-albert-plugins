@@ -90,21 +90,20 @@ def handleQuery(query):
                 results.append(get_as_item(m))
 
         except Exception:  # user to report error
-            raise
-        # results.insert(
-        #     0,
-        #     v0.Item(
-        #         id=__prettyname__,
-        #         icon=icon_path,
-        #         text="Something went wrong! Press [ENTER] to copy error and report it",
-        #         actions=[
-        #             v0.ClipAction(
-        #                 f"Copy error - report it to {__homepage__[8:]}",
-        #                 f"{sys.exc_info()}",
-        #             )
-        #         ],
-        #     ),
-        # )
+            results.insert(
+                0,
+                v0.Item(
+                    id=__prettyname__,
+                    icon=icon_path,
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        v0.ClipAction(
+                            f"Copy error - report it to {__homepage__[8:]}",
+                            f"{sys.exc_info()}",
+                        )
+                    ],
+                ),
+            )
 
     return results
 

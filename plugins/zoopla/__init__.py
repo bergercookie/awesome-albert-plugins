@@ -1,10 +1,11 @@
 """ Zoopla - Search Property to Buy, Rent, House Prices """
 
-from pathlib import Path
-import sys
 import os
+import traceback
+from pathlib import Path
 
 import zoopla as z
+
 import albertv0 as v0
 
 __iid__ = "PythonInterface/v0.2"
@@ -20,18 +21,12 @@ if not iconPath:
     iconPath = os.path.join(os.path.dirname(__file__), "zoopla")
 settings_path = Path(v0.cacheLocation()) / "zoopla"
 
-api_key = "khagqa497wsgfa5ya35rwfnt"
+api_key = "sn2dtcnvekktbjbv8ays8e33"
 zoopla = z.Zoopla(api_key=api_key)
 
-str_to_key = {
-    "sale": "listing_status",
-    "rent": "listing_status",
-}
+str_to_key = {"sale": "listing_status", "rent": "listing_status"}
 
-str_to_actual_name = {
-    "sale": "sale",
-    "rent": "rent",
-}
+str_to_actual_name = {"sale": "sale", "rent": "rent"}
 
 
 def initialize():
@@ -82,7 +77,7 @@ def handleQuery(query):
                     actions=[
                         v0.ClipAction(
                             f"Copy error - report it to {__homepage__[8:]}",
-                            f"{sys.exc_info()}",
+                            f"{traceback.format_exc()}",
                         )
                     ],
                 ),
