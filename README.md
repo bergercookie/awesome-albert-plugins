@@ -24,8 +24,10 @@ Currently the list of plugins includes:
 * Taskwarrior - Interact with Taskwarrior
 * Remmina - Search and start remmina connections easily
 * Google Maps - Fetch instructions from/to a specific place
-* Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
-  * Google
+* Google Translate - Improved version of original albert plugin - avoids
+  occasional IP blocking by Google
+* Suggestions-enabled search using [googler](https://github.com/jarun/googler)
+* on a variety of websites. For example: Google
   * Amazon
   * Youtube
   * Github
