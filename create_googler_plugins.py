@@ -46,7 +46,6 @@ generate_plugins_only_for = [
     "linux",
     "man7",
     "opensubtitles",
-    "python",
     "quora",
     "reddit",
     "rottentomatoes",
@@ -73,6 +72,8 @@ custom_plugins = {
     "search_urbandictionary": {"googler_at": "urbandictionary.com", "trigger": "ud"},
     "search_dlib": {"googler_at": "dlib.net", "trigger": "dlib"},
     "search_opencv": {"googler_at": "docs.opencv.org", "trigger": "cv"},
+    "search_pydocs": {"googler_at": "docs.python.org", "trigger": "pydocs"},
+    "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
 }
 
 
