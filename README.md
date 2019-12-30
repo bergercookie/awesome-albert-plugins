@@ -32,7 +32,8 @@ Currently the list of plugins includes:
   * Youtube
   * Github
   * Ebay
-  * IMDB
+  * Imdb
+  * Python, OpenCV, Dlib, C++ documentation lookup
   * ...
   * :warning: To avoid getting blocked by Google, a search request is only sent
       when there is a 0.3 seconds difference between keystrokes. Thus, it's

@@ -76,7 +76,7 @@ class KeystrokeMonitor:
         self.report = self.report_after_first
 
 
-# I 'm only sending a reques to Google once the user has stopped typing, otherwise Google
+# I 'm only sending a request to Google once the user has stopped typing, otherwise Google
 # blocks my IP.
 keys_monitor = KeystrokeMonitor()
 
