@@ -53,7 +53,7 @@ generate_plugins_only_for = [
     "sourceforge",
     "stackoverflow",
     "ted",
-    "torentz2",
+    "torrentz2",
     "twitter",
     "vim",
     "wikipedia",
@@ -74,6 +74,7 @@ custom_plugins = {
     "search_opencv": {"googler_at": "docs.opencv.org", "trigger": "cv"},
     "search_pydocs": {"googler_at": "docs.python.org", "trigger": "pydocs"},
     "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
+    "search_scihub": {"googler_at": "sci-hub.tw", "trigger": "sci"},
 }
 
 

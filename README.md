@@ -33,6 +33,7 @@ Currently the list of plugins includes:
   * Github
   * Ebay
   * Imdb
+  * Urban dictionary: Word/Slang definitions lookup
   * Python, OpenCV, Dlib, C++ documentation lookup
   * ...
   * :warning: To avoid getting blocked by Google, a search request is only sent
@@ -98,6 +99,8 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Plugin ideas
 
+* :construction: Online radio player
+* :construction: [Radio Paradise player](https://radioparadise.com/player)
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
-* :construction: Abbreviations/Slang lookup
-* :construction: Linux directory listing
+* :construction: Filesystem directory listing
+* :construction: devdocs.io search
