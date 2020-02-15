@@ -75,6 +75,7 @@ custom_plugins = {
     "search_pydocs": {"googler_at": "docs.python.org", "trigger": "pydocs"},
     "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
     "search_scihub": {"googler_at": "sci-hub.tw", "trigger": "sci"},
+    "search_devhints": {"googler_at": "devhints.io", "trigger": "dev"},
 }
 
 
