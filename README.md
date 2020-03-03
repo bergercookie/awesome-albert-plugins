@@ -26,7 +26,7 @@ Currently the list of plugins includes:
 * Google Maps - Fetch instructions from/to a specific place
 * Google Translate - Improved version of original albert plugin - avoids
   occasional IP blocking by Google
-* [TL;DR](https://www.google.com/search?client=ubuntu&channel=fs&q=tldr+github&ie=utf-8&oe=utf-8) pages lookup
+* [TL;DR](https://www.google.com/search?client=ubuntu&channel=fs&q=tldr+github&ie=utf-8&oe=utf-8) pages lookup - [demo](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)
 * Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example: Google
   * Amazon
   * Youtube
@@ -62,7 +62,7 @@ your case).
 |:---:|:---:|
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/zoopla/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/tldr.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | |
 
 ## Motivation
 

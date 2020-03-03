@@ -4,7 +4,7 @@
 
 ## Demo
 
-![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
+![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/tldr.gif)
 
 ## Motivation
 
@@ -21,7 +21,7 @@ Requirements:
 
 - tldr client program.
 
-  Current plugin is tested using [tealdeer](https://github.com/dbrgn/tealdeer.).
+  Current plugin is tested using [tealdeer](https://github.com/dbrgn/tealdeer).
 
 Download and run the ``install-plugin.sh`` script or run the following to do
 that automatically:
