@@ -27,6 +27,8 @@ Currently the list of plugins includes:
 * Google Translate - Improved version of original albert plugin - avoids
   occasional IP blocking by Google
 * [TL;DR](https://github.com/tldr-pages/tldr) pages lookup - [demo](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)
+* Get 2FA codes using [totp-cli](https://github.com/bergercookie/totp-cli)
+* Lookup HTTP URL status codes
 * Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example: Google
   * Amazon
   * Youtube

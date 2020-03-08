@@ -1,15 +1,8 @@
 # pass_totp_cli - Albert plugin
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Add demo gif/pictures
-
-## Description
-
 ## Demo
 
-![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
-
-## Motivation
+![demo_picture](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/pass_totp_cli.png)
 
 ## Manual installation instructions
 

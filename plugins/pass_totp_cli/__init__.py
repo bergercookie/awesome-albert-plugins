@@ -1,4 +1,4 @@
-"""Fetch OTP codes using otp-cli and pass."""
+"""2FA codes using otp-cli and pass."""
 
 import os
 import shutil
