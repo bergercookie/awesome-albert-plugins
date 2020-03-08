@@ -167,7 +167,7 @@ def get_cmd_items(pair: Tuple[str, Path]):
         if not li.startswith("- "):
             continue
 
-        desc = li.lstrip("- ")
+        desc = li.lstrip("- ")[:-1]
         example_cmd = lines[i + 2].strip("`").replace("{{", "").replace("}}", "")
 
         items.append(
