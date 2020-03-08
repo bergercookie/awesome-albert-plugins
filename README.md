@@ -26,7 +26,7 @@ Currently the list of plugins includes:
 * Google Maps - Fetch instructions from/to a specific place
 * Google Translate - Improved version of original albert plugin - avoids
   occasional IP blocking by Google
-* [TL;DR](https://www.google.com/search?client=ubuntu&channel=fs&q=tldr+github&ie=utf-8&oe=utf-8) pages lookup - [demo](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)
+* [TL;DR](https://github.com/tldr-pages/tldr) pages lookup - [demo](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)
 * Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example: Google
   * Amazon
   * Youtube
