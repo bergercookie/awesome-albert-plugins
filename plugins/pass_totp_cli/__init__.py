@@ -96,7 +96,7 @@ def get_all_2fa_codes() -> Dict[str, int]:
     for p in pass_2fa_dir.iterdir():
         name = p.stem
 
-        code = subprocess.check_output(["totp", "show-only", name]).strip()
+        code = subprocess.check_output(["totp", "show", "--nocopy", name]).strip()
         d[name] = code
 
     return d
