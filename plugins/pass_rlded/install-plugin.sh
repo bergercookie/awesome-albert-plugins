@@ -41,34 +41,34 @@ ret=$(is_installed albert)
 if [ "$ret" = "1" ]
 then
     announce_err "Please install albert first. Exiting"
-    return 1
+    exit 1
 fi
 ret=$(is_installed git)
 if [ "$ret" = "1" ]
 then
     announce_err "Please install git first. Exiting"
-    return 1
+    exit 1
 fi
 
 ret=$(is_installed pass)
 if [ "$ret" = "1" ]
 then
     announce_err "Please install Pass first - see https://www.passwordstore.org/ for details. Exiting..."
-    return 1
+    exit 1
 fi
 
 ret=$(git config --get remote.origin.url 2>/dev/null)
 if [ "${ret:34}" != "awesome-albert-plugins" ]
 then
     announce_err "You have to first download awesome-albert-plugins to run this script"
-    return 1
+    exit 1
 fi
 
 DST="$HOME/.local/share/albert/org.albert.extension.python/modules"
 if [[ ! -d "$DST" ]]
 then
-    announce_err "Local extensions directory doesn't exist. Please check your albert installation. Exiting"
-    return 1
+    announce_err "Local extensions directory [$DST] doesn't exist. Please check your albert installation. Exiting"
+    exit 1
 fi
 
 # Install ----------------------------------------------------------------------
