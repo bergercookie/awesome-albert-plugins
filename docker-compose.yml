@@ -7,5 +7,6 @@ services:
     build:
       context: .
       args:
-        ARG_UID: 1000
-        ARG_GID: 1000
+        UID: 1000
+        GID: 1000
+        SRC: "/src"

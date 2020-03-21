@@ -107,3 +107,6 @@ Session.vim
 
 /plugins/search_*/
 !plugins/search_template/
+/.viminfo
+/.local/
+/.cookiecutter_replay/

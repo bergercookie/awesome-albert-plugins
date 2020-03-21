@@ -5,10 +5,14 @@ services:
   - docker
 
 before_install:
-  - docker pull bergercookie/albertlauncher:ubuntu18.04
-  - apt-get install docker-compose
+  - sudo apt-get update
+  - sudo apt-get install --no-install-recommends -y
+      python3 python3-pip python3-setuptools
+      libsasl2-dev python-dev libldap2-dev libssl-dev
+  - python3 -m pip install pip
+  - python3 -m pip install wheel pyopenssl
+  - python3 -m pip install secrets requests googler cookiecutter
 
 script:
-  - docker-compose build awesome-albert-plugins
-  - docker-compose run awesome-albert-plugins ./test/create_googler_plugins.sh
-  - docker-compose run awesome-albert-plugins ./test/cookiecutter.sh
+  - ./test/create_googler_plugins.sh
+  - ./test/cookiecutter.sh
