@@ -68,24 +68,60 @@ your case).
 
 ## Motivation
 
-It's really so easy writing plugins and automating parts of your workflow using Albert and its python extensions. That's the very reason I started writing them.
+It's really so easy writing plugins and automating parts of your workflow using
+Albert and its python extensions. That's the very reason I started writing them.
 
-## Manual installation instructions
+## Installation
 
 Requirements:
 
+- Linux (tested on Ubuntu)
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
     - Albert Python Interface: ``v0.2``
 
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
+Clone this repository under your local Albert python plugins directory. By
+default the that is: `~/.local/share/albert/org.albert.extension.python/modules`.
 
-```sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/install-plugin.sh | bash
+Then go to the Albert settings and enable the plugins that you are interested in
+using. Beware that you may need to install some more dependencies depending on
+the plugins you use. These dependencies will probably be pointed out either when
+you enable, or when you run the plugin for the first time. Refer to the
+directory of the corresponding plugin for more details.
+
+### `Googler`-based plugins
+
+The search plugins that use googler have not been committed to this repo. You
+can generate them offline using the `create_googler_plugins.py` script provided.
+Make sure you have Python >= 3.6 installed:
+
+```
+pip3 install --user --upgrade secrets requests googler cookiecutter
+./create_googler_plugins.py
 ```
 
-This will clone the current repo and then will delegate execution to the
-`install-plugin.sh` of each one of the plugins to be installed
+This will generate an Albert plugin for each one of the search engines specified
+in `create_googler_plugins.py`. Adjust the latter as required if you want to
+add more or remove plugins.
+
+```py
+generate_plugins_only_for = [
+    "alternativeto",
+    "amazon",
+    "askubuntu",
+    "aur.archlinux",
+    ...
+    ]
+```
+
+### I don't want to setup all the plugins, just a few
+
+Very well, then after cloning this repo, just symlink or copy the plugin of
+choice under your local python plugins directory. For example for the `jira`
+plugin:
+```
+cp -r plugins/jira ~/.local/share/albert/org.albert.extension.python/modules/jira
+```
+After that, enable the plugin from the Albert settings.
 
 ## Self Promotion
 

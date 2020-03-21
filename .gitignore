@@ -104,3 +104,6 @@ ENV/
 # vim
 Session.vim
 .bash_history
+
+/plugins/search_*/
+!plugins/search_template/

@@ -9,23 +9,9 @@
 
 ![demo_gif]({{ cookiecutter.parent_repo_url }}/misc/demo.gif)
 
-## Motivation
+## Installation instructions
 
-## Manual installation instructions
-
-Requirements:
-
-- Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``{{ cookiecutter.albert_plugin_interface }}``
-
-- Python version >= 3.5
-
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-```sh
-curl {{ cookiecutter.download_url_base }}/install-plugin.sh | bash
-```
+Refer to the parent project: [Awesome albert plugins]({{ cookiecutter.parent_repo_url }})
 
 ## Self Promotion
 

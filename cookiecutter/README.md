@@ -1,7 +1,7 @@
 # Albert Python Plugins Bootstrapping
 
-Purpose of this repository is to facilitate the bootstrapping of other
-Albert plugins. For that it makes use of
+Purpose of this repository is to facilitate the bootstrapping of other Albert
+plugins. For that it makes use of
 [cookiecutter](https://github.com/cookiecutter/cookiecutter) to customise and
 bootstrap the repository.
 
@@ -17,4 +17,3 @@ bootstrap the repository.
 
     # configure
     go through the prompts and adjust accordingly
-

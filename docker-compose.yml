@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  awesome-albert-plugins:
+    volumes:
+     - .:/src
+    build:
+      context: .
+      args:
+        ARG_UID: 1000
+        ARG_GID: 1000
