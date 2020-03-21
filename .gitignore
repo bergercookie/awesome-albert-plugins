@@ -103,3 +103,4 @@ ENV/
 
 # vim
 Session.vim
+.bash_history

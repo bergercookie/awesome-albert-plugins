@@ -27,25 +27,19 @@ function install_pkg
 
 function is_installed
 {
-    if [ "$(which "$*" 2>&1 1>/dev/null)" = "1" ]
-    then
-        return 1
-    else
-        return 0
-    fi
+    test -x "$(which "$*")"
 }
 
 # Check prereqs ----------------------------------------------------------------
-ret=$(is_installed albert)
-if [ "$ret" = "1" ]
+if  ! is_installed albert
 then
-    announce_err "Please install albert first. Exiting"
+    announce_err "Please install [albert] first. Exiting"
     exit 1
 fi
-ret=$(is_installed git)
-if [ "$ret" = "1" ]
+
+if ! is_installed git
 then
-    announce_err "Please install git first. Exiting"
+    announce_err "Please install [git] first. Exiting"
     exit 1
 fi
 
@@ -63,16 +57,20 @@ if [ -d "$PLUGIN_DIR" ]
 then
     rm -rf "$PLUGIN_DIR"
 fi
-announce "Cloning awesome-albert-plugins -> $PLUGIN_DIR"
-git clone "https://github.com/bergercookie/awesome-albert-plugins" "$PLUGIN_DIR"
-announce "Installed awesome-albert-plugins -> $PLUGIN_DIR"
+
+if test -f plugins && test -d cookiecutter && test -d themes && test -f LICENSE
+then
+else
+    announce "Cloning awesome-albert-plugins -> $PLUGIN_DIR"
+    git clone "https://github.com/bergercookie/awesome-albert-plugins" "$PLUGIN_DIR"
+    announce "Installed awesome-albert-plugins -> $PLUGIN_DIR"
 
 cd "$PLUGIN_DIR"
-for plugin in $(ls plugins);
+for plugin in $(ls plugins)
 do (
     cd "$plugin"
     ./install-plugin.sh
 )
 done
 
-announce "Plugin ready - Enable it from the Albert settings"
+announce "Plugins installed successfully - Enable them via the Albert settings"
