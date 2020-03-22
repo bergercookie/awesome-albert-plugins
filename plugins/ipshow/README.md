@@ -8,7 +8,6 @@ Show the IPs of the machine at hand. Pretty much like `ip a s` or `ifconfig`.
 
 ![demo](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)
 
-
 ## Installation instructions
 
 Refer to the parent project: [Awesome albert plugins](https://github.com/bergercookie/awesome-albert-plugins)

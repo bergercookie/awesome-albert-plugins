@@ -30,6 +30,8 @@ Currently the list of plugins includes:
 * [TL;DR](https://github.com/tldr-pages/tldr) pages lookup - [demo](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)
 * Get 2FA codes using [totp-cli](https://github.com/bergercookie/totp-cli)
 * Lookup HTTP URL status codes
+* Lookup errno status codes
+* Show Internal, External IPs, Default Gateways
 * Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example: Google
   * Amazon
   * Youtube
@@ -65,6 +67,7 @@ your case).
 |:---:|:---:|
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/zoopla/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | |
 
 ## Motivation

@@ -1,31 +1,8 @@
 # url_lookup - Albert plugin
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Add demo gif/pictures
+## Installation instructions
 
-## Description
-
-## Demo
-
-![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
-
-## Motivation
-
-## Manual installation instructions
-
-Requirements:
-
-- Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``v0.2``
-
-- Python version >= 3.5
-
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-```sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/url_lookup//install-plugin.sh | bash
-```
+Refer to the parent project: [Awesome albert plugins](https://github.com/bergercookie/awesome-albert-plugins)
 
 ## Self Promotion
 
