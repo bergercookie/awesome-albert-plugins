@@ -24,6 +24,7 @@ icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
+dev_mode = True
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -57,6 +58,10 @@ def handleQuery(query) -> list:
             results.append(get_as_item())
 
         except Exception:  # user to report error
+            if dev_mode:  # let exceptions fly!
+                print(traceback.format_exc())
+                raise
+
             results.insert(
                 0,
                 v0.Item(
