@@ -64,10 +64,8 @@ def handleQuery(query) -> list:
             if results_setup:
                 return results_setup
 
-            # modify this...
-            all_codes = get_all_2fa_codes()
-            for c in all_codes.items():
-                results.append(get_as_item(c))
+            for path in pass_2fa_dir.iterdir():
+                results.append(get_as_item(path))
 
         except Exception:  # user to report error
             results.insert(
@@ -91,26 +89,18 @@ def handleQuery(query) -> list:
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_all_2fa_codes() -> Dict[str, int]:
-    d = {}
-    for p in pass_2fa_dir.iterdir():
-        name = p.stem
-
-        code = subprocess.check_output(["totp", "show", "--nocopy", name]).strip()
-        d[name] = code
-
-    return d
-
-
-def get_as_item(name_to_code: Tuple[str, int]):
-    print("name_to_code: ", name_to_code)
+def get_as_item(path: Path):
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,
-        text=name_to_code[1],
-        subtext=name_to_code[0],
+        text=path.stem,
         completion="",
-        actions=[v0.ClipAction("Copy code", name_to_code[1])],
+        actions=[
+            v0.FuncAction(
+                "Copy 2FA code",
+                lambda name=path.stem: subprocess.check_output(["totp", "show", name]).strip(),
+            )
+        ],
     )
 
 

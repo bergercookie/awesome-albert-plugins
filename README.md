@@ -141,7 +141,7 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Plugin ideas
 
-* :construction: Online radio player
+* :construction: Online radio player - use https://github.com/coderholic/pyradio
 * :construction: [Radio Paradise player](https://radioparadise.com/player)
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Filesystem directory listing
