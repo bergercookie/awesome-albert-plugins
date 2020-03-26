@@ -130,6 +130,8 @@ def get_as_item(password_path: Path):
             v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
             # v0.ProcAction("Decrypt and open document", )
             v0.ClipAction("Copy Full Path", str(password_path)),
+            v0.ClipAction("Copy pass-compatible path",
+                          str(password_path.relative_to(pass_dir).parent / password_path.stem)),
         ],
     )
 
