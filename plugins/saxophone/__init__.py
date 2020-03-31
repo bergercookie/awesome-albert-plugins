@@ -1,13 +1,14 @@
 """Saxophone - Play internet radio streams from albert."""
 
 import json
+import operator
 import os
 import subprocess
 import time
 import traceback
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from loguru import logger
 
@@ -16,19 +17,27 @@ import albertv0 as v0
 __iid__ = "PythonInterface/v0.2"
 __prettyname__ = "Saxophone - Play internet radio streams from albert"
 __version__ = "0.1.0"
-__trigger__ = "sax "
+__trigger__ = "sax"
 __author__ = "Nikos Koukis"
 __dependencies__ = ["cvlc"]
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//saxophone"
 )
 
-icon_path = str(Path(__file__).parent / "saxophone")
-stop_icon_path = str(Path(__file__).parent / "stop_icon")
+icons_path = Path(__file__).parent / "images"
+
+
+def get_icon(icon: str):
+    return str(icons_path / icon)
+
+
+icon_path = get_icon("saxophone")
+stop_icon_path = get_icon("stop_icon")
 
 cache_path = Path(v0.cacheLocation()) / "saxophone"
-config_path = Path(v0.configLocation()) / "saxophone"
 data_path = Path(v0.dataLocation()) / "saxophone"
+
+json_config = str(Path(__file__).parent / "config" / "saxophone.json")
 dev_mode = False
 
 # Stream class --------------------------------------------------------------------------------
@@ -56,21 +65,16 @@ UrlType = enum("PLAYLIST", "RAW_STREAM", "COUNT", "INVALID")
 
 
 class Stream:
-    def __init__(
-        self,
-        url: str,
-        name: str,
-        icon: str = None,
-        description: str = None,
-        homepage: str = None,
-    ):
+    def __init__(self, url: str, name: str, **kargs):
         super(Stream, self).__init__()
 
-        self.url = url
-        self.name = name
-        self.description = description
-        self.homepage = homepage
-        self._icon = icon
+        self.url: str = url
+        self.name: str = name
+        self.description: str = kargs.get("description")
+        self.homepage: str = kargs.get("homepage")
+        self._icon: str = kargs.get("icon")
+        self.favorite: bool = kargs.get("favorite", False)
+        print("self.favorite: ", self.favorite)
 
         self._process: subprocess.Popen = None
 
@@ -95,7 +99,7 @@ class Stream:
         if self._icon is None:
             return None
 
-        return str(Path(__file__).parent / self._icon)
+        return get_icon(self._icon)
 
     def play(self):
         self._process = subprocess.Popen(["cvlc", self.url])
@@ -111,12 +115,14 @@ class Stream:
         self._process.communicate()
 
 
-streams = []
-with open(config_path / "saxophone.json") as f:
+# initialise all available streams
+streams: List[Stream] = []
+with open(json_config) as f:
     conts = json.load(f)
 
     for item in conts["all"]:
         streams.append(Stream(**item))
+streams.sort(key=operator.attrgetter("favorite"), reverse=True)
 
 
 # plugin main functions -----------------------------------------------------------------------
@@ -158,16 +164,12 @@ def start_stream(stream: Stream):
     stream.play()
 
 
-# TODO  - Install step for json file
-# TODO  - Icons
+# TODO  - Move json file inside the repo
+# TODO  - Icons - configure properly - move them to misc directory
 # TODO  - Add to enums - handle m3u, pls, raw
 # TODO  - System notification
 # TODO  - System tray notification
-# TODO  - Icon path
-# TODO  - Homepage in JSON
-# TODO  - Autocomplete name of stream or stream description
-# TODO Check the links as part of CI
-
+# TODO  - Check the links as part of CI
 
 # albert functions ----------------------------------------------------------------------------
 
@@ -176,7 +178,7 @@ def initialize():
     # Called when the extension is loaded (ticked in the settings) - blocking
 
     # create plugin locations
-    for p in (cache_path, config_path, data_path):
+    for p in (cache_path, data_path):
         p.mkdir(parents=False, exist_ok=True)
 
 
@@ -184,11 +186,10 @@ def finalize():
     pass
 
 
-def handleQuery(query) -> list:
+def handleQuery(query) -> list:  # noqa
     results = []
 
-    # always display it
-    if is_radio_on():
+    if len(query.rawString.strip()) <= 1 and is_radio_on():
         results.insert(
             0,
             v0.Item(
@@ -209,8 +210,7 @@ def handleQuery(query) -> list:
             if results_setup:
                 return results_setup
 
-            # TODO Autocomplete
-            query_str = query.string.lower()
+            query_str = query.string.strip().lower()
 
             if not query_str:
                 for stream in streams:
@@ -278,20 +278,6 @@ def get_as_subtext_field(field, field_title=None) -> str:
         s = f"{field_title} :" + s
 
     return s
-
-
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
 
 
 def setup(query):

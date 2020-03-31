@@ -2,24 +2,61 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "http://198.245.60.88:8128/listen.pls?sid=1",
+      "name": "Skylab Radio",
+      "homepage": "https://www.skylabradio.com",
+      "favorite": true
+    },
+    {
+      "url": "http://www.wnyc.org/stream/wnyc-fm939/aac.pls",
+      "name": "WNYC 93.9 FM",
+      "homepage": "http:www.wnyc.org/"
+    },
+    {
+      "url": "http://www.wnyc.org/stream/wqxr/aac.pls",
+      "name": "WQXR 105.9 FM",
+      "homepage": "https://www.wqxr.org/",
+      "favorite": true
+    },
+    {
+      "url": "http://www.wnyc.org/stream/q2/aac.pls",
+      "name": "New Sounds",
+      "homepage": "https://www.wqxr.org/"
+    },
+    {
+      "url": "ttp://www.wqxr.org/stream/wqxr-special/aac.pls",
+      "homepage": "https://www.wqxr.org/",
+      "name": "Openavore"
+    },
+    {
+      "url": "http://www.101smoothjazz.com/101-smoothjazz.m3u",
+      "name": "101 Smooth Jazz",
+      "homepage": "http://www.101smoothjazz.com/"
+    },
+    {
       "url": "https://stream.radioparadise.com/aac-320",
       "name": "Radio Paradise - Main Mix AAC 320K",
-      "icon": "rp"
+      "icon": "rp",
+      "homepage": "https://radioparadise.com",
+      "favorite": true
     },
     {
       "url": "https://stream.radioparadise.com/mellow-320",
       "name": "Radio Paradise - Mellow Mix AAC 320K",
-      "icon": "rp"
+      "icon": "rp",
+      "homepage": "https://radioparadise.com"
     },
     {
       "url": "https://stream.radioparadise.com/rock-320",
       "name": "Radio Paradise - Rock Mix AAC 320K",
-      "icon": "rp"
+      "icon": "rp",
+      "homepage": "https://radioparadise.com"
     },
     {
       "url": "https://stream.radioparadise.com/eclectic-320",
       "name": "Radio Paradise - World/Eclectic Mix AAC 320K",
-      "icon": "rp"
+      "icon": "rp",
+      "homepage": "https://radioparadise.com"
     },
     {
       "url": "http://minnesota.publicradio.org/tools/play/streams/the_current.pls",
@@ -64,28 +101,77 @@
       "name": "Sleepbot Environmental Broadcast 56K MP3"
     },
     {
+      "url": "https://somafm.com/deepspaceone130.pls",
+      "name": "Deep Space One",
+      "icon": "deepspaceone120",
+      "homepage": "somafm.com"
+    },
+    {
       "url": "https://somafm.com/covers130.pls,",
-      "name": "Soma FM Covers"
+      "name": "Soma FM Covers",
+      "icon": "covers120",
+      "homepage": "somafm.com"
     },
     {
       "url": "https://somafm.com/secretagent130.pls",
-      "name": "Soma FM Secret Agent"
+      "name": "Soma FM Secret Agent",
+      "favorite": true,
+      "icon": "secretagent120",
+      "homepage": "somafm.com"
     },
     {
       "url": "http://somafm.com/groovesalad130.pls",
-      "name": "Soma FM Groove Salad iTunes AAC 128K"
+      "name": "Soma FM Groove Salad iTunes AAC 128K",
+      "icon": "groovesalad120",
+      "homepage": "somafm.com"
     },
     {
       "url": "http://somafm.com/dronezone130.pls",
-      "name": "Soma FM Drone Zone iTunes AAC 128K"
+      "name": "Soma FM Drone Zone iTunes AAC 128K",
+      "icon": "dronezone120",
+      "homepage": "somafm.com"
     },
     {
       "url": "http://somafm.com/lush130.pls",
-      "name": "Soma FM Lush iTunes AAC 128K"
+      "name": "Soma FM Lush iTunes AAC 128K",
+      "icon": "lush120",
+      "homepage": "somafm.com"
     },
     {
       "url": "http://somafm.com/sonicuniverse.pls",
-      "name": "Soma FM Sonic Universe iTunes AAC 128K"
+      "name": "Soma FM Sonic Universe iTunes AAC 128K",
+      "icon": "sonicuniverse120",
+      "homepage": "somafm.com"
+    },
+    {
+      "url": "https://somafm.com/u80s130.pls",
+      "name": "Underground 80s",
+      "icon": "u80s-120",
+      "description": " Early 80s UK Synthpop and a bit of New Wave. ",
+      "homepage": "https://somafm.com/u80s/"
+    },
+    {
+      "url": "https://somafm.com/reggae130.pls",
+      "name": "Space Station Soma",
+      "icon": "spacestation-400",
+      "description": " Tune in, turn on, space out. Spaced-out ambient and mid-tempo electronica. ",
+      "homepage": "https://somafm.com/reggae/",
+      "favorite": true
+    },
+    {
+      "url": "https://somafm.com/defcon130.pls",
+      "name": "DEF CON Radio",
+      "icon": "defcon120",
+      "description": " Music for Hacking. The DEF CON Year-Round Channel. ",
+      "homepage": "https://somafm.com/defcon/",
+      "favorite": true
+    },
+    {
+      "url": "https://somafm.com/reggae130.pls",
+      "name": "Heavyweight Reggae",
+      "icon": "reggae120",
+      "description": "Reggae, Ska, Rocksteady classic and deep tracks.",
+      "homepage": "https://somafm.com/reggae/"
     }
   ]
 }
