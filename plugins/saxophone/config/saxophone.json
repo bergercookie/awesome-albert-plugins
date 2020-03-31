@@ -1,0 +1,91 @@
+{
+  "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
+  "all": [
+    {
+      "url": "https://stream.radioparadise.com/aac-320",
+      "name": "Radio Paradise - Main Mix AAC 320K",
+      "icon": "rp"
+    },
+    {
+      "url": "https://stream.radioparadise.com/mellow-320",
+      "name": "Radio Paradise - Mellow Mix AAC 320K",
+      "icon": "rp"
+    },
+    {
+      "url": "https://stream.radioparadise.com/rock-320",
+      "name": "Radio Paradise - Rock Mix AAC 320K",
+      "icon": "rp"
+    },
+    {
+      "url": "https://stream.radioparadise.com/eclectic-320",
+      "name": "Radio Paradise - World/Eclectic Mix AAC 320K",
+      "icon": "rp"
+    },
+    {
+      "url": "http://minnesota.publicradio.org/tools/play/streams/the_current.pls",
+      "name": "The Current"
+    },
+    {
+      "url": "http://listen.radionomy.com/boleros-para-enamorarse",
+      "name": "Boleros Para Enamorarse",
+      "description": "Latin Jazz"
+    },
+    {
+      "url": "http://sc2b-sjc.1.fm:8030/",
+      "name": "FM Blues"
+    },
+    {
+      "url": "http://1.ice1.firststreaming.com/kkjz_fm.mp3",
+      "name": "KKJZ - KJazz 88.1",
+      "homepage": "http://jazzandblues.org/"
+    },
+    {
+      "url": "http://minnesota.publicradio.org/tools/play/streams/classical.pls",
+      "name": "Classical MPR"
+    },
+    {
+      "url": "http://minnesota.publicradio.org/tools/play/streams/local.pls",
+      "name": "Local Current"
+    },
+    {
+      "url": "http://minnesota.publicradio.org/tools/play/streams/radio_heartland.pls",
+      "name": "MPR Radio Heartland"
+    },
+    {
+      "url": "http://choralstream1.publicradio.org/choral.m3u",
+      "name": "Clasical MPR Chora"
+    },
+    {
+      "url": "http://www.wefunkradio.com/play/shoutcast.pls",
+      "name": "WEFUNK Radio MP3 64K"
+    },
+    {
+      "url": "http://sleepbot.com/ambience/cgi/listen.cgi/listen.pls",
+      "name": "Sleepbot Environmental Broadcast 56K MP3"
+    },
+    {
+      "url": "https://somafm.com/covers130.pls,",
+      "name": "Soma FM Covers"
+    },
+    {
+      "url": "https://somafm.com/secretagent130.pls",
+      "name": "Soma FM Secret Agent"
+    },
+    {
+      "url": "http://somafm.com/groovesalad130.pls",
+      "name": "Soma FM Groove Salad iTunes AAC 128K"
+    },
+    {
+      "url": "http://somafm.com/dronezone130.pls",
+      "name": "Soma FM Drone Zone iTunes AAC 128K"
+    },
+    {
+      "url": "http://somafm.com/lush130.pls",
+      "name": "Soma FM Lush iTunes AAC 128K"
+    },
+    {
+      "url": "http://somafm.com/sonicuniverse.pls",
+      "name": "Soma FM Sonic Universe iTunes AAC 128K"
+    }
+  ]
+}

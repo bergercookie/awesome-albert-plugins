@@ -20,6 +20,7 @@ This is a collection of plugins and themes for the
 Currently the list of plugins includes:
 
 * Jira - Issue Tracking
+* Listen to internet Radio Streams - Saxophone Plugin
 * Zoopla - Search Property to Buy, Rent, House Prices
 * Xkcd - Fetch xkcd comics like a boss
 * Taskwarrior - Interact with Taskwarrior
