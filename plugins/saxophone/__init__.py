@@ -164,12 +164,11 @@ def start_stream(stream: Stream):
     stream.play()
 
 
-# TODO  - Move json file inside the repo
-# TODO  - Icons - configure properly - move them to misc directory
-# TODO  - Add to enums - handle m3u, pls, raw
-# TODO  - System notification
-# TODO  - System tray notification
-# TODO  - Check the links as part of CI
+# TODO - Icons - configure properly - move them to misc directory
+# TODO - Add to enums - handle m3u, pls, raw
+# TODO - System notification
+# TODO - System tray notification
+# TODO - Check the links as part of CI
 
 # albert functions ----------------------------------------------------------------------------
 

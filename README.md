@@ -3,12 +3,10 @@
 <img src="https://travis-ci.com/bergercookie/awesome-albert-plugins.svg?branch=master"></a>
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
 <img src="https://api.codacy.com/project/badge/Grade/dbefc49bb5f446488da561c7497bb821"/></a>
-<a href=https://github.com/bergercookie/awesome-albert-plugins/blob/master/LICENSE" alt="LICENCE">
+<a href=https://github.com/bergercookie/awesome-albert-plugins/blob/master/LICENSE alt="LICENCE">
 <img src="https://img.shields.io/github/license/bergercookie/awesome-albert-plugins.svg" /></a>
 <a href="https://github.com/psf/black">
 <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-<a href=" https://github.com/bergercookie/awesome-albert-plugins/issues">
-<img src="https://img.shields.io/github/issues/bergercookie/awesome-albert-plugins/awesome-albert-plugins.svg"></a>
 
 ## Description
 
