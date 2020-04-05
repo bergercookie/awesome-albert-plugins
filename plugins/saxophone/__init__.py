@@ -3,6 +3,7 @@
 import json
 import operator
 import os
+import signal
 import subprocess
 import time
 import traceback
@@ -33,8 +34,10 @@ def get_icon(icon: str):
 
 icon_path = get_icon("saxophone")
 stop_icon_path = get_icon("stop_icon")
+repeat_icon_path = get_icon("repeat_icon")
 
 cache_path = Path(v0.cacheLocation()) / "saxophone"
+pids_path = cache_path / "streams_on"
 data_path = Path(v0.dataLocation()) / "saxophone"
 
 json_config = str(Path(__file__).parent / "config" / "saxophone.json")
@@ -74,7 +77,6 @@ class Stream:
         self.homepage: str = kargs.get("homepage")
         self._icon: str = kargs.get("icon")
         self.favorite: bool = kargs.get("favorite", False)
-        print("self.favorite: ", self.favorite)
 
         self._process: subprocess.Popen = None
 
@@ -92,7 +94,13 @@ class Stream:
             return False
 
         # if poll() is None then it's running!
-        return self._process.poll() is None
+        if self._process.poll() is not None:
+            # process has been externally killed
+            self._process = None
+            return False
+
+        # still running..
+        return True
 
     def icon(self) -> Optional[Path]:
         """Cache the icon."""
@@ -103,26 +111,27 @@ class Stream:
 
     def play(self):
         self._process = subprocess.Popen(["cvlc", self.url])
+        with open(pids_path / str(self._process.pid), "w"):
+            pass
 
-    def stop(self) -> None:
-        logger.warning(f'Stopping Stream "{self.name}"')
 
-        if not self._process:
-            logger.warning(f'Stream "{self.name}" does not seem to be active.')
-            return
+streams: List[Stream] = []
 
-        self._process.terminate()
-        self._process.communicate()
+
+def init_streams():
+    global streams
+    streams.clear()
+
+    with open(json_config) as f:
+        conts = json.load(f)
+
+        for item in conts["all"]:
+            streams.append(Stream(**item))
+    streams.sort(key=operator.attrgetter("favorite"), reverse=True)
 
 
 # initialise all available streams
-streams: List[Stream] = []
-with open(json_config) as f:
-    conts = json.load(f)
-
-    for item in conts["all"]:
-        streams.append(Stream(**item))
-streams.sort(key=operator.attrgetter("favorite"), reverse=True)
+init_streams()
 
 
 # plugin main functions -----------------------------------------------------------------------
@@ -140,15 +149,19 @@ def check_pid(pid: int) -> bool:
 
 def is_radio_on() -> bool:
     """Check if any of the streams are on."""
-    return any([stream.is_on() for stream in streams])
+    return len(list(pids_path.iterdir())) != 0
 
 
 def stop_radio():
     """Turn of the radio."""
-    for stream in streams:
-        if stream.is_on():
-            stream.stop()
-            return
+    for pid_f in pids_path.iterdir():
+        try:
+            # process may not exist - perhaps albert exited in the meantime.
+            os.kill(int(pid_f.stem), signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        finally:
+            os.remove(pid_f)
 
     return  # no radio was active
 
@@ -164,6 +177,8 @@ def start_stream(stream: Stream):
     stream.play()
 
 
+# TODO When actually searching do not show favorites on top
+# TODO - Write PIDs to file and kill them using that - these structs will not survive a re-import of the python module
 # TODO - Icons - configure properly - move them to misc directory
 # TODO - Add to enums - handle m3u, pls, raw
 # TODO - System notification
@@ -177,7 +192,7 @@ def initialize():
     # Called when the extension is loaded (ticked in the settings) - blocking
 
     # create plugin locations
-    for p in (cache_path, data_path):
+    for p in (cache_path, data_path, pids_path):
         p.mkdir(parents=False, exist_ok=True)
 
 
@@ -200,6 +215,16 @@ def handleQuery(query) -> list:  # noqa
         )
 
     if query.isTriggered:
+        results.insert(
+            0,
+            v0.Item(
+                id=__prettyname__,
+                icon=repeat_icon_path,
+                text="Reindex stations",
+                actions=[v0.FuncAction("Reindex", lambda: init_streams())],
+            ),
+        )
+
         try:
             # be backwards compatible with v0.2
             if "disableSort" in dir(query):

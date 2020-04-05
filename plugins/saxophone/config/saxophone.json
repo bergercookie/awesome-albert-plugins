@@ -10,7 +10,7 @@
     {
       "url": "http://www.wnyc.org/stream/wnyc-fm939/aac.pls",
       "name": "WNYC 93.9 FM",
-      "homepage": "http:www.wnyc.org/"
+      "homepage": "http://www.wnyc.org/"
     },
     {
       "url": "http://www.wnyc.org/stream/wqxr/aac.pls",
@@ -24,7 +24,7 @@
       "homepage": "https://www.wqxr.org/"
     },
     {
-      "url": "ttp://www.wqxr.org/stream/wqxr-special/aac.pls",
+      "url": "http://www.wqxr.org/stream/wqxr-special/aac.pls",
       "homepage": "https://www.wqxr.org/",
       "name": "Openavore"
     },
@@ -104,44 +104,44 @@
       "url": "https://somafm.com/deepspaceone130.pls",
       "name": "Deep Space One",
       "icon": "deepspaceone120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "https://somafm.com/covers130.pls,",
       "name": "Soma FM Covers",
       "icon": "covers120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "https://somafm.com/secretagent130.pls",
       "name": "Soma FM Secret Agent",
       "favorite": true,
       "icon": "secretagent120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "http://somafm.com/groovesalad130.pls",
       "name": "Soma FM Groove Salad iTunes AAC 128K",
       "icon": "groovesalad120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "http://somafm.com/dronezone130.pls",
       "name": "Soma FM Drone Zone iTunes AAC 128K",
       "icon": "dronezone120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "http://somafm.com/lush130.pls",
       "name": "Soma FM Lush iTunes AAC 128K",
       "icon": "lush120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "http://somafm.com/sonicuniverse.pls",
       "name": "Soma FM Sonic Universe iTunes AAC 128K",
       "icon": "sonicuniverse120",
-      "homepage": "somafm.com"
+      "homepage": "https://somafm.com"
     },
     {
       "url": "https://somafm.com/u80s130.pls",
@@ -151,12 +151,12 @@
       "homepage": "https://somafm.com/u80s/"
     },
     {
-      "url": "https://somafm.com/reggae130.pls",
+      "url": "https://somafm.com/spacestation130.pls",
       "name": "Space Station Soma",
       "icon": "spacestation-400",
       "description": " Tune in, turn on, space out. Spaced-out ambient and mid-tempo electronica. ",
       "homepage": "https://somafm.com/reggae/",
-      "favorite": true
+      "favorite": false
     },
     {
       "url": "https://somafm.com/defcon130.pls",
@@ -167,11 +167,34 @@
       "favorite": true
     },
     {
+      "url": "https://somafm.com/sonicuniverse130.pls",
+      "name": "Sonic Universe",
+      "icon": "sonicuniverse120",
+      "description": " Transcending the world of jazz with eclectic, avant-garde takes on tradition. ",
+      "homepage": "https://somafm.com/sonicuniverse/",
+      "favorite": true
+    },
+    {
+      "url": "https://somafm.com/missioncontrol130.pls",
+      "name": "Mission Control",
+      "icon": "missioncontrol120",
+      "description": "Celebrating NASA and Space Explorers everywhere.",
+      "homepage": "https://somafm.com/missioncontrol/",
+      "favorite": true
+    },
+    {
       "url": "https://somafm.com/reggae130.pls",
       "name": "Heavyweight Reggae",
       "icon": "reggae120",
       "description": "Reggae, Ska, Rocksteady classic and deep tracks.",
       "homepage": "https://somafm.com/reggae/"
+    },
+    {
+      "url": "https://sebsauvage.net/ambient/playlist.m3u",
+      "name": "Sebsauvage - Ambient music",
+      "icon": "sebsauvage",
+      "description": "Background music for exploration/settlement management games such as Minecraft, RimWorld or Rise to Ruins",
+      "homepage": "https://sebsauvage.net/ambient/"
     }
   ]
 }

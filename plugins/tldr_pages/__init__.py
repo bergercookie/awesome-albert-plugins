@@ -47,6 +47,11 @@ def initialize():
     for p in (cache_path, config_path, data_path):
         p.mkdir(parents=False, exist_ok=True)
 
+    reindex_tldr_pages()
+
+
+def reindex_tldr_pages():
+    global page_paths
     page_paths = get_page_paths()
 
 
@@ -76,6 +81,12 @@ def handleQuery(query) -> list:
                         icon=icon_path,
                         text="Update tldr database",
                         actions=[v0.FuncAction("Update", lambda: update_tldr_db())],
+                    ),
+                    v0.Item(
+                        id=__prettyname__,
+                        icon=icon_path,
+                        text="Reindex tldr pages",
+                        actions=[v0.FuncAction("Reindex", lambda: reindex_tldr_pages())],
                     ),
                     v0.Item(
                         id=__prettyname__,

@@ -12,7 +12,9 @@ before_install:
   - python3 -m pip install pip
   - python3 -m pip install wheel pyopenssl
   - python3 -m pip install secrets requests googler cookiecutter
+  - python3 -m pip install pytest pyvirtualdisplay selenium
 
 script:
   - ./test/create_googler_plugins.sh
   - ./test/cookiecutter.sh
+  - pytest
