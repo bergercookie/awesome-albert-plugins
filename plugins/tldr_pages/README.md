@@ -2,13 +2,18 @@
 
 ## Description
 
+View [TL;DR](https://github.com/tldr-pages/tldr) pages in Albert. Pages are by
+default cached under `~/.cache/albert/tldr_pages/tldr` By default it uses the
+English version of the tldr pages. If that's not what you want alter the
+following line in `__init__.py` appropriately and restart Albert.
+
+```python
+pages_root = tldr_root / "pages"
+```
+
 ## Demo
 
 ![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/tldr.gif)
-
-## Motivation
-
-View tl;dr pages in Albert
 
 ## Manual installation instructions
 
@@ -19,16 +24,7 @@ Requirements:
 
 - Python version >= 3.5
 
-- tldr client program.
-
-  Current plugin is tested using [tealdeer](https://github.com/dbrgn/tealdeer).
-
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-```sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/tldr_pages//install-plugin.sh | bash
-```
+- git for downloading and managing the tldr pages
 
 ## Self Promotion
 

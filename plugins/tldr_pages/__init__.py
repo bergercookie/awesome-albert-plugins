@@ -1,6 +1,7 @@
 """TL;DR pages from albert."""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -17,7 +18,7 @@ __prettyname__ = "TL;DR pages from albert."
 __version__ = "0.1.0"
 __trigger__ = "tldr "
 __author__ = "Nikos Koukis"
-__dependencies__ = []
+__dependencies__ = ["git"]
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//tldr_pages"
 )
@@ -28,13 +29,13 @@ cache_path = Path(v0.cacheLocation()) / "tldr_pages"
 config_path = Path(v0.configLocation()) / "tldr_pages"
 data_path = Path(v0.dataLocation()) / "tldr_pages"
 
-# TODO - make this more modular
-pages_root = Path.home() / ".config" / "tldr"
+tldr_root = cache_path / "tldr"
+pages_root = tldr_root / "pages"
 
 page_paths: Dict[str, Path] = None
 
 # Is the plugin run in development mode?
-in_development = True
+in_development = False
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -46,6 +47,11 @@ def initialize():
     # create plugin locations
     for p in (cache_path, config_path, data_path):
         p.mkdir(parents=False, exist_ok=True)
+
+    if not pages_root.is_dir():
+        subprocess.check_call(
+            f"git clone https://github.com/tldr-pages/tldr {tldr_root}".split()
+        )
 
     reindex_tldr_pages()
 
@@ -104,7 +110,6 @@ def handleQuery(query) -> list:
                 # fuzzy search based on word
                 matched = process.extract(query_text, page_paths.keys(), limit=20)
 
-                # modify this...
                 for m in [elem[0] for elem in matched]:
                     results.append(get_cmd_as_item((m, page_paths[m])))
 
@@ -134,9 +139,8 @@ def handleQuery(query) -> list:
 
 
 def update_tldr_db():
-    global page_paths
-    subprocess.check_call(["tldr", "--update"])
-    page_paths = get_page_paths()
+    subprocess.check_call(f"git -C {tldr_root} pull --rebase origin master".split())
+    reindex_tldr_pages()
 
 
 def get_page_paths() -> Dict[str, Path]:
@@ -148,22 +152,35 @@ def get_page_paths() -> Dict[str, Path]:
 
 def get_cmd_as_item(pair: Tuple[str, Path]):
     with open(pair[-1], "r") as f:
-        li = f.readline()
-        while li.startswith(">"):
-            li = f.readline()
+        all_lines = f.readlines()
+        description_lines = [
+            li.lstrip("> ").rstrip().rstrip(".") for li in all_lines if li.startswith("> ")
+        ]
 
-    li = li.lstrip("> ").rstrip().rstrip(".")
+        # see if there's a line with more information and a URL
+        more_info_url = None
+        try:
+            more_info = [li for li in all_lines if "More information" in li][0]
+            more_info_url = re.search("<(.*)>", more_info).groups()[0]
+        except IndexError:
+            pass
+
+    actions = [
+        v0.ClipAction("Copy command", pair[0]),
+        v0.UrlAction(
+            "Do a google search", f'https://www.google.com/search?q="{pair[0]}" command'
+        ),
+    ]
+    if more_info_url:
+        actions.append(v0.UrlAction("More information", more_info_url))
 
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,
         text=pair[0],
         completion=" ".join([__trigger__, pair[0]]),
-        subtext=li,
-        actions=[
-            v0.ClipAction("Copy command", pair[0]),
-            v0.UrlAction("Do a google search", f'https://www.google.com/search?q="{pair[0]}" command'),
-        ],
+        subtext=" ".join(description_lines),
+        actions=actions,
     )
 
 
@@ -190,7 +207,8 @@ def get_cmd_items(pair: Tuple[str, Path]):
                 actions=[
                     v0.ClipAction("Copy command", example_cmd),
                     v0.UrlAction(
-                        "Do a google search", f'https://www.google.com/search?q="{pair[0]}" command'
+                        "Do a google search",
+                        f'https://www.google.com/search?q="{pair[0]}" command',
                     ),
                 ],
             )
