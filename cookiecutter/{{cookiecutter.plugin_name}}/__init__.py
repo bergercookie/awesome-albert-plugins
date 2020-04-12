@@ -30,7 +30,7 @@ dev_mode = True
 
 
 def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
+    """Called when the extension is loaded (ticked in the settings) - blocking."""
 
     # create plugin locations
     for p in (cache_path, config_path, data_path):
@@ -42,6 +42,7 @@ def finalize():
 
 
 def handleQuery(query) -> list:
+    """Hook that is called by albert with *every new keypress*."""  # noqa
     results = []
 
     if query.isTriggered:
@@ -84,6 +85,7 @@ def handleQuery(query) -> list:
 
 
 def get_as_item():
+    """Return an item - ready to be appended to the items list and be rendered by Albert."""
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,
@@ -98,9 +100,7 @@ def get_as_item():
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable.
-
-    """
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
     if field:
         s = f"{field} | "
@@ -128,7 +128,7 @@ def load_data(data_name) -> str:
 
 
 def setup(query):
-    """setup is successful if an empty list is returned.
+    """Setup is successful if an empty list is returned.
 
     Use this function if you need the user to provide you data
     """

@@ -60,6 +60,7 @@ generate_plugins_only_for = [
     "wikiquote",
     "yahoo",
     "youtube",
+    "cambridge",
 ]
 
 custom_plugins = {
@@ -76,6 +77,10 @@ custom_plugins = {
     "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
     "search_scihub": {"googler_at": "sci-hub.tw", "trigger": "sci"},
     "search_devhints": {"googler_at": "devhints.io", "trigger": "dev"},
+    "search_cambridge_dictionary": {
+        "googler_at": "dictionary.cambridge.org",
+        "trigger": "cam",
+    },
 }
 
 
@@ -149,22 +154,26 @@ def get_cookiecutter_directives(plugin_name, trigger, googler_at):
 # main ----------------------------------------------------------------------------------------
 
 
-def main():
+def main():  # noqa
     # setup -----------------------------------------------------------------------------------
     cookiecutter_orig_path = Path(__file__).parent / "plugins" / "search_template"
     assert cookiecutter_orig_path.is_dir(), f"No such directory -> {cookiecutter_orig_path}"
 
     def get_logo(plugin_name) -> Optional[Path]:
         """Get the corresponding logo or None if the latter is not found."""
-        p = (
-            Path(__file__).parent
-            / "googler_logos"
-            / f"{get_plugin_name_wo_search(plugin_name)}.svg"
+        path_to_logos = Path(__file__).parent / "googler_logos"
+        all_logos = [str(p) for p in path_to_logos.iterdir()]
+        r = re.compile(
+            f"{str(path_to_logos / get_plugin_name_wo_search(plugin_name))}\.[png\|jpg\|svg]"
         )
-        if not p.is_file():
-            p = Path(__file__).parent / "googler_logos" / "default.svg"
+        matching_logos = list(filter(r.search, all_logos))
 
-        return p
+        if len(matching_logos):
+            logo_path = Path(matching_logos[0])
+        else:
+            logo_path = Path(__file__).parent / "googler_logos" / "default.svg"
+
+        return logo_path
 
     def get_output_dir(plugin_name) -> Path:
         """Get the output directory for the plugin at hand."""
@@ -206,7 +215,8 @@ def main():
         )
 
         # copy logo if exists
-        shutil.copy(get_logo(plugin_name), get_output_dir(plugin_name) / f"{plugin_name}.svg")
+        ext = get_logo(plugin_name).suffix
+        shutil.copy(get_logo(plugin_name), get_output_dir(plugin_name) / f"{plugin_name}{ext}")
 
     # postprocessing --------------------------------------------------------------------------
     os.chdir(oldpwd)
