@@ -12,8 +12,9 @@ bootstrap the repository.
     pip install cookiecutter
     ...
 
-    # issue template repo
-    cookiecutter https://github.com/bergercookie/albert-plugin-cookiecutter
+    # Download this cookiecutter package locally and use it
+    git clone https://github.com/bergercookie/awesome-albert-plugins
+    cookiecutter awesome-albert-plugins/cookiecutter
 
     # configure
     go through the prompts and adjust accordingly
