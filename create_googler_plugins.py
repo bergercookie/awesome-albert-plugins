@@ -81,6 +81,7 @@ custom_plugins = {
         "googler_at": "dictionary.cambridge.org",
         "trigger": "cam",
     },
+    "search_qt5_docs": {"googler_at": "doc.qt.io/qt-5", "trigger": "qt5"}
 }
 
 

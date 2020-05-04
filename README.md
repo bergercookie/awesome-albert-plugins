@@ -18,7 +18,7 @@ This is a collection of plugins and themes for the
 Currently the list of plugins includes:
 
 * Jira - Issue Tracking
-* Listen to internet Radio Streams - Saxophone Plugin
+* Saxophone - Listen to internet Radio Streams
 * Zoopla - Search Property to Buy, Rent, House Prices
 * Xkcd - Fetch xkcd comics like a boss
 * Taskwarrior - Interact with Taskwarrior
@@ -44,7 +44,7 @@ Currently the list of plugins includes:
       when there is a 0.3 seconds difference between keystrokes. Thus, it's
       common when you actually want to send a request to wait a bit and then
       append a space character at the end of the query.
-
+* PulseAudio - Select pulseaudio input/output devices, sound card profiles
 
 Here's a view of the albert prompt after having enabled several of the
 search-suggestion plugins:
@@ -67,6 +67,7 @@ your case).
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/zoopla/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | |
 
 ## Motivation
@@ -140,7 +141,7 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Plugin ideas
 
-* :construction: Online radio player - use https://github.com/coderholic/pyradio
+* :construction: Emoji - Improved version of original `dango_kaoi` emojis plugin
 * :construction: [Radio Paradise player](https://radioparadise.com/player)
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
 * :construction: Filesystem directory listing
