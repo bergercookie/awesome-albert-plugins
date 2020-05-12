@@ -22,14 +22,10 @@ Requirements:
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
   - Albert Python Interface: ``v0.2``
 - Python version >= 3.5
+- Install [taskw_gcal_sync](https://github.com/bergercookie/taskw_gcal_sync)
+- Install `overrides` python module
 
 
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-```sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/taskwarrior/install-plugin.sh | bash
-```
 ## Self Promotion
 
 If you find this tool useful, please [star it on

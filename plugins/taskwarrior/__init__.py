@@ -1,20 +1,28 @@
-""" Interact with Taskwarrior """
+"""Interact with Taskwarrior."""
 
-from pathlib import Path
-import sys
+import re
+import datetime
 import os
-from typing import Tuple, Union
-from subprocess import call, PIPE
-
-from fuzzywuzzy import process
+import sys
+import traceback
 from importlib import import_module
+from pathlib import Path
 from shutil import which
-from taskw_gcal_sync import TaskWarriorSide
-import albertv0 as v0
-import taskw
+from subprocess import PIPE, Popen
+from typing import Optional, Tuple, Union
 
-# TODO Add a subcommand for manual gcal syncing
-# TODO Add a reminders tag file via dialog
+import gi
+import taskw
+from dateutil import tz
+from fuzzywuzzy import process
+from overrides import overrides
+from taskw_gcal_sync import TaskWarriorSide
+
+import albertv0 as v0
+
+gi.require_version("Notify", "0.7")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip
+
 
 # metadata ------------------------------------------------------------------------------------
 __iid__ = "PythonInterface/v0.2"
@@ -22,19 +30,19 @@ __prettyname__ = "Taskwarrior interaction"
 __version__ = "0.1.0"
 __trigger__ = "t "
 __author__ = "Nikos Koukis"
-__dependencies__ = []
-__homepage__ = "https://github.com/bergercookie/taskwarrior-albert-plugin"
+__dependencies__ = ["task"]
+__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 __simplename__ = "taskwarrior"
 
 # initial checks ------------------------------------------------------------------------------
 
 # icon ----------------------------------------------------------------------------------------
-icon_path = os.path.join(os.path.dirname(__file__), "taskwarrior")
-icon_path_b = os.path.join(os.path.dirname(__file__), "taskwarrior_blue")
-icon_path_r = os.path.join(os.path.dirname(__file__), "taskwarrior_red")
-icon_path_y = os.path.join(os.path.dirname(__file__), "taskwarrior_yellow")
-icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan")
-icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green")
+icon_path = os.path.join(os.path.dirname(__file__), "taskwarrior.svg")
+icon_path_b = os.path.join(os.path.dirname(__file__), "taskwarrior_blue.svg")
+icon_path_r = os.path.join(os.path.dirname(__file__), "taskwarrior_red.svg")
+icon_path_y = os.path.join(os.path.dirname(__file__), "taskwarrior_yellow.svg")
+icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan.svg")
+icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 
 # initial configuration -----------------------------------------------------------------------
 cache_path = Path(v0.cacheLocation()) / __simplename__
@@ -46,7 +54,56 @@ reminders_tag_path = config_path / "reminders_tag"
 tw_side = TaskWarriorSide(enable_caching=True)
 tw_side.start()
 
+dev_mode = True
+
+# regular expression to match URLs
+# https://gist.github.com/gruber/8891611
+url_re = re.compile(r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))""")
+
 # plugin main functions -----------------------------------------------------------------------
+
+
+def do_notify(msg: str, image=None):
+    app_name = "Taskwarrior"
+    Notify.init(app_name)
+    image = image
+    print("msg: ", msg)
+    print("image: ", image)
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
+
+
+def get_tasks_of_date(date: datetime.date):
+    tasks = tw_side.get_all_items(include_completed=False)
+
+    return [
+        t
+        for t in tasks
+        # acount for hack in taskw_gcal_sync - tasks scheduled for yesterday 23:59:00 are
+        # actually today's tasks
+        if "due" in t.keys()
+        and t["due"]
+        != datetime.datetime(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=23,
+            minute=0,
+            tzinfo=tz.tzutc(),
+        )
+        and (
+            t["due"].date() == date
+            or t["due"]
+            == datetime.datetime(
+                year=date.year,
+                month=date.month,
+                day=date.day - 1,
+                hour=23,
+                minute=0,
+                tzinfo=tz.tzutc(),
+            )
+        )
+    ]
 
 
 def initialize():
@@ -73,32 +130,41 @@ def handleQuery(query):
                 return results_setup
             tasks = tw_side.get_all_items(include_completed=False)
 
-            # TODO Handle a potential subcommand - add?
-            query_text = query.string
+            query_str = query.string
 
-            if len(query.string) < 2:
+            if len(query_str) < 2:
                 tw_side.reload_items = True
-                results.extend(
-                    [
-                        get_as_item(text=val, completion=f"{__trigger__} {key} ")
-                        for key, val in zip(
-                            get_prop_for_subcommands("name"), get_prop_for_subcommands("desc")
-                        )
-                    ]
-                )
+                results.extend([s.get_as_albert_item() for s in subcommands])
 
                 tasks.sort(key=lambda t: t["urgency"], reverse=True)
                 results.extend([get_tw_item(task) for task in tasks])
 
             else:
-                # find relevant results
-                desc_to_task = {task["description"]: task for task in tasks}
-                matched = process.extract(query_text, list(desc_to_task.keys()), limit=30)
-                for m in [elem[0] for elem in matched]:
-                    task = desc_to_task[m]
-                    results.append(get_tw_item(task))
+                subcommand_query = get_subcommand_query(query_str)
+
+                if subcommand_query:
+                    results.extend(
+                        subcommand_query.command.get_as_albert_items_full(
+                            subcommand_query.query
+                        )
+                    )
+
+                    if not results:
+                        results.append(get_as_item(text="No results"))
+
+                else:
+                    # find relevant results
+                    desc_to_task = {task["description"]: task for task in tasks}
+                    matched = process.extract(query_str, list(desc_to_task.keys()), limit=30)
+                    for m in [elem[0] for elem in matched]:
+                        task = desc_to_task[m]
+                        results.append(get_tw_item(task))
 
         except Exception:  # user to report error
+            if dev_mode:
+                print(traceback.format_exc())
+                raise
+
             results.insert(
                 0,
                 v0.Item(
@@ -108,7 +174,7 @@ def handleQuery(query):
                     actions=[
                         v0.ClipAction(
                             f"Copy error - report it to {__homepage__[8:]}",
-                            f"{sys.exc_info()}",
+                            f"{traceback.format_exc()}",
                         )
                     ],
                 ),
@@ -193,9 +259,24 @@ def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path
         return "↑", icon_path_r
 
 
-def run_tw_action(args_list: list):
+def run_tw_action(args_list: list, need_pty=False):
     args_list = ["task", "rc.recurrence.confirmation=no", "rc.confirmation=off", *args_list]
-    call(args_list)
+
+    if need_pty:
+        args_list.insert(0, "x-terminal-emulator")
+        args_list.insert(1, "-e")
+
+    proc = Popen(args_list, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = proc.communicate()
+
+    if proc.returncode != 0:
+        image = icon_path_r
+        msg = f'stdout: {stdout.decode("utf-8")} | stderr: {stderr.decode("utf-8")}'
+    else:
+        image = icon_path
+        msg = stdout.decode("utf-8")
+
+    do_notify(msg=msg, image=image)
     tw_side.reload_items = True
 
 
@@ -227,10 +308,18 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
         ),
         v0.FuncAction(
             "Edit task interactively",
-            lambda args_list=["edit", tw_side.get_task_id(task)]: run_tw_action(args_list),
+            lambda args_list=["edit", tw_side.get_task_id(task)]: run_tw_action(args_list,
+                                                                                need_pty=True),
         ),
         v0.ClipAction("Copy task UUID", f"{tw_side.get_task_id(task)}"),
     ]
+
+    found_urls = url_re.findall(task["description"])
+    if "annotations" in task.keys():
+        found_urls.extend(url_re.findall(" ".join(task["annotations"])))
+
+    for url in found_urls[-1::-1]:
+        actions.insert(0, v0.UrlAction(f"Open {url}", url))
 
     if reminders_tag_path.is_file():
         reminders_tag = load_data(reminders_tag_path)
@@ -263,41 +352,114 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
 
 # subcommands ---------------------------------------------------------------------------------
 class Subcommand:
-    def __init__(self, *, name, desc, needs_existing=True):
+    def __init__(self, *, name, desc):
         self.name = name
         self.desc = desc
-        self.needs_existing = needs_existing
+
+    def get_as_albert_item(self):
+        return get_as_item(text=self.desc, completion=f"{__trigger__} {self.name} ")
+
+    def get_as_albert_items_full(self, query_str):
+        return [self.get_as_albert_item()]
+
+    def __str__(self) -> str:
+        return f"Name: {self.name} | Description: {self.desc}"
 
 
-subcommands = [Subcommand(name="add", desc="Add a new task", needs_existing=False)]
+class AddSubcommand(Subcommand):
+    def __init__(self, **kargs):
+        super(AddSubcommand, self).__init__(**kargs)
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        item = self.get_as_albert_item()
+        item.subtext = query_str
+        item.addAction(
+            v0.FuncAction(
+                "Add task",
+                lambda args_list=["add", *query_str.split()]: run_tw_action(args_list),
+            )
+        )
+        return [item]
 
 
-def get_prop_for_subcommands(prop: str):
-    """Fetch the values of the given property for all subcommands"""
-    return [getattr(a, prop) for a in subcommands]
+class TodayTasks(Subcommand):
+    def __init__(self, **kargs):
+        super(TodayTasks, self).__init__(**kargs)
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        return [get_tw_item(t) for t in get_tasks_of_date(datetime.datetime.today())]
 
 
-def get_subcommand_query(query_str: str) -> Tuple[bool, str]:
-    """Determine whether current query is of a subcommand. If so first returned value is
-    True, else False.
+class YesterdayTasks(Subcommand):
+    def __init__(self, **kargs):
+        super(YesterdayTasks, self).__init__(**kargs)
 
-    If subcommand, then return the actual query excluding the subcommand else string will be
-    empty
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        date = datetime.datetime.today().date() - datetime.timedelta(days=1)
+        return [get_tw_item(t) for t in get_tasks_of_date(date)]
 
-    Usage:
 
-    >>> get_subcommand_query("add a_string")
-    (True, 'a_string')
-    >>> get_subcommand_query(" add another string")
-    (True, 'another string')
-    >>> get_subcommand_query(" adds another string")
-    (False, '')
+class TomorrowTasks(Subcommand):
+    def __init__(self, **kargs):
+        super(TomorrowTasks, self).__init__(**kargs)
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        date = datetime.datetime.today().date() + datetime.timedelta(days=1)
+        return [get_tw_item(t) for t in get_tasks_of_date(date)]
+
+
+class SubcommandQuery:
+    def __init__(self, subcommand: Subcommand, query: str):
+        """
+        Query for a specific subcommand.
+
+        :query: Query text - doesn't include the subcommand itself
+        """
+
+        self.command = subcommand
+        self.query = query
+
+    def __str__(self) -> str:
+        return f"Command: {self.command}\nQuery Text: {self.query}"
+
+
+subcommands = [
+    AddSubcommand(name="add", desc="Add a new task"),
+    TodayTasks(name="today", desc="Today's tasks"),
+    YesterdayTasks(name="yesterday", desc="Yesterday's tasks"),
+    TomorrowTasks(name="tomorrow", desc="Tomorrow's tasks"),
+]
+
+
+def get_subcommand_for_name(name: str) -> Optional[Subcommand]:
+    """Get a subcommand with the indicated name."""
+    matching = [s for s in subcommands if s.name.lower() == name.lower()]
+    if matching:
+        return matching[0]
+
+
+def get_subcommand_query(query_str: str) -> Optional[SubcommandQuery]:
+    """
+    Determine whether current query is of a subcommand.
+
+    If so first returned the corresponding SubcommandQeury object.
     """
     if not query_str:
-        return False, ""
+        return None
 
+    # spilt:
+    # "subcommand_name rest of query" -> ["subcommand_name", "rest of query""]
     query_parts = query_str.strip().split(None, maxsplit=1)
-    if query_parts[0] in get_prop_for_subcommands("name"):
-        return True, query_parts[1] if len(query_parts) > 1 else ""
+
+    if len(query_parts) < 2:
+        query_str = ""
     else:
-        return False, ""
+        query_str = query_parts[1]
+
+    subcommand = get_subcommand_for_name(query_parts[0])
+    if subcommand:
+        return SubcommandQuery(subcommand=subcommand, query=query_str)
