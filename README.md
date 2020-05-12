@@ -45,6 +45,7 @@ Currently the list of plugins includes:
       common when you actually want to send a request to wait a bit and then
       append a space character at the end of the query.
 * PulseAudio - Select pulseaudio input/output devices, sound card profiles
+* Improved implementations of the original `Pass`, `Pomodoro` plugins
 
 Here's a view of the albert prompt after having enabled several of the
 search-suggestion plugins:
