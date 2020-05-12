@@ -13,17 +13,18 @@ from pathlib import Path
 from shutil import which
 
 import gi
-from gi.repository import GdkPixbuf, Notify
 
 import albertv0 as v0
+
+gi.require_version("Notify", "0.7")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip
+
 
 __iid__ = "PythonInterface/v0.1"
 __prettyname__ = "Pomodoro"
 __version__ = "1.0"
 __author__ = "Manuel Schneider"
 __dependencies__ = ["cvlc"]
-
-gi.require_version("Notify", "0.7")
 
 
 class PomodoroTimer:
