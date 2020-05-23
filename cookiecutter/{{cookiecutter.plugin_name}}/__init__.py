@@ -108,7 +108,7 @@ def get_as_subtext_field(field, field_title=None) -> str:
         return ""
 
     if field_title:
-        s = f"{field_title} :" + s
+        s = f"{field_title}: " + s
 
     return s
 

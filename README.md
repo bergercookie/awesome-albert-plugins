@@ -31,7 +31,8 @@ Currently the list of plugins includes:
 * Lookup HTTP URL status codes
 * Lookup errno status codes
 * Show Internal, External IPs, Default Gateways
-* Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example: Google
+* Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
+  * Google
   * Amazon
   * Youtube
   * Github
@@ -46,6 +47,7 @@ Currently the list of plugins includes:
       append a space character at the end of the query.
 * PulseAudio - Select pulseaudio input/output devices, sound card profiles
 * Improved implementations of the original `Pass`, `Pomodoro` plugins
+* Create stopwatches and countdowns
 
 Here's a view of the albert prompt after having enabled several of the
 search-suggestion plugins:
@@ -65,11 +67,11 @@ your case).
 
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
 |:---:|:---:|
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/zoopla/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif)
 
 ## Motivation
 
