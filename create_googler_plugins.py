@@ -25,7 +25,7 @@ from cookiecutter.main import cookiecutter
 generate_plugins_only_for = [
     "alternativeto",
     "amazon",
-    "askubuntu",
+    "askubu",
     "aur.archlinux",
     "bbc",
     "cnn",
@@ -82,7 +82,9 @@ custom_plugins = {
         "trigger": "cam",
     },
     "search_qt5_docs": {"googler_at": "doc.qt.io/qt-5", "trigger": "qt5"},
-    "search_acronyms": {"googler_at": "https://www.allacronyms.com", "trigger": "acro"}
+    "search_acronyms": {"googler_at": "https://www.allacronyms.com", "trigger": "acro"},
+    "search_rust": {"googler_at": "https://doc.rust-lang.org", "trigger": "ru"},
+    "search_ubuntu": {"googler_at": "https://packages.ubuntu.com", "trigger": "ubu"},
 }
 
 

@@ -99,6 +99,11 @@ def get_as_item():
     )
 
 
+def sanitize_string(s: str) -> str:
+    return s.replace("<", "&lt;")
+
+
+
 def get_as_subtext_field(field, field_title=None) -> str:
     """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""

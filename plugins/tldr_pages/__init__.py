@@ -196,7 +196,9 @@ def get_cmd_items(pair: Tuple[str, Path]):
             continue
 
         desc = li.lstrip("- ")[:-1]
-        example_cmd = lines[i + 2].strip("`").replace("{{", "").replace("}}", "")
+        example_cmd = sanitize_string(
+            lines[i + 2].strip("`").replace("{{", "").replace("}}", "")
+        )
 
         items.append(
             v0.Item(
@@ -215,6 +217,10 @@ def get_cmd_items(pair: Tuple[str, Path]):
         )
 
     return items
+
+
+def sanitize_string(s: str) -> str:
+    return s.replace("<", "&lt;")
 
 
 def save_data(data: str, data_name: str):
