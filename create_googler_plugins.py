@@ -84,6 +84,7 @@ custom_plugins = {
     "search_qt5_docs": {"googler_at": "doc.qt.io/qt-5", "trigger": "qt5"},
     "search_acronyms": {"googler_at": "https://www.allacronyms.com", "trigger": "acro"},
     "search_rust": {"googler_at": "https://doc.rust-lang.org", "trigger": "ru"},
+    "search_rustcreates": {"googler_at": "https://docs.rs", "trigger": "rc"},
     "search_ubuntu": {"googler_at": "https://packages.ubuntu.com", "trigger": "ubu"},
 }
 
