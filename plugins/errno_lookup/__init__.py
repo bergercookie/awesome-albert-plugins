@@ -28,7 +28,7 @@ lines = [
     li.split(maxsplit=2)
     for li in subprocess.check_output(["errno", "--list"]).decode("utf-8").splitlines()
 ]
-codes_d: Dict[int, Tuple[str, str]] = {li[1]: (li[0], li[2]) for li in lines}
+codes_d: Dict[str, Tuple[str, str]] = {li[1]: (li[0], li[2]) for li in lines}
 dev_mode = False
 
 # plugin main functions -----------------------------------------------------------------------
@@ -59,13 +59,13 @@ def handleQuery(query) -> list:
             if results_setup:
                 return results_setup
 
-            query_str = query.string
+            query_str: str = query.string
             for item in codes_d.items():
                 if query_str in item[0]:
                     results.append(get_as_item(item))
                 else:
                     for v in item[1]:
-                        if query_str in v:
+                        if query_str.lower() in v.lower():
                             results.append(get_as_item(item))
                             break
 
@@ -95,7 +95,7 @@ def handleQuery(query) -> list:
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_as_item(t: Tuple[int, Tuple[str, str]]):
+def get_as_item(t: Tuple[str, Tuple[str, str]]):
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,

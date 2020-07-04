@@ -110,3 +110,4 @@ Session.vim
 /.viminfo
 /.local/
 /.cookiecutter_replay/
+/.vim/
