@@ -101,6 +101,18 @@
       "name": "Sleepbot Environmental Broadcast 56K MP3"
     },
     {
+        "url": "https://somafm.com/thetrip130.pls",
+        "name": "The Trip",
+        "icon": "thetrip",
+        "homepage": "https://somafm.com/thetrip"
+    },
+    {
+        "url": "https://somafm.com/beatblender130.pls",
+        "name": "Beat Blender",
+        "icon": "beatblender-400",
+        "homepage": "https://somafm.com/beatblender/"
+    },
+    {
       "url": "https://somafm.com/deepspaceone130.pls",
       "name": "Deep Space One",
       "icon": "deepspaceone120",

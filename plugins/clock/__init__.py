@@ -1,23 +1,29 @@
 """Countdown/Stopwatch functionalities."""
-import os
-import shutil
 import subprocess
-import sys
 import threading
 import time
 import traceback
-from abc import ABC, abstractmethod
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import (
+    List,
+    Optional,
+    Union,
+)
 
 import gi
-from fuzzywuzzy import process
 from overrides import overrides
 
 import albertv0 as v0
 
 gi.require_version("Notify", "0.7")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip
+from gi.repository import (
+    GdkPixbuf,
+    Notify,
+)  # isort:skip
 
 
 __iid__ = "PythonInterface/v0.2"
@@ -44,11 +50,13 @@ dev_mode = True
 
 def play_sound(num):
     for x in range(num):
-        t = threading.Timer(0.5 * x, lambda: subprocess.Popen(["cvlc", sound_path]))
+        t = threading.Timer(0.5 * x, lambda: subprocess.Popen(["cvlc", sound_path,]),)
         t.start()
 
 
-def notify(app_name: str, msg: str, image=None):
+def notify(
+    app_name: str, msg: str, image=None,
+):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
@@ -71,7 +79,7 @@ class Watch(ABC):
         self._name = name if name is not None else ""
         self._to_remove = False
 
-    def name(self) -> Optional[str]:
+    def name(self,) -> Optional[str]:
         return self._name
 
     @abstractmethod
@@ -90,7 +98,7 @@ class Watch(ABC):
     def notify(self):
         pass
 
-    def to_remove(self) -> bool:
+    def to_remove(self,) -> bool:
         return False
 
 
@@ -113,12 +121,16 @@ class Stopwatch(Watch):
         stop_time = time.time()
         self.total_time += stop_time - self.latest_start
         self._started = False
-        self.notify(msg=f"Stopwatch [{self.name()}] paused, total: {format_time(self.total_time)}")
+        self.notify(
+            msg=f"Stopwatch [{self.name()}] paused, total: {format_time(self.total_time)}"
+        )
         self.latest_stop_time = stop_time
 
     @overrides
     def notify(self, msg):
-        notify(app_name="Stopwatch", msg=msg, image=stopwatch_path)
+        notify(
+            app_name="Stopwatch", msg=msg, image=stopwatch_path,
+        )
 
     @classmethod
     def icon(cls):
@@ -137,14 +149,16 @@ class Stopwatch(Watch):
         total = self.total_time + current_interval
         s = get_as_subtext_field(play_icon(self._started))
         s += get_as_subtext_field(self.name())
-        s += get_as_subtext_field(format_time(total), "Total")
-        s += get_as_subtext_field(format_time(current_interval), "Current Interval")[:-2]
+        s += get_as_subtext_field(format_time(total), "Total",)
+        s += get_as_subtext_field(format_time(current_interval), "Current Interval",)[:-2]
 
         return s
 
 
 class Countdown(Watch):
-    def __init__(self, name: str, count_from: float):
+    def __init__(
+        self, name: str, count_from: float,
+    ):
         super(Countdown, self).__init__(name=name)
         self.latest_start = 0
         self.remaining_time = count_from
@@ -155,7 +169,7 @@ class Countdown(Watch):
     def start(self):
         self._started = True
         self.latest_start = time.time()
-        self.timer = threading.Timer(self.remaining_time, self.time_elapsed)
+        self.timer = threading.Timer(self.remaining_time, self.time_elapsed,)
         self.timer.start()
         self.notify(
             msg=f"Countdown [{self.name()}] starting, remaining: {format_time(self.remaining_time)}"
@@ -167,12 +181,12 @@ class Countdown(Watch):
         self.remaining_time -= time.time() - self.latest_start
         if self.timer:
             self.timer.cancel()
-            self.notify(msg=f"Countdown [{self.name()}] paused, remaining: {format_time(self.remaining_time)}")
+            self.notify(
+                msg=f"Countdown [{self.name()}] paused, remaining: {format_time(self.remaining_time)}"
+            )
 
     def time_elapsed(self):
-        self.notify(
-            msg=f"Countdown [{self.name()}] finished"
-        )
+        self.notify(msg=f"Countdown [{self.name()}] finished")
         play_sound(1)
         self._to_remove = True
 
@@ -186,7 +200,9 @@ class Countdown(Watch):
 
     @overrides
     def notify(self, msg):
-        notify(app_name="Countdown", msg=msg, image=countdown_path)
+        notify(
+            app_name="Countdown", msg=msg, image=countdown_path,
+        )
 
     def __str__(self):
         s = get_as_subtext_field(play_icon(self._started))
@@ -206,7 +222,10 @@ stopwatches: List[Stopwatch] = []
 
 
 def all_watches() -> List[Union[Countdown, Stopwatch]]:
-    return [*countdowns, *stopwatches]
+    return [
+        *countdowns,
+        *stopwatches,
+    ]
 
 
 def create_stopwatch(name, *query_parts):
@@ -217,7 +236,7 @@ def create_stopwatch(name, *query_parts):
 def create_countdown(name, *query_parts):
     t = float(query_parts[0].strip()) * 60
 
-    countdowns.append(Countdown(name=name, count_from=t))
+    countdowns.append(Countdown(name=name, count_from=t,))
     countdowns[-1].start()
 
 
@@ -235,15 +254,21 @@ def initialize():
     """Called when the extension is loaded (ticked in the settings) - blocking."""
 
     # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
+    for p in (
+        cache_path,
+        config_path,
+        data_path,
+    ):
+        p.mkdir(
+            parents=False, exist_ok=True,
+        )
 
 
 def finalize():
     pass
 
 
-def handleQuery(query) -> list:
+def handleQuery(query,) -> list:
     """Hook that is called by albert with *every new keypress*."""  # noqa
     results = []
 
@@ -275,7 +300,7 @@ def handleQuery(query) -> list:
                             v0.FuncAction(
                                 "Create countdown",
                                 lambda name=name, query_parts=query_parts: create_countdown(
-                                    name, *query_parts
+                                    name, *query_parts,
                                 ),
                             )
                         ],
@@ -290,7 +315,7 @@ def handleQuery(query) -> list:
                             v0.FuncAction(
                                 "Create stopwatch",
                                 lambda name=name, query_parts=query_parts: create_stopwatch(
-                                    name, *query_parts
+                                    name, *query_parts,
                                 ),
                             )
                         ],
@@ -299,7 +324,10 @@ def handleQuery(query) -> list:
             )
 
             # cleanup watches that are done
-            for li in [countdowns, stopwatches]:
+            for li in [
+                countdowns,
+                stopwatches,
+            ]:
                 for watch in li:
                     if watch.to_remove():
                         li.remove(watch)
@@ -334,11 +362,11 @@ def handleQuery(query) -> list:
 
 def get_as_item(item: Union[Countdown, Stopwatch]):
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    actions = [v0.FuncAction("Remove", lambda: delete_item(item))]
+    actions = [v0.FuncAction("Remove", lambda: delete_item(item),)]
     if item.started():
-        actions.append(v0.FuncAction("Pause", lambda: item.pause()))
+        actions.append(v0.FuncAction("Pause", lambda: item.pause(),))
     else:
-        actions.append(v0.FuncAction("Resume", lambda: item.start()))
+        actions.append(v0.FuncAction("Resume", lambda: item.start(),))
 
     return v0.Item(
         id=__prettyname__,
@@ -366,13 +394,13 @@ def get_as_subtext_field(field, field_title=None) -> str:
 
 def save_data(data: str, data_name: str):
     """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
+    with open(config_path / data_name, "w",) as f:
         f.write(data)
 
 
-def load_data(data_name) -> str:
+def load_data(data_name,) -> str:
     """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
+    with open(config_path / data_name, "r",) as f:
         data = f.readline().strip().split()[0]
 
     return data

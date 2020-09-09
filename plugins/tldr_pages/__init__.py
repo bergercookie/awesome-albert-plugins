@@ -161,7 +161,9 @@ def get_cmd_as_item(pair: Tuple[str, Path]):
         more_info_url = None
         try:
             more_info = [li for li in all_lines if "More information" in li][0]
-            more_info_url = re.search("<(.*)>", more_info).groups()[0]
+            more_info_url = re.search("<(.*)>", more_info)
+            if more_info_url.groups():
+                more_info_url = more_info_url.groups()[0]
         except IndexError:
             pass
 
