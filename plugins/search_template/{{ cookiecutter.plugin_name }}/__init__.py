@@ -123,6 +123,17 @@ def handleQuery(query) -> list:
 
                 results.extend(googler_results)
 
+                if not results:
+                    results.insert(
+                        0,
+                        v0.Item(
+                            id=__prettyname__,
+                            icon=icon_path,
+                            text="No results.",
+                            actions=[],
+                        ),
+                    )
+
         except Exception:  # user to report error
             results.insert(
                 0,
