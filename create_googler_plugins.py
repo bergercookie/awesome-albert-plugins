@@ -59,7 +59,6 @@ generate_plugins_only_for = [
     "wikipedia",
     "wikiquote",
     "yahoo",
-    "youtube",
     "cambridge",
 ]
 
@@ -87,6 +86,13 @@ custom_plugins = {
     "search_rust": {"googler_at": "https://doc.rust-lang.org", "trigger": "ru"},
     "search_rustcreates": {"googler_at": "https://docs.rs", "trigger": "rc"},
     "search_ubuntu": {"googler_at": "https://packages.ubuntu.com", "trigger": "ubu"},
+    "search_youtube": {
+        "trigger": "yt",
+        "googler_at": "youtube.com",
+        "url_handler": "mpv",
+        "url_handler_check_cmd": "which mpv && which youtube-dl",
+        "url_handler_description": "Launch using mpv"
+    },
 }
 
 
@@ -138,7 +144,8 @@ def googler_plugins() -> dict:
     return googler_plugins
 
 
-def get_cookiecutter_directives(plugin_name, trigger, googler_at):
+def get_cookiecutter_directives(plugin_name, trigger, googler_at, url_handler,
+                                url_handler_description, url_handler_check_cmd):
     github_user = "bergercookie"
 
     cookiecutter_directives = {
@@ -146,6 +153,9 @@ def get_cookiecutter_directives(plugin_name, trigger, googler_at):
         "plugin_name": plugin_name,
         "trigger": trigger,
         "googler_at": googler_at,
+        "url_handler": url_handler,
+        "url_handler_description": url_handler_description,
+        "url_handler_check_cmd": url_handler_check_cmd,
         "github_user": github_user,
         "repo_base_url": f"https://github.com/{github_user}/awesome-albert-plugins/blob/master/plugins/",
         "download_url_base": f"https://raw.githubusercontent.com/{github_user}/awesome-albert-plugins/master/plugins/{plugin_name}/",
@@ -195,6 +205,9 @@ def main():  # noqa
         plugin_name = plugin[0]
         trigger = plugin[1]["trigger"]
         googler_at = plugin[1]["googler_at"]
+        url_handler = plugin[1].get("url_handler", "")
+        url_handler_description = plugin[1].get("url_handler_description", "")
+        url_handler_check_cmd = plugin[1].get("url_handler_check_cmd", "")
 
         print()
         print("===============================================")
@@ -215,7 +228,12 @@ def main():  # noqa
             no_input=True,
             overwrite_if_exists=True,
             extra_context=get_cookiecutter_directives(
-                plugin_name=plugin_name, trigger=trigger, googler_at=googler_at
+                plugin_name=plugin_name,
+                trigger=trigger,
+                googler_at=googler_at,
+                url_handler=url_handler,
+                url_handler_description=url_handler_description,
+                url_handler_check_cmd=url_handler_check_cmd,
             ),
             output_dir=get_output_dir(plugin_name).parent,
         )

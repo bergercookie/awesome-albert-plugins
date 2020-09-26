@@ -37,6 +37,24 @@ data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
 # see: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
 googler_at = "{{ cookiecutter.googler_at }}"
 
+# special way to handle the url?
+url_handler = "{{ cookiecutter.url_handler }}"
+
+url_handler_check_cmd = "{{ cookiecutter.url_handler_check_cmd }}"
+if url_handler_check_cmd:
+    p = subprocess.Popen(url_handler_check_cmd, shell=True)
+    p.communicate()
+    if p.returncode != 0:
+        print(
+            f'[W] Disabling the url handler "{url_handler}"... - Condition {url_handler_check_cmd} not met'
+        )
+        url_handler = None
+
+
+url_handler_desc = "{{ cookiecutter.url_handler_description }}"
+if not url_handler_desc:
+    url_handler_desc = "Run special action"
+
 # plugin main functions -----------------------------------------------------------------------
 
 
@@ -127,10 +145,7 @@ def handleQuery(query) -> list:
                     results.insert(
                         0,
                         v0.Item(
-                            id=__prettyname__,
-                            icon=icon_path,
-                            text="No results.",
-                            actions=[],
+                            id=__prettyname__, icon=icon_path, text="No results.", actions=[],
                         ),
                     )
 
@@ -178,6 +193,15 @@ def get_googler_result_as_item(googler_item: dict):
         v0.UrlAction("Open in browser", googler_item["url"]),
         v0.ClipAction("Copy URL", googler_item["url"]),
     ]
+
+    if url_handler:
+        # check that the handler is actually there
+        actions.insert(0, v0.FuncAction(
+            url_handler_desc,
+            lambda url_handler=url_handler: subprocess.Popen(
+                f'{url_handler} {googler_item["url"]}', shell=True
+            ),
+        ))
 
     return v0.Item(
         id=__prettyname__,
