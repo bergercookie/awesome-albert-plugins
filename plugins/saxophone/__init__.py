@@ -1,19 +1,26 @@
 """Saxophone - Play internet radio streams from albert."""
 
-import json
-import operator
-import os
-import signal
-import subprocess
-import time
-import traceback
+# TODO When actually searching do not show favorites on top
+# TODO - Enable using dbus-send for wm widget integration
+
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
+import json
+import operator
+import os
+import time
 
-from loguru import logger
-
+import traceback
+import mpv
 import albertv0 as v0
+
+import gi # isort:skip
+gi.require_version("Notify", "0.7")  # isort:skip
+from gi.repository import (
+    GdkPixbuf,
+    Notify,
+)  # isort:skip
 
 __iid__ = "PythonInterface/v0.2"
 __prettyname__ = "Saxophone - Play internet radio streams from albert"
@@ -31,6 +38,12 @@ icons_path = Path(__file__).parent / "images"
 def get_icon(icon: str):
     return str(icons_path / icon)
 
+def notify(
+    app_name: str, msg: str, image=None,
+):
+    Notify.init(app_name)
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
 
 icon_path = get_icon("saxophone")
 stop_icon_path = get_icon("stop_icon")
@@ -86,23 +99,25 @@ class Stream:
         else:
             self._url_type = UrlType.RAW_STREAM
 
+        self.player = mpv.MPV(log_handler=self.debug_print)
+        self.player.observe_property("metadata", self.on_metadata_change)
+
+    def on_metadata_change(self, name, value):
+        if value:
+            notify("Saxophone", value.get('icy-title', ""), self.icon())
+
+        # Send to dbus
+
+    def debug_print(self, loglevel, component, message):
+        print(f"[{loglevel}] {component}: {message}")
+
     def url_type(self) -> UrlType:
         return self._url_type
 
     def is_on(self) -> bool:
-        if self._process is None:
-            return False
+        return self.player.idle_active == False
 
-        # if poll() is None then it's running!
-        if self._process.poll() is not None:
-            # process has been externally killed
-            self._process = None
-            return False
-
-        # still running..
-        return True
-
-    def icon(self) -> Optional[Path]:
+    def icon(self) -> Optional[str]:
         """Cache the icon."""
         if self._icon is None:
             return None
@@ -110,9 +125,10 @@ class Stream:
         return get_icon(self._icon)
 
     def play(self):
-        self._process = subprocess.Popen(["cvlc", self.url])
-        with open(pids_path / str(self._process.pid), "w"):
-            pass
+        self.player.play(self.url)
+
+    def stop(self):
+        self.player.stop()
 
 
 streams: List[Stream] = []
@@ -149,41 +165,25 @@ def check_pid(pid: int) -> bool:
 
 def is_radio_on() -> bool:
     """Check if any of the streams are on."""
-    return len(list(pids_path.iterdir())) != 0
+    return any([s.is_on() for s in streams])
+    return True
 
 
 def stop_radio():
-    """Turn of the radio."""
-    for pid_f in pids_path.iterdir():
-        try:
-            # process may not exist - perhaps albert exited in the meantime.
-            os.kill(int(pid_f.stem), signal.SIGTERM)
-        except ProcessLookupError:
-            pass
-        finally:
-            os.remove(pid_f)
-
-    return  # no radio was active
+    """Turn off the radio."""
+    for s in streams:
+        s.stop()
 
 
 def start_stream(stream: Stream):
     """Stop any running stream, then start the indicated one."""
 
     if stream.is_on():
-        logger.info(f'Stream "{stream.name}" is already on')
         return
 
     stop_radio()
     stream.play()
 
-
-# TODO When actually searching do not show favorites on top
-# TODO - Write PIDs to file and kill them using that - these structs will not survive a re-import of the python module
-# TODO - Icons - configure properly - move them to misc directory
-# TODO - Add to enums - handle m3u, pls, raw
-# TODO - System notification
-# TODO - System tray notification
-# TODO - Check the links as part of CI
 
 # albert functions ----------------------------------------------------------------------------
 

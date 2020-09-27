@@ -14,11 +14,11 @@ from typing import (
     Union,
 )
 
-import gi
 from overrides import overrides
 
 import albertv0 as v0
 
+import gi # isort:skip
 gi.require_version("Notify", "0.7")  # isort:skip
 from gi.repository import (
     GdkPixbuf,
