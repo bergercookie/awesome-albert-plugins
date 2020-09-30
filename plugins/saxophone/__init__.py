@@ -99,7 +99,7 @@ class Stream:
         else:
             self._url_type = UrlType.RAW_STREAM
 
-        self.player = mpv.MPV(log_handler=self.debug_print)
+        self.player = mpv.MPV(config=False, log_handler=self.debug_print)
         self.player.observe_property("metadata", self.on_metadata_change)
 
     def on_metadata_change(self, name, value):
