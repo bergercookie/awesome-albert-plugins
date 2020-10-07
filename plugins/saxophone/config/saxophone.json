@@ -2,6 +2,37 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "http://edge.espn.cdn.abacast.net/espn-networkmp3-48",
+      "name": "ESPN Radio",
+      "homepage": "https://www.espn.com/",
+      "icon": "espn.png"
+    },
+    {
+      "url": "http://uk1.internet-radio.com:8267/listen.pls&t=.pls",
+      "name": "White Noise"
+    },
+    {
+      "url": "http://cast.streams.ovh:8008/listen.pls?sid=1&t=.pls",
+      "name": "Trance Athena"
+    },
+    {
+      "url": "http://realfm.live24.gr/realfm",
+      "name": "RealFM 97.8",
+      "homepage": " http://www.realfm.gr/"
+    },
+    {
+      "url": "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1_mf_q",
+      "name": "BBC Radio 1",
+      "homepage": "https://www.bbc.co.uk/radio1",
+      "icon": "bbc1.png"
+    },
+    {
+      "url": "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio2_mf_q",
+      "name": "BBC Radio 2",
+      "homepage": "https://www.bbc.co.uk/radio2",
+      "icon": "bbc2.jpg"
+    },
+    {
       "url": "http://198.245.60.88:8128/listen.pls?sid=1",
       "name": "Skylab Radio",
       "homepage": "https://www.skylabradio.com",

@@ -71,7 +71,7 @@ custom_plugins = {
     "search_wikiquote": {"googler_at": "en.wikiquote.org", "trigger": "quote"},
     "search_urbandictionary": {"googler_at": "urbandictionary.com", "trigger": "ud"},
     "search_dlib": {"googler_at": "dlib.net", "trigger": "dlib"},
-    "search_opencv": {"googler_at": "docs.opencv.org", "trigger": "cv"},
+    "search_opencv": {"googler_at": "docs.opencv.org", "trigger": "cv2"},
     "search_pydocs": {"googler_at": "docs.python.org", "trigger": "pydocs"},
     "search_numpy": {"googler_at": "numpy.org/doc", "trigger": "np"},
     "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
