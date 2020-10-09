@@ -48,6 +48,10 @@ Currently the list of plugins includes:
       when there is a 0.3 seconds difference between keystrokes. Thus, it's
       common when you actually want to send a request to wait a bit and then
       append a space character at the end of the query.
+
+    Install `google-chrome` or `chromium-browser` to add an "Open in incognito
+    mode" option
+
 * PulseAudio - Select pulseaudio input/output devices, sound card profiles
 * Improved implementations of the original `Pass`, `Pomodoro` plugins
 * Create stopwatches and countdowns

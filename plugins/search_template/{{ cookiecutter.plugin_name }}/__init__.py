@@ -37,7 +37,7 @@ data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
 # see: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
 googler_at = "{{ cookiecutter.googler_at }}"
 
-# special way to handle the url?
+# special way to handle the url? --------------------------------------------------------------
 url_handler = "{{ cookiecutter.url_handler }}"
 
 url_handler_check_cmd = "{{ cookiecutter.url_handler_check_cmd }}"
@@ -54,6 +54,18 @@ if url_handler_check_cmd:
 url_handler_desc = "{{ cookiecutter.url_handler_description }}"
 if not url_handler_desc:
     url_handler_desc = "Run special action"
+
+# browser -------------------------------------------------------------------------------------
+# look for google-chrome first
+inco_browser = shutil.which("google-chrome")
+if not inco_browser:
+    inco_browser = shutil.which("chromium-browser")
+
+if inco_browser:
+    inco_cmd = lambda url: subprocess.Popen([inco_browser, "--incognito", url])
+else:
+    inco_cmd = None
+
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -194,14 +206,28 @@ def get_googler_result_as_item(googler_item: dict):
         v0.ClipAction("Copy URL", googler_item["url"]),
     ]
 
+    # incognito search
+    if inco_cmd:
+        actions.insert(
+            1,
+            v0.FuncAction(
+                "Open in browser [incognito mode]",
+                lambda url=googler_item["url"]: inco_cmd(url),
+            ),
+        )
+
+    # special url handler
     if url_handler:
         # check that the handler is actually there
-        actions.insert(0, v0.FuncAction(
-            url_handler_desc,
-            lambda url_handler=url_handler: subprocess.Popen(
-                f'{url_handler} {googler_item["url"]}', shell=True
+        actions.insert(
+            0,
+            v0.FuncAction(
+                url_handler_desc,
+                lambda url_handler=url_handler: subprocess.Popen(
+                    f'{url_handler} {googler_item["url"]}', shell=True
+                ),
             ),
-        ))
+        )
 
     return v0.Item(
         id=__prettyname__,
