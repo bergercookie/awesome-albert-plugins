@@ -6,8 +6,10 @@ import subprocess
 import sys
 import traceback
 from pathlib import Path
+from typing import List, Dict
 
 from fuzzywuzzy import process
+from gi.repository import GdkPixbuf, Notify
 
 import albertv0 as v0
 
@@ -82,6 +84,13 @@ def handleQuery(query) -> list:
 
 
 # supplementary functions ---------------------------------------------------------------------
+
+def notify(
+     msg: str, app_name: str=__prettyname__, image=str(icon_path),
+):
+    Notify.init(app_name)
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
 
 
 def get_as_item():

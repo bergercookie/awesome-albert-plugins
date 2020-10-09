@@ -17,6 +17,7 @@ This is a collection of plugins and themes for the
 
 Currently the list of plugins includes:
 
+* Killproc: Kill process(es); allows killing multiple processes with the same name or based on a glob - Improved version of the original albert plugin
 * Timezones - Fuzzy-search timezones
 * Colors - Lookup the RGB triplet or the hex code for the given color
 * Jira - Issue Tracking
@@ -74,7 +75,7 @@ your case).
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png) |
 
 ## Motivation
 
