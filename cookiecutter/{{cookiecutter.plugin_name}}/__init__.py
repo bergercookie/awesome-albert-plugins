@@ -9,14 +9,16 @@ from pathlib import Path
 from typing import List, Dict
 
 from fuzzywuzzy import process
+{%- if cookiecutter.use_notifications == 'y' %}
 from gi.repository import GdkPixbuf, Notify
+{%- endif %}
 
 import albertv0 as v0
 
 __iid__ = "PythonInterface/{{ cookiecutter.albert_plugin_interface }}"
 __prettyname__ = "{{ cookiecutter.plugin_short_description }}"
 __version__ = "{{ cookiecutter.version }}"
-__trigger__ = "{{ cookiecutter.plugin_name }} "
+__trigger__ = "{{ cookiecutter.trigger }} "
 __author__ = "{{ cookiecutter.author }}"
 __dependencies__ = []
 __homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
@@ -85,12 +87,14 @@ def handleQuery(query) -> list:
 
 # supplementary functions ---------------------------------------------------------------------
 
+{%- if cookiecutter.use_notifications == 'y' %}
 def notify(
      msg: str, app_name: str=__prettyname__, image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
+{%- endif %}
 
 
 def get_as_item():

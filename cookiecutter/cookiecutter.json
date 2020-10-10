@@ -5,5 +5,7 @@
     "repo_base_url": "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins",
     "plugin_short_description": "Some title for your plugin",
     "albert_plugin_interface": "v0.2",
-    "version": "0.1.0"
+    "trigger": "{{ cookiecutter.plugin_name }}",
+    "version": "0.1.0",
+    "use_notifications": "y"
 }

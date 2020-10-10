@@ -7,7 +7,7 @@
 
 ## Demo
 
-![demo_gif]({{ cookiecutter.parent_repo_url }}/misc/demo.gif)
+| ![basic-usage](misc/demo0.png) | ![basic-usage](misc/demo1.png) |
 
 ## Installation instructions
 
