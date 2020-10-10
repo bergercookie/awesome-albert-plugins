@@ -17,7 +17,7 @@ import albertv0 as v0
 __iid__ = "PythonInterface/v0.2"
 __prettyname__ = "IPs of the host machine"
 __version__ = "0.1.0"
-__trigger__ = "ip"
+__trigger__ = "ip "
 __author__ = "Nikos Koukis"
 __dependencies__ = []
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
