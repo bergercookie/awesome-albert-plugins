@@ -155,10 +155,19 @@ that I'm currently either working on or interested in implementing in the near
 future. In case there's something you are interesting in working on, don't
 hesitate to either ask for clarifications or just do it and directly make a PR.
 
-### Plugin ideas
+### Ideas List (feel free to contribute)
 
-* :construction: Emoji - Improved version of original `dango_kaoi` emojis plugin
-* :construction: [Radio Paradise player](https://radioparadise.com/player)
+* :construction: Lookup abbreviations / slang words (either stored in textfiles
+    locally or else look them up in the web)
+* :construction: Emoji - Improved version of original `dango_kao` emojis plugin
+    with thumbnail-like preview of each one?
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
-* :construction: Filesystem directory listing
-* :construction: devdocs.io search
+* :construction: Devdocs.io/Zeal/Dash search
+* :construction: Lookup weather
+* :construction: Manage your VPN connections - Frontend to `WireGuard`?
+* :construction: Spotify mini player - similar  to [this](https://github.com/vdesabou/alfred-spotify-mini-player)
+* :construction: [Radio Paradise player](https://radioparadise.com/player)
+  * Sign-in - grab password from `pass` as in `Jira` plugin
+  * Ability to mark as favorite / change stream
+* :construction: Movie search and ratings - be able to sign in to various
+    services and (e.g., imdb) and submit a rating for a movie
