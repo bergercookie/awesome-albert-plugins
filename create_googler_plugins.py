@@ -63,6 +63,7 @@ generate_plugins_only_for = [
 ]
 
 custom_plugins = {
+    "search_patreon": {"trigger": "patreon", "googler_at": "patreon.com"},
     "search_amazon": {"trigger": "ama", "googler_at": "amazon.co.uk"},
     "search_google": {"trigger": "gg", "googler_at": ""},
     "search_cppreference": {"trigger": "cpp", "googler_at": "en.cppreference.com"},

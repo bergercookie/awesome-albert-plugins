@@ -171,3 +171,7 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
   * Ability to mark as favorite / change stream
 * :construction: Movie search and ratings - be able to sign in to various
     services and (e.g., imdb) and submit a rating for a movie
+* :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
+* :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
+* :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
+  + Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`

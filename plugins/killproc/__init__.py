@@ -185,6 +185,7 @@ def get_as_item(p: Process, *extra_actions):
         actions = [
             v0.FuncAction("Terminate", lambda: p.terminate()),
             v0.FuncAction("Kill", lambda: p.kill()),
+            v0.ClipAction("Get PID", f"{p.pid}"),
             v0.FuncAction(
                 "Terminate matching names",
                 lambda name=p.name(): kill_by_name(name, signal=signal.SIGTERM),
