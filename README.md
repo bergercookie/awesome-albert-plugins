@@ -158,8 +158,6 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Ideas List (feel free to contribute)
 
-* :construction: Lookup abbreviations / slang words (either stored in textfiles
-    locally or else look them up in the web)
 * :construction: Emoji - Improved version of original `dango_kao` emojis plugin
     with thumbnail-like preview of each one?
 * :construction: Giphy - https://github.com/Giphy/giphy-python-client
