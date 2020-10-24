@@ -1,12 +1,13 @@
 """{{ cookiecutter.plugin_short_description }}."""
 
+from pathlib import Path
+from typing import List, Dict
 import os
 import shutil
 import subprocess
 import sys
+import time
 import traceback
-from pathlib import Path
-from typing import List, Dict
 
 from fuzzywuzzy import process
 {%- if cookiecutter.use_notifications == 'y' %}
@@ -29,6 +30,35 @@ cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
 dev_mode = True
+
+{%- if cookiecutter.include_keystroke_monitor == 'y' %}
+# KeystrokeMonitor clss -----------------------------------------------------------------------
+class KeystrokeMonitor:
+    def __init__(self):
+        super(KeystrokeMonitor, self)
+        self.thres = 0.3  # s
+        self.prev_time = time.time()
+        self.curr_time = time.time()
+
+    def report(self):
+        self.prev_time = time.time()
+        self.curr_time = time.time()
+        self.report = self.report_after_first
+
+    def report_after_first(self):
+        # update prev, curr time
+        self.prev_time = self.curr_time
+        self.curr_time = time.time()
+
+    def triggered(self) -> bool:
+        return self.curr_time - self.prev_time > self.thres
+
+    def reset(self) -> None:
+        self.report = self.report_after_first
+{%- endif %}
+
+# Do not flood the web server with queries, otherwise it may block your IP.
+keys_monitor = KeystrokeMonitor()
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -59,8 +89,21 @@ def handleQuery(query) -> list:
             if results_setup:
                 return results_setup
 
+            query_str = query.string
+
+{%- if cookiecutter.include_keystroke_monitor == 'y' %}
+            if len(query_str) < 2:
+                keys_monitor.reset()
+                return results
+
+            keys_monitor.report()
+            if keys_monitor.triggered():
+                # modify this...
+                results.append(get_as_item())
+{%- else %}
             # modify this...
             results.append(get_as_item())
+{%- endif %}
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
@@ -95,7 +138,6 @@ def notify(
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
 {%- endif %}
-
 
 def get_as_item():
     """Return an item - ready to be appended to the items list and be rendered by Albert."""

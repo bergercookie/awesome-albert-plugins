@@ -19,7 +19,7 @@ import albertv0 as v0
 __iid__ = "PythonInterface/v0.2"
 __prettyname__ = "User-defined abbreviations read/written a file"
 __version__ = "0.1.0"
-__trigger__ = "abbr "
+__trigger__ = "ab "
 __author__ = "Nikos Koukis"
 __dependencies__ = []
 __homepage__ = (
