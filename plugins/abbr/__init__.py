@@ -45,7 +45,7 @@ split_at = ":"
 
 if abbr_store_fname.is_file():
     with open(abbr_store_fname, "r") as f:
-        p = Path(f.readline().strip())
+        p = Path(f.readline().strip()).expanduser()
         if not p.is_file():
             raise FileNotFoundError(p)
 
