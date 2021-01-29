@@ -11,14 +11,14 @@ from typing import Dict, List, Tuple
 
 from fuzzywuzzy import process
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "TL;DR pages from albert."
-__version__ = "0.1.0"
-__trigger__ = "tldr "
-__author__ = "Nikos Koukis"
-__dependencies__ = ["git"]
+__title__ = "TL;DR pages from albert."
+__version__ = "0.1.1"
+__triggers__ = "tldr "
+__authors__ = "Nikos Koukis"
+__exec_deps__ = ["git"]
+__py_deps__ = ["fuzzywuzzy"]
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//tldr_pages"
 )
@@ -83,19 +83,19 @@ def handleQuery(query) -> list:
             if not len(query_text):
                 results = [
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="Update tldr database",
                         actions=[v0.FuncAction("Update", lambda: update_tldr_db())],
                     ),
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="Reindex tldr pages",
                         actions=[v0.FuncAction("Reindex", lambda: reindex_tldr_pages())],
                     ),
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="Need at least 1 letter to offer suggestions",
                         actions=[],
@@ -120,7 +120,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -177,10 +177,10 @@ def get_cmd_as_item(pair: Tuple[str, Path]):
         actions.append(v0.UrlAction("More information", more_info_url))
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=pair[0],
-        completion=" ".join([__trigger__, pair[0]]),
+        completion=" ".join([__triggers__, pair[0]]),
         subtext=" ".join(description_lines),
         actions=actions,
     )
@@ -204,7 +204,7 @@ def get_cmd_items(pair: Tuple[str, Path]):
 
         items.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=example_cmd,
                 subtext=desc,
