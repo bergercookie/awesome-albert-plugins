@@ -11,12 +11,14 @@ from typing import Dict, List, Tuple
 
 from fuzzywuzzy import process
 
-import albertv0 as v0
+#import albertv0 as v0
+from albert import *
 
 __iid__ = "PythonInterface/v0.2"
+__title__ = "tldr.sh"
 __prettyname__ = "TL;DR pages from albert."
 __version__ = "0.1.0"
-__trigger__ = "tldr "
+__triggers__ = "tldr "
 __author__ = "Nikos Koukis"
 __dependencies__ = ["git"]
 __homepage__ = (
@@ -25,9 +27,9 @@ __homepage__ = (
 
 icon_path = str(Path(__file__).parent / "tldr_pages")
 
-cache_path = Path(v0.cacheLocation()) / "tldr_pages"
-config_path = Path(v0.configLocation()) / "tldr_pages"
-data_path = Path(v0.dataLocation()) / "tldr_pages"
+cache_path = Path(cacheLocation()) / "tldr_pages"
+config_path = Path(configLocation()) / "tldr_pages"
+data_path = Path(dataLocation()) / "tldr_pages"
 
 tldr_root = cache_path / "tldr"
 pages_root = tldr_root / "pages"
@@ -82,19 +84,19 @@ def handleQuery(query) -> list:
 
             if not len(query_text):
                 results = [
-                    v0.Item(
+                    Item(
                         id=__prettyname__,
                         icon=icon_path,
                         text="Update tldr database",
-                        actions=[v0.FuncAction("Update", lambda: update_tldr_db())],
+                        actions=[FuncAction("Update", lambda: update_tldr_db())],
                     ),
-                    v0.Item(
+                    Item(
                         id=__prettyname__,
                         icon=icon_path,
                         text="Reindex tldr pages",
-                        actions=[v0.FuncAction("Reindex", lambda: reindex_tldr_pages())],
+                        actions=[FuncAction("Reindex", lambda: reindex_tldr_pages())],
                     ),
-                    v0.Item(
+                    Item(
                         id=__prettyname__,
                         icon=icon_path,
                         text="Need at least 1 letter to offer suggestions",
@@ -119,12 +121,12 @@ def handleQuery(query) -> list:
 
             results.insert(
                 0,
-                v0.Item(
+                Item(
                     id=__prettyname__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        v0.ClipAction(
+                        ClipAction(
                             f"Copy error - report it to {__homepage__[8:]}",
                             f"{traceback.format_exc()}",
                         )
@@ -168,15 +170,15 @@ def get_cmd_as_item(pair: Tuple[str, Path]):
             pass
 
     actions = [
-        v0.ClipAction("Copy command", pair[0]),
-        v0.UrlAction(
+        ClipAction("Copy command", pair[0]),
+        UrlAction(
             "Do a google search", f'https://www.google.com/search?q="{pair[0]}" command'
         ),
     ]
     if more_info_url:
-        actions.append(v0.UrlAction("More information", more_info_url))
+        actions.append(UrlAction("More information", more_info_url))
 
-    return v0.Item(
+    return Item(
         id=__prettyname__,
         icon=icon_path,
         text=pair[0],
@@ -203,14 +205,14 @@ def get_cmd_items(pair: Tuple[str, Path]):
         )
 
         items.append(
-            v0.Item(
+            Item(
                 id=__prettyname__,
                 icon=icon_path,
                 text=example_cmd,
                 subtext=desc,
                 actions=[
-                    v0.ClipAction("Copy command", example_cmd),
-                    v0.UrlAction(
+                    ClipAction("Copy command", example_cmd),
+                    UrlAction(
                         "Do a google search",
                         f'https://www.google.com/search?q="{pair[0]}" command',
                     ),
