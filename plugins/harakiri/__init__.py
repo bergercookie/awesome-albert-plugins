@@ -48,9 +48,7 @@ def handleQuery(query) -> list:
 
     if query.isTriggered:
         try:
-            # be backwards compatible with v0.2
-            if "disableSort" in dir(query):
-                query.disableSort()
+            query.disableSort()
 
             query_str =query.string.strip()
             results.append(get_as_item(query_str if query_str else randstr()))

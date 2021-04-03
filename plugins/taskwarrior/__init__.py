@@ -121,9 +121,7 @@ def handleQuery(query):
             results.insert(0,
                            TodayTasks(name="today", desc="Today's tasks").get_as_albert_item())
     else:
-        try:
-            if "disableSort" in dir(query):
-                query.disableSort()
+            query.disableSort()
 
             results_setup = setup(query)
             if results_setup:

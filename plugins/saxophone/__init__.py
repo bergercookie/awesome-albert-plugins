@@ -225,9 +225,7 @@ def handleQuery(query) -> list:  # noqa
         )
 
         try:
-            # be backwards compatible with v0.2
-            if "disableSort" in dir(query):
-                query.disableSort()
+            query.disableSort()
 
             results_setup = setup(query)
             if results_setup:

@@ -127,9 +127,7 @@ def handleQuery(query) -> list:
                 )
     else:
         try:
-            # be backwards compatible with v0.2
-            if "disableSort" in dir(query):
-                query.disableSort()
+            query.disableSort()
 
             # setup stage ---------------------------------------------------------------------
             results_setup = setup(query)

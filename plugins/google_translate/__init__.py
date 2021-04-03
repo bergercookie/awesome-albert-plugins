@@ -182,9 +182,7 @@ def handleQuery(query):
     results = []
     if query.isTriggered:
         try:
-            # be backwards compatible with v0.2
-            if "disableSort" in dir(query):
-                query.disableSort()
+            query.disableSort()
 
             fields = query.string.split()
             item = v0.Item(id=__title__, icon=icon_path, completion=query.rawString)

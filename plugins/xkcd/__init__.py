@@ -53,9 +53,7 @@ def handleQuery(query):
         update_xkcd_db()
 
     if query.isTriggered:
-        # be backwards compatible with v0.2
-        if "disableSort" in dir(query):
-            query.disableSort()
+        query.disableSort()
 
         try:
             with open(xkcd_dict, "r", encoding="utf-8") as f:
