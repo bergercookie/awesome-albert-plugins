@@ -15,10 +15,10 @@ import taskw
 from fuzzywuzzy import process
 from overrides import overrides
 
-import albertv0 as v0
+import albertv0 as v0  # type: ignore
 from taskw_gcal_sync import TaskWarriorSide
 
-from gi.repository import GdkPixbuf, Notify  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
 
 gi.require_version("Notify", "0.7")  # isort:skip
@@ -131,6 +131,12 @@ def handleQuery(query):
 
             if len(query_str) < 2:
                 results.extend([s.get_as_albert_item() for s in subcommands])
+                results.append(
+                    get_as_item(
+                        text="Reload list of tasks",
+                        actions=[v0.FuncAction("Reload", block_reload_tasks)],
+                    )
+                )
 
                 tasks.sort(key=lambda t: t["urgency"], reverse=True)
                 results.extend([get_tw_item(task) for task in tasks])
@@ -206,7 +212,7 @@ def block_reload_tasks():
             f.write(str(now))
 
 
-def setup(query):
+def setup(query):  # type: ignore
 
     results = []
 
@@ -258,17 +264,17 @@ def get_as_subtext_field(field, field_title=None):
 
 def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path]:
     if prio is None:
-        return None, icon_path
+        return None, Path(icon_path)
     elif prio < 4:
-        return "↓", icon_path_b
+        return "↓", Path(icon_path_b)
     elif prio < 8:
-        return "↘", icon_path_c
+        return "↘", Path(icon_path_c)
     elif prio < 11:
-        return "-", icon_path_g
+        return "-", Path(icon_path_g)
     elif prio < 15:
-        return "↗", icon_path_y
+        return "↗", Path(icon_path_y)
     else:
-        return "↑", icon_path_r
+        return "↑", Path(icon_path_r)
 
 
 def run_tw_action(args_list: list, need_pty=False):
@@ -357,7 +363,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
             field(task.get("tags"), "tags"),
             field(task.get("due"), "due"),
         )[:-2],
-        icon=icon,
+        icon=str(icon),
         completion=f'{__trigger__}{task["description"]}',
         actions=actions,
     )
@@ -425,18 +431,6 @@ class TomorrowTasks(Subcommand):
         return [get_tw_item(t) for t in get_tasks_of_date(date)]
 
 
-class SyncTasks(Subcommand):
-    def __init__(self, **kargs):
-        super(SyncTasks, self).__init__(**kargs)
-
-    @overrides
-    def get_as_albert_items_full(self, query_str):
-        item = self.get_as_albert_item()
-        item.subtext = query_str
-        item.addAction(v0.FuncAction("Fetch all tasks again", lambda: block_reload_tasks))
-        return [item]
-
-
 class SubcommandQuery:
     def __init__(self, subcommand: Subcommand, query: str):
         """
@@ -457,7 +451,6 @@ subcommands = [
     TodayTasks(name="today", desc="Today's tasks"),
     YesterdayTasks(name="yesterday", desc="Yesterday's tasks"),
     TomorrowTasks(name="tomorrow", desc="Tomorrow's tasks"),
-    SyncTasks(name="sync", desc="Fetch all tasks from the local TaskWarrior instance"),
 ]
 
 
