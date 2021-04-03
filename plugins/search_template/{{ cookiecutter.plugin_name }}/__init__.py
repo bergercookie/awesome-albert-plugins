@@ -115,15 +115,16 @@ def handleQuery(query) -> list:
     results = []
 
     if not query.isTriggered:
-        if not query.string:
-            results.append(
-                v0.Item(
-                    id=__prettyname__,
-                    icon=icon_path,
-                    text=f'Search {"_".join("{{ cookiecutter.plugin_name }}".split("_")[1:])}',
-                    completion=__trigger__,
+        if {{ cookiecutter.show_on_top_no_trigger }}:
+            if not query.string:
+                results.append(
+                    v0.Item(
+                        id=__prettyname__,
+                        icon=icon_path,
+                        text=f'Search {"_".join("{{ cookiecutter.plugin_name }}".split("_")[1:])}',
+                        completion=__trigger__,
+                    )
                 )
-            )
     else:
         try:
             # be backwards compatible with v0.2

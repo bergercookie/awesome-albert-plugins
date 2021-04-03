@@ -11,5 +11,6 @@
     "download_url_base": "https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/search_template/",
     "plugin_short_description": "Some description",
     "albert_plugin_interface": "v0.2",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "show_on_top_no_trigger": "False"
 }

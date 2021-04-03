@@ -65,7 +65,11 @@ generate_plugins_only_for = [
 
 custom_plugins = {
     "search_acronyms": {"googler_at": "https://www.allacronyms.com", "trigger": "acro"},
-    "search_amazon": {"trigger": "ama", "googler_at": "amazon.co.uk"},
+    "search_amazon": {
+        "trigger": "ama",
+        "googler_at": "amazon.co.uk",
+        "show_on_top_no_trigger": True,
+    },
     "search_cambridge_dictionary": {
         "googler_at": "dictionary.cambridge.org",
         "trigger": "cam",
@@ -73,7 +77,7 @@ custom_plugins = {
     "search_cppreference": {"trigger": "cpp", "googler_at": "en.cppreference.com"},
     "search_devhints": {"googler_at": "devhints.io", "trigger": "dev"},
     "search_dlib": {"googler_at": "dlib.net", "trigger": "dlib"},
-    "search_google": {"trigger": "gg", "googler_at": ""},
+    "search_google": {"trigger": "gg", "googler_at": "", "show_on_top_no_trigger": True},
     "search_kivy": {"trigger": "kv", "googler_at": "kivy.org"},
     "search_mdn": {
         "googler_at": "https://developer.mozilla.org/en-US/docs/Web",
@@ -90,7 +94,11 @@ custom_plugins = {
     "search_scipy": {"googler_at": "docs.scipy.org", "trigger": "sp"},
     "search_ubuntu": {"googler_at": "https://packages.ubuntu.com", "trigger": "ubu"},
     "search_urbandictionary": {"googler_at": "urbandictionary.com", "trigger": "ud"},
-    "search_wikipedia": {"googler_at": "en.wikipedia.org", "trigger": "w"},
+    "search_wikipedia": {
+        "googler_at": "en.wikipedia.org",
+        "trigger": "w",
+        "show_on_top_no_trigger": True,
+    },
     "search_wikiquote": {"googler_at": "en.wikiquote.org", "trigger": "quote"},
     "search_youtube": {
         "trigger": "yt",
@@ -98,6 +106,7 @@ custom_plugins = {
         "url_handler": "mpv",
         "url_handler_check_cmd": "which mpv && which youtube-dl",
         "url_handler_description": "Launch using mpv",
+        "show_on_top_no_trigger": True,
     },
 }
 
@@ -114,7 +123,7 @@ def get_plugin_name_wo_search(plugin_name):
 def parse_googler_at_line(line: str):
     """Parse lines of this form:
 
-        alias @zdnet='googler -w zdnet.com'\n
+    alias @zdnet='googler -w zdnet.com'\n
     """
     tokens = line.strip().split()
     googler_at = tokens[-1][:-1]  # ignore "'" in the end of line
@@ -157,6 +166,7 @@ def get_cookiecutter_directives(
     url_handler,
     url_handler_description,
     url_handler_check_cmd,
+    show_on_top_no_trigger,
 ):
     github_user = "bergercookie"
 
@@ -172,6 +182,7 @@ def get_cookiecutter_directives(
         "repo_base_url": f"https://github.com/{github_user}/awesome-albert-plugins/blob/master/plugins/",
         "download_url_base": f"https://raw.githubusercontent.com/{github_user}/awesome-albert-plugins/master/plugins/{plugin_name}/",
         "plugin_short_description": f'{plugin_name.split("_")[1].capitalize()}: Search suggestions for {plugin_name.split("_")[1].capitalize()}',
+        "show_on_top_no_trigger": show_on_top_no_trigger,
         "albert_plugin_interface": "v0.2",
         "version": "0.1.0",
     }
@@ -220,6 +231,7 @@ def main():  # noqa
         url_handler = plugin[1].get("url_handler", "")
         url_handler_description = plugin[1].get("url_handler_description", "")
         url_handler_check_cmd = plugin[1].get("url_handler_check_cmd", "")
+        show_on_top_no_trigger = plugin[1].get("show_on_top_no_trigger", False)
 
         print()
         print("===============================================")
@@ -246,6 +258,7 @@ def main():  # noqa
                 url_handler=url_handler,
                 url_handler_description=url_handler_description,
                 url_handler_check_cmd=url_handler_check_cmd,
+                show_on_top_no_trigger=show_on_top_no_trigger,
             ),
             output_dir=get_output_dir(plugin_name).parent,
         )

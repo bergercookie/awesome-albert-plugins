@@ -45,6 +45,7 @@ icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan.svg")
 icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 
 # initial configuration -----------------------------------------------------------------------
+always_show_today_subcommand = True
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
@@ -117,7 +118,11 @@ def handleQuery(query):
     ):  # run an update daily
         block_reload_tasks()
 
-    if query.isTriggered:
+    if not query.isTriggered:
+        if always_show_today_subcommand and len(query.string) < 2:
+            results.insert(0,
+                           TodayTasks(name="today", desc="Today's tasks").get_as_albert_item())
+    else:
         try:
             if "disableSort" in dir(query):
                 query.disableSort()
