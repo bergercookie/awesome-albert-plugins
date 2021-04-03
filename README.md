@@ -1,4 +1,5 @@
 # Awesome Albert Plugins
+
 <a href="https://travis-ci.com/bergercookie/awesome-albert-plugins" alt="Build Status">
 <img src="https://travis-ci.com/bergercookie/awesome-albert-plugins.svg?branch=master"></a>
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
@@ -13,79 +14,76 @@
 This is a collection of plugins and themes for the
 [Albert](https://albertlauncher.github.io/) launcher.
 
-### Plugins
+## Demos
+
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png)      |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif)      |
+| :----------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
+|        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |         ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif)         |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif)      |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif)      |
+|           ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png)            |              ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)               |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
+|     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png)       |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png)       |
+|        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)        |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)       |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
+
+## Plugins
 
 Currently the list of plugins includes:
 
-* image_search: Search, preview and directly copy-to-clipboard images from the web
-* harakiri - Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
-* Words - Get the definition, synonyms and antonyms for a word
-* Killproc - Kill process(es); allows killing multiple processes with the same
+- image_search: Search, preview and directly copy-to-clipboard images from the web
+- harakiri - Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
+- Words - Get the definition, synonyms and antonyms for a word
+- Killproc - Kill process(es); allows killing multiple processes with the same
   name or based on a glob - Improved version of the original albert plugin
-* Timezones - Fuzzy-search timezones
-* Colors - Lookup the RGB triplet or the hex code for the given color
-* Jira - Issue Tracking
-* Saxophone - Listen to internet Radio Streams
-* Zoopla - Search Property to Buy, Rent, House Prices
-* Xkcd - Fetch xkcd comics like a boss
-* Taskwarrior - Interact with Taskwarrior
-* Remmina - Search and start remmina connections easily
-* Google Maps - Fetch instructions from/to a specific place
-* Google Translate - Improved version of original albert plugin - avoids
+- Timezones - Fuzzy-search timezones
+- Colors - Lookup the RGB triplet or the hex code for the given color
+- Jira - Issue Tracking
+- Saxophone - Listen to internet Radio Streams
+- Zoopla - Search Property to Buy, Rent, House Prices
+- Xkcd - Fetch xkcd comics like a boss
+- Taskwarrior - Interact with Taskwarrior
+- Remmina - Search and start remmina connections easily
+- Google Maps - Fetch instructions from/to a specific place
+- Google Translate - Improved version of original albert plugin - avoids
   occasional IP blocking by Google
-* [TL;DR](https://github.com/tldr-pages/tldr) pages lookup
-* Get 2FA codes using [totp-cli](https://github.com/bergercookie/totp-cli)
-* Lookup HTTP URL status codes
-* Lookup errno status codes
-* Show Internal, External IPs, Default Gateways
-* Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
-  * Google
-  * Amazon
-  * Youtube
-  * Github
-  * Ebay
-  * Imdb
-  * Urban dictionary: Word/Slang definitions lookup
-  * Python, OpenCV, Dlib, C++ documentation lookup
-  * ...
-  * :warning: To avoid getting blocked by Google, a search request is only sent
-      when there is a 0.3 seconds difference between keystrokes. Thus, it's
-      common when you actually want to send a request to wait a bit and then
-      append a space character at the end of the query.
+- [TL;DR](https://github.com/tldr-pages/tldr) pages lookup
+- Get 2FA codes using [totp-cli](https://github.com/bergercookie/totp-cli)
+- Lookup HTTP URL status codes
+- Lookup errno status codes
+- Show Internal, External IPs, Default Gateways
+- Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
 
-  * Install `google-chrome` or `chromium-browser` to add an "Open in incognito
+  - Google
+  - Amazon
+  - Youtube
+  - Github
+  - Ebay
+  - Imdb
+  - Urban dictionary: Word/Slang definitions lookup
+  - Python, OpenCV, Dlib, C++ documentation lookup
+  - ...
+  - :warning: To avoid getting blocked by Google, a search request is only sent
+    when there is a 0.3 seconds difference between keystrokes. Thus, it's
+    common when you actually want to send a request to wait a bit and then
+    append a space character at the end of the query.
+
+  - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
     mode" option
 
-* PulseAudio - Select pulseaudio input/output devices, sound card profiles
-* Improved implementations of the original `Pass`, `Pomodoro` plugins
-* Create stopwatches and countdowns
+- PulseAudio - Select pulseaudio input/output devices, sound card profiles
+- Improved implementations of the original `Pass`, `Pomodoro` plugins
+- Create stopwatches and countdowns
 
-Here's a view of the albert prompt after having enabled several of the
-search-suggestion plugins:
-
-![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/search_plugins.png)
-
-Plugins have been tested with the Albert python `v0.3` interface but there's no
-reason they shouldn't work with the `v0.2` as well (if they don't raise an
-issue). I'm using Python `3.6.8` (again, raise an issue if it doesn't work in
-your case).
+Plugins have been tested with the Albert python `v0.4` interface. If you're
+looking for a version that works with earlier versions of the plugin, see the
+`prior-to-v0.4` branch. I'm using Python `3.6.8`.
 
 ### Themes
 
-* [Mozhi](https://github.com/Hsins/Albert-Mozhi) - A flat, transparent and dark theme for Albert (A fast and flexible keyboard launcher for Linux). ([DEMO](https://github.com/Hsins/Albert-Mozhi/blob/master/demo/demo.gif))
-
-## Demos
-
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
-|:---:|:---:|
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/xkcd/misc/demo.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png) | ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png) |
+- [Mozhi](https://github.com/Hsins/Albert-Mozhi) - A flat, transparent and dark
+  theme for Albert.
+  ([DEMO](https://github.com/Hsins/Albert-Mozhi/blob/master/demo/demo.gif))
 
 ## Motivation
 
@@ -98,7 +96,7 @@ Requirements:
 
 - Linux (tested on Ubuntu)
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``v0.2``
+  - Albert Python Interface: `v0.4`
 
 Clone this repository under your local Albert python plugins directory. By
 default the that is: `~/.local/share/albert/org.albert.extension.python/modules`.
@@ -139,9 +137,11 @@ generate_plugins_only_for = [
 Very well, then after cloning this repo, just symlink or copy the plugin of
 choice under your local python plugins directory. For example for the `jira`
 plugin:
+
 ```
 cp -r plugins/jira ~/.local/share/albert/org.albert.extension.python/modules/jira
 ```
+
 After that, enable the plugin from the Albert settings.
 
 ## Self Promotion
@@ -158,21 +158,20 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Ideas List (feel free to contribute)
 
-* :construction: Emoji - Improved version of original `dango_kao` emojis plugin
-    with thumbnail-like preview of each one?
-* :construction: Giphy - https://github.com/Giphy/giphy-python-client
-* :construction: Devdocs.io/Zeal/Dash search
-* :construction: Lookup weather
-* :construction: Manage your VPN connections - Frontend to `WireGuard`?
-* :construction: Spotify mini player - similar  to [this](https://github.com/vdesabou/alfred-spotify-mini-player)
-* :construction: [Radio Paradise player](https://radioparadise.com/player)
-  * Sign-in - grab password from `pass` as in `Jira` plugin
-  * Ability to mark as favorite / change stream
-* :construction: Movie search and ratings - be able to sign in to various
-    services and (e.g., imdb) and submit a rating for a movie
-* :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
-* :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
-* :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
-  + Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`
-* :construction: List previous google-translate items in the google-translate
-    plugin
+- :construction: Emoji - Improved version of original `dango_kao` emojis plugin
+  with thumbnail-like preview of each one?
+- :construction: Giphy - https://github.com/Giphy/giphy-python-client
+- :construction: Devdocs.io/Zeal/Dash search
+- :construction: Manage your VPN connections - Frontend to `WireGuard`?
+- :construction: Spotify mini player - similar to [this](https://github.com/vdesabou/alfred-spotify-mini-player)
+- :construction: [Radio Paradise player](https://radioparadise.com/player)
+  - Sign-in - grab password from `pass` as in `Jira` plugin
+  - Ability to mark as favorite / change stream
+- :construction: Movie search and ratings - be able to sign in to various
+  services and (e.g., imdb) and submit a rating for a movie
+- :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
+- :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
+- :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
+  - Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`
+- :construction: List previous google-translate items in the google-translate
+  plugin
