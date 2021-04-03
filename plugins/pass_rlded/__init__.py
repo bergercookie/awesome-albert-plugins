@@ -26,12 +26,23 @@ cache_path = Path(v0.cacheLocation()) / "pass_rlded"
 config_path = Path(v0.configLocation()) / "pass_rlded"
 data_path = Path(v0.dataLocation()) / "pass_rlded"
 
-
 pass_dir = Path(
     os.environ.get(
         "PASSWORD_STORE_DIR", os.path.join(os.path.expanduser("~/.password-store/"))
     )
 )
+
+# https://gist.github.com/bergercookie/d808bade22e62afbb2abe64fb1d20688
+# For an updated version feel free to contact me.
+pass_open_doc = shutil.which("pass_open_doc")
+pass_open_doc_exts = [
+    ".jpg",
+    ".jpeg",
+    ".pdf",
+    ".png",
+]
+
+dev_mode = True
 
 
 # passwords cache -----------------------------------------------------------------------------
@@ -90,6 +101,9 @@ def handleQuery(query):
                 results.append(get_as_item(m))
 
         except Exception:  # user to report error
+            if dev_mode:
+                raise
+
             results.insert(
                 0,
                 v0.Item(
@@ -118,21 +132,36 @@ def get_as_item(password_path: Path):
     full_path_no_suffix_str = str(full_path_no_suffix)
     full_path_rel_root_str = str(full_path_rel_root)
 
+    actions = [
+        v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
+        v0.ClipAction("Copy Full Path", str(password_path)),
+        v0.ClipAction(
+            "Copy pass-compatible path",
+            str(password_path.relative_to(pass_dir).parent / password_path.stem),
+        ),
+    ]
+
+    if len(password_path.suffixes) >= 2 and password_path.suffixes[-2] in pass_open_doc_exts:
+        pass
+        # actions.insert(
+        #     0,
+        #     v0.FuncAction(
+        #         "Open with pass-open-doc", lambda p=str(password_path): subprocess.check_call(["pass-open-doc", p]),
+        #     ),
+        # )
+    else:
+        actions.insert(0, v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
+        actions.insert(
+            0, v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
+        )
+
     return v0.Item(
         id=__prettyname__,
         icon=icon_path,
         text=f"{password_path.stem}",
         subtext=full_path_no_suffix_str,
         completion=f"{__trigger__} {full_path_no_suffix_str}",
-        actions=[
-            v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
-            v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]),
-            v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
-            # v0.ProcAction("Decrypt and open document", )
-            v0.ClipAction("Copy Full Path", str(password_path)),
-            v0.ClipAction("Copy pass-compatible path",
-                          str(password_path.relative_to(pass_dir).parent / password_path.stem)),
-        ],
+        actions=actions,
     )
 
 

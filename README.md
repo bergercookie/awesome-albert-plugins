@@ -174,3 +174,5 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 * :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
 * :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
   + Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`
+* :construction: List previous google-translate items in the google-translate
+    plugin

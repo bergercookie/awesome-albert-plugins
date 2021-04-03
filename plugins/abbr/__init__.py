@@ -94,6 +94,28 @@ def handleQuery(query) -> list:
 
             query_str = query.string
 
+            if len(query_str.strip().split()) == 0:
+                results.append(
+                    v0.Item(
+                        id=__prettyname__,
+                        icon=icon_path,
+                        text="[new] Add a new abbreviation",
+                        subtext="new <u>abbreviation</u> <u>description</u>",
+                        completion=f"{__trigger__}new ",
+                    )
+                )
+                results.append(
+                    v0.Item(
+                        id=__prettyname__,
+                        icon=icon_path,
+                        text="Write more to query the database",
+                        subtext="",
+                        completion=f"{__trigger__}",
+                    )
+                )
+                return results
+
+
             # new behavior
             tokens = query_str.split()
             if len(tokens) >= 1 and tokens[0] == "new":

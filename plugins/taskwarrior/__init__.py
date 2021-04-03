@@ -1,27 +1,27 @@
 """Interact with Taskwarrior."""
 
-import re
 import datetime
 import os
-import sys
+import re
 import traceback
-from importlib import import_module
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
 from typing import Optional, Tuple, Union
 
+import dateutil
 import gi
 import taskw
-from dateutil import tz
 from fuzzywuzzy import process
 from overrides import overrides
-from taskw_gcal_sync import TaskWarriorSide
 
 import albertv0 as v0
+from taskw_gcal_sync import TaskWarriorSide
+
+from gi.repository import GdkPixbuf, Notify  # isort:skip
+
 
 gi.require_version("Notify", "0.7")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 
 # metadata ------------------------------------------------------------------------------------
@@ -48,6 +48,7 @@ icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
+last_update_path = cache_path / "last_update"
 
 reminders_tag_path = config_path / "reminders_tag"
 
@@ -58,7 +59,9 @@ dev_mode = True
 
 # regular expression to match URLs
 # https://gist.github.com/gruber/8891611
-url_re = re.compile(r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))""")
+url_re = re.compile(
+    r"""(?i)\b((?:https?:(?:/{1,3}|[a-z0-9%])|[a-z0-9.\-]+[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)/)(?:[^\s()<>{}\[\]]+|\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\))+(?:\([^\s()]*?\([^\s()]+\)[^\s()]*?\)|\([^\s]+?\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])|(?:(?<!@)[a-z0-9]+(?:[.\-][a-z0-9]+)*[.](?:com|net|org|edu|gov|mil|aero|asia|biz|cat|coop|info|int|jobs|mobi|museum|name|post|pro|tel|travel|xxx|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cs|cu|cv|cx|cy|cz|dd|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|Ja|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)\b/?(?!@)))"""
+)
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -73,37 +76,19 @@ def do_notify(msg: str, image=None):
     n.show()
 
 
+def date_only_tzlocal(datetime: datetime.datetime):
+    return datetime.astimezone(dateutil.tz.tzlocal()).date()  # type: ignore
+
+
 def get_tasks_of_date(date: datetime.date):
     tasks = tw_side.get_all_items(include_completed=False)
 
-    return [
-        t
-        for t in tasks
-        # acount for hack in taskw_gcal_sync - tasks scheduled for yesterday 23:59:00 are
-        # actually today's tasks
-        if "due" in t.keys()
-        and t["due"]
-        != datetime.datetime(
-            year=date.year,
-            month=date.month,
-            day=date.day,
-            hour=23,
-            minute=0,
-            tzinfo=tz.tzutc(),
-        )
-        and (
-            t["due"].date() == date
-            or t["due"]
-            == datetime.datetime(
-                year=date.year,
-                month=date.month,
-                day=date.day - 1,
-                hour=23,
-                minute=0,
-                tzinfo=tz.tzutc(),
-            )
-        )
-    ]
+    # You have to do the comparison in tzlocal. TaskWarrior stores the tasks in UTC and thus
+    # the effetive date*time* may not match the given date parameter  because of the time
+    # difference
+    tasks = [t for t in tasks if "due" in t.keys() and date_only_tzlocal(t["due"]) == date]
+
+    return tasks
 
 
 def initialize():
@@ -112,6 +97,9 @@ def initialize():
     # create cache location
     config_path.mkdir(parents=False, exist_ok=True)
 
+    if not last_update_path.is_file():
+        block_reload_tasks()
+
 
 def finalize():
     pass
@@ -119,6 +107,15 @@ def finalize():
 
 def handleQuery(query):
     results = []
+
+    # Update the TaskWarrior cache ------------------------------------------------------------
+    with open(last_update_path, "r") as f:
+        date_str = float(f.readline().strip())
+    last_date = datetime.datetime.fromtimestamp(date_str)
+    if datetime.datetime.now() - last_date > datetime.timedelta(
+        hours=1
+    ):  # run an update daily
+        block_reload_tasks()
 
     if query.isTriggered:
         try:
@@ -133,7 +130,6 @@ def handleQuery(query):
             query_str = query.string
 
             if len(query_str) < 2:
-                tw_side.reload_items = True
                 results.extend([s.get_as_albert_item() for s in subcommands])
 
                 tasks.sort(key=lambda t: t["urgency"], reverse=True)
@@ -192,6 +188,22 @@ def get_as_item(**kargs) -> v0.Item:
 
 
 # supplementary functions ---------------------------------------------------------------------
+
+
+def mark_for_reload():
+    tw_side.reload_items = True
+
+
+def block_reload_tasks():
+    global tasks
+    print("TaskWarrior: Updating list of tasks...")
+    mark_for_reload()
+    tasks = tw_side.get_all_items(include_completed=False)
+
+    with open(last_update_path, "w") as f:
+        now = (datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds()
+        with open(last_update_path, "w") as f:
+            f.write(str(now))
 
 
 def setup(query):
@@ -277,7 +289,7 @@ def run_tw_action(args_list: list, need_pty=False):
         msg = stdout.decode("utf-8")
 
     do_notify(msg=msg, image=image)
-    tw_side.reload_items = True
+    mark_for_reload()
 
 
 def add_reminder(task_id, reminders_tag: list):
@@ -308,8 +320,9 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
         ),
         v0.FuncAction(
             "Edit task interactively",
-            lambda args_list=["edit", tw_side.get_task_id(task)]: run_tw_action(args_list,
-                                                                                need_pty=True),
+            lambda args_list=["edit", tw_side.get_task_id(task)]: run_tw_action(
+                args_list, need_pty=True
+            ),
         ),
         v0.ClipAction("Copy task UUID", f"{tw_side.get_task_id(task)}"),
     ]
@@ -345,7 +358,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
             field(task.get("due"), "due"),
         )[:-2],
         icon=icon,
-        completion="",
+        completion=f'{__trigger__}{task["description"]}',
         actions=actions,
     )
 
@@ -389,7 +402,7 @@ class TodayTasks(Subcommand):
 
     @overrides
     def get_as_albert_items_full(self, query_str):
-        return [get_tw_item(t) for t in get_tasks_of_date(datetime.datetime.today())]
+        return [get_tw_item(t) for t in get_tasks_of_date(datetime.date.today())]
 
 
 class YesterdayTasks(Subcommand):
@@ -398,7 +411,7 @@ class YesterdayTasks(Subcommand):
 
     @overrides
     def get_as_albert_items_full(self, query_str):
-        date = datetime.datetime.today().date() - datetime.timedelta(days=1)
+        date = datetime.date.today() - datetime.timedelta(days=1)
         return [get_tw_item(t) for t in get_tasks_of_date(date)]
 
 
@@ -408,8 +421,20 @@ class TomorrowTasks(Subcommand):
 
     @overrides
     def get_as_albert_items_full(self, query_str):
-        date = datetime.datetime.today().date() + datetime.timedelta(days=1)
+        date = datetime.date.today() + datetime.timedelta(days=1)
         return [get_tw_item(t) for t in get_tasks_of_date(date)]
+
+
+class SyncTasks(Subcommand):
+    def __init__(self, **kargs):
+        super(SyncTasks, self).__init__(**kargs)
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        item = self.get_as_albert_item()
+        item.subtext = query_str
+        item.addAction(v0.FuncAction("Fetch all tasks again", lambda: block_reload_tasks))
+        return [item]
 
 
 class SubcommandQuery:
@@ -432,6 +457,7 @@ subcommands = [
     TodayTasks(name="today", desc="Today's tasks"),
     YesterdayTasks(name="yesterday", desc="Yesterday's tasks"),
     TomorrowTasks(name="tomorrow", desc="Tomorrow's tasks"),
+    SyncTasks(name="sync", desc="Fetch all tasks from the local TaskWarrior instance"),
 ]
 
 

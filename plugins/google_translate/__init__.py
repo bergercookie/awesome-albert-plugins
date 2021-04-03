@@ -156,7 +156,7 @@ langs = [
 class KeystrokeMonitor:
     def __init__(self):
         super(KeystrokeMonitor, self)
-        self.thres = 0.3  # s
+        self.thres = 0.4  # s
         self.prev_time = time.time()
         self.curr_time = time.time()
 
@@ -213,6 +213,7 @@ def handleQuery(query):
                     result = data[0][0][0]
                     item.text = result
                     item.subtext = "%s -> %s: %s" % (src.upper(), dst.upper(), txt,)
+                    item.completion = f"{__trigger__}{src} {dst} "
                     item.addAction(v0.ClipAction("Copy translation to clipboard", result))
                     item.addAction(
                         v0.UrlAction(
