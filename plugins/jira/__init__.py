@@ -9,16 +9,14 @@ from pathlib import Path
 from fuzzywuzzy import process
 from jira import JIRA, resources
 
-import albertv0 as v0
+import albert as v0
 
 # initial configuration -----------------------------------------------------------------------
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Jira Issue Tracking"
-__version__ = "0.1.0"
-__trigger__ = "jira "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Jira Issue Tracking"
+__version__ = "0.4.0"
+__triggers__ = "jira "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/jira-albert-plugin"
 __simplename__ = "jira"
 
@@ -96,7 +94,7 @@ def handleQuery(query):
 
             results.append(
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Create new issue",
                     actions=[v0.UrlAction(f"Create new issue", get_create_issue_page(server))],
@@ -119,7 +117,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -179,7 +177,7 @@ def setup(query):
     if not shutil.which("pass"):
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f'"pass" is not installed.',
                 subtext='Please install and configure "pass" accordingly.',
@@ -194,7 +192,7 @@ def setup(query):
     if not user_path.is_file():
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f"Please specify your email address for JIRA",
                 subtext="Fill and press [ENTER]",
@@ -207,7 +205,7 @@ def setup(query):
     if not server_path.is_file():
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f"Please specify the JIRA server to connect to",
                 subtext="Fill and press [ENTER]",
@@ -224,7 +222,7 @@ def setup(query):
     if not api_key_path.is_file():
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f"Please add api_key",
                 subtext="Press to copy the command to run",
@@ -290,7 +288,7 @@ def get_as_item(issue: resources.Issue, jira):
     subtext += prio_to_text[issue.fields.priority.name]
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=prio_to_icon[issue.fields.priority.name],
         text=f"{issue.fields.summary}",
         subtext=subtext,

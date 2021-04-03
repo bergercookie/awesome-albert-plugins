@@ -7,21 +7,16 @@ import os
 import subprocess
 import sys
 
-import albertv0 as v0
+import albert as v0
 from fuzzywuzzy import process
-from shutil import which
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Xkcd Comics Fetcher"
-__version__ = "0.1"
-__trigger__ = "xkcd "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Xkcd Comics Fetcher"
+__version__ = "0.4.0"
+__triggers__ = "xkcd "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/xkcd-albert-plugin"
-
-
-if not which("xkcd-dl"):
-    raise RuntimeError("xkcd-dl not in $PATH - Please install it via pip3 first.")
+__exec_deps__ = ["xkcd-dl"]
+__py_deps__ = ["fuzzywuzzy"]
 
 iconPath = v0.iconLookup("xkcd")
 if not iconPath:
@@ -85,7 +80,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=iconPath,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -102,7 +97,7 @@ def handleQuery(query):
 
 def get_as_item(k: str, v: dict):
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=iconPath,
         text=v["description"],
         subtext=v["date-published"],

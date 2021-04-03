@@ -12,14 +12,12 @@ from urllib import request
 
 from fuzzywuzzy import process
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "IPs of the host machine"
-__version__ = "0.1.0"
-__trigger__ = "ip "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "IPs of the host machine"
+__version__ = "0.4.0"
+__triggers__ = "ip "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
 
 icon_path = str(Path(__file__).parent / "ipshow")
@@ -127,7 +125,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -147,7 +145,7 @@ def handleQuery(query) -> list:
 
 def get_as_item(text, subtext, completion="", actions=[]):
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=text,
         subtext=subtext,

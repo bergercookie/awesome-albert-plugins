@@ -7,15 +7,13 @@ import sys
 from typing import Iterable
 
 from fuzzywuzzy import process
-import albertv0 as v0
+import albert as v0
 import shutil
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Pass - UNIX Password Manager - fuzzy search"
-__version__ = "0.1.0"
-__trigger__ = "pass2 "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Pass - UNIX Password Manager - fuzzy search"
+__version__ = "0.4.0"
+__triggers__ = "pass2 "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pass_rlded"
 )
@@ -107,7 +105,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -156,11 +154,11 @@ def get_as_item(password_path: Path):
         )
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"{password_path.stem}",
         subtext=full_path_no_suffix_str,
-        completion=f"{__trigger__} {full_path_no_suffix_str}",
+        completion=f"{__triggers__} {full_path_no_suffix_str}",
         actions=actions,
     )
 

@@ -8,16 +8,14 @@ from typing import Dict, List, Union
 from fuzzywuzzy import process
 from pulsectl import Pulse, pulsectl
 
-import albertv0 as v0
+import albert as v0
 
 pulse_lock = Lock()
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "PulseAudio - Set I/O Audio devices and Profile"
-__version__ = "0.1.0"
-__trigger__ = "p "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "PulseAudio - Set I/O Audio devices and Profile"
+__version__ = "0.4.0"
+__triggers__ = "p "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//pulse_control"
 )
@@ -88,7 +86,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=None,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -130,11 +128,11 @@ def render_noargs(
 
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon,
                 text=s.port_active.description,
                 subtext=s.description,
-                completion=__trigger__,
+                completion=__triggers__,
                 actions=actions,
             )
         )
@@ -150,11 +148,11 @@ def render_noargs(
 
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=config_icon_path,
                 text=c.profile_active.description,
                 subtext=c.name,
-                completion=__trigger__,
+                completion=__triggers__,
                 actions=actions,
             )
         )
@@ -202,11 +200,11 @@ def render_search(
 
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon,
                 text=m,
                 subtext=subtext,
-                completion=" ".join([__trigger__, query_str]),
+                completion=" ".join([__triggers__, query_str]),
                 actions=[action],
             )
         )

@@ -15,7 +15,7 @@ import taskw
 from fuzzywuzzy import process
 from overrides import overrides
 
-import albertv0 as v0  # type: ignore
+import albert as v0  # type: ignore
 from taskw_gcal_sync import TaskWarriorSide
 
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
@@ -25,12 +25,10 @@ gi.require_version("Notify", "0.7")  # isort:skip
 
 
 # metadata ------------------------------------------------------------------------------------
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Taskwarrior interaction"
-__version__ = "0.1.0"
-__trigger__ = "t "
-__author__ = "Nikos Koukis"
-__dependencies__ = ["task"]
+__title__ = "Taskwarrior interaction"
+__version__ = "0.4.0"
+__triggers__ = "t "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 __simplename__ = "taskwarrior"
 
@@ -175,7 +173,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -195,7 +193,7 @@ def get_as_item(**kargs) -> v0.Item:
         icon = kargs.pop("icon")
     else:
         icon = icon_path
-    return v0.Item(id=__prettyname__, icon=icon, **kargs)
+    return v0.Item(id=__title__, icon=icon, **kargs)
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -224,7 +222,7 @@ def setup(query):  # type: ignore
     if not which("task"):
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f'"taskwarrior" is not installed.',
                 subtext='Please install and configure "taskwarrior" accordingly.',
@@ -369,7 +367,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
             field(task.get("due"), "due"),
         )[:-2],
         icon=str(icon),
-        completion=f'{__trigger__}{task["description"]}',
+        completion=f'{__triggers__}{task["description"]}',
         actions=actions,
     )
 
@@ -381,7 +379,7 @@ class Subcommand:
         self.desc = desc
 
     def get_as_albert_item(self):
-        return get_as_item(text=self.desc, completion=f"{__trigger__} {self.name} ")
+        return get_as_item(text=self.desc, completion=f"{__triggers__} {self.name} ")
 
     def get_as_albert_items_full(self, query_str):
         return [self.get_as_albert_item()]

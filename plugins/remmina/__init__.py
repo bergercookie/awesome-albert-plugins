@@ -7,20 +7,16 @@ import os
 import subprocess
 from glob import glob
 from re import IGNORECASE, search
-from shutil import which
 from typing import Tuple
 
-from albertv0 import FuncAction, Item, critical
+from albert import FuncAction, Item, critical
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Remmina"
-__version__ = "0.2"
-__trigger__ = "rem"
-__author__ = "Oğuzcan Küçükbayrak"
-__dependencies__ = ["remmina"]
-
-if not which("remmina"):
-    raise Exception("`remmina` is not in $PATH.")
+__title__ = "Remmina"
+__version__ = "0.4.0"
+__triggers__ = "rem"
+__authors__ = "Oğuzcan Küçükbayrak, Nikos Koukis"
+__exec_deps__ = ["remmina"]
+__py_deps__ = []
 
 MODULE_PATH = os.path.dirname(__file__)
 ICON_PATH = MODULE_PATH + "/icons/remmina.svg"
@@ -39,7 +35,7 @@ def getConfigFiles():
 
 def getAsItem(name, group, server, proto, file):
     return Item(
-        id=__prettyname__,
+        id=__title__,
         icon=PROTOCOL_ICONS_PATH % (proto.lower()),
         text=(name, "%s/ %s" % (group, name))[len(group) > 0],
         subtext="%s %s" % (proto, server),
@@ -79,9 +75,9 @@ def handleQuery(query):
 
         results.append(
             Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=ICON_PATH,
-                text=__prettyname__,
+                text=__title__,
                 subtext=__doc__,
                 actions=[FuncAction("Open Remmina", runRemmina)],
             )

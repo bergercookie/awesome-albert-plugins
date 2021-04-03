@@ -7,14 +7,12 @@ import traceback
 import webbrowser
 from pathlib import Path
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Harakiri mail temporary email"
-__version__ = "0.1.0"
-__trigger__ = "harakiri "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Harakiri mail temporary email"
+__version__ = "0.4.0"
+__triggers__ = "harakiri "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri"
 
 icon_path = str(Path(__file__).parent / "harakiri")
@@ -65,7 +63,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -90,11 +88,11 @@ def copy_and_go(email: str):
 def get_as_item(email):
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"Temporary email: <u>{email}</u>",
         subtext="",
-        completion=f"{__trigger__} {email}",
+        completion=f"{__triggers__} {email}",
         actions=[
             v0.FuncAction("Open in browser (and copy email address)", lambda email=email:
                           copy_and_go(email)),

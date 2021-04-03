@@ -17,17 +17,17 @@ import tzlocal
 from fuzzywuzzy import process
 import pycountry
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Timezones lookup"
-__version__ = "0.1.0"
-__trigger__ = "tz "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Timezones lookup"
+__version__ = "0.4.0"
+__triggers__ = "tz "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones"
 )
+__py_deps__ = ["pycountry", "fuzzywuzzy", "tzlocal", "requests", "traceback", "pytz"]
+
 
 icon_path = str(Path(__file__).parent / "timezones")
 
@@ -167,7 +167,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -198,7 +198,7 @@ def get_as_item(city: str):
     subtext = f"[{code}] | {city}"
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon,
         text=text,
         subtext=subtext,

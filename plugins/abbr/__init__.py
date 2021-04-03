@@ -14,14 +14,12 @@ from typing import List, Dict, Tuple
 from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "User-defined abbreviations read/written a file"
-__version__ = "0.1.0"
-__trigger__ = "ab "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "User-defined abbreviations read/written a file"
+__version__ = "0.4.0"
+__triggers__ = "ab "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr"
 )
@@ -97,20 +95,20 @@ def handleQuery(query) -> list:
             if len(query_str.strip().split()) == 0:
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="[new] Add a new abbreviation",
                         subtext="new <u>abbreviation</u> <u>description</u>",
-                        completion=f"{__trigger__}new ",
+                        completion=f"{__triggers__}new ",
                     )
                 )
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="Write more to query the database",
                         subtext="",
-                        completion=f"{__trigger__}",
+                        completion=f"{__triggers__}",
                     )
                 )
                 return results
@@ -130,7 +128,7 @@ def handleQuery(query) -> list:
 
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text=f"New abbreviation: {name}",
                         subtext=f"Description: {desc}",
@@ -158,7 +156,7 @@ def handleQuery(query) -> list:
             if not abbr_latest_d:
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text=f'No lines split by "{split_at}" in the file provided',
                         actions=[
@@ -185,7 +183,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -202,7 +200,7 @@ def handleQuery(query) -> list:
 
 # supplementary functions ---------------------------------------------------------------------
 def notify(
-    msg: str, app_name: str = __prettyname__, image=str(icon_path),
+    msg: str, app_name: str = __title__, image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -215,11 +213,11 @@ def get_abbr_as_item(abbr: Tuple[str, str]):
     subtext = abbr[1].strip()
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"{text}",
         subtext=f"{subtext}",
-        completion=f"{__trigger__}{text.strip()}",
+        completion=f"{__triggers__}{text.strip()}",
         actions=[
             v0.UrlAction("Open in Google", f"https://www.google.com/search?&q={text}"),
             v0.ClipAction("Copy abbreviation", text),
@@ -298,7 +296,7 @@ def setup(query) -> list:
     if not abbr_store_fname.is_file():
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f"Specify file to read/write abbreviations to/from",
                 subtext="Paste the path to the file, then press <ENTER>",
@@ -312,7 +310,7 @@ def setup(query) -> list:
     if not abbr_store_sep.is_file():
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f"Specify separator *character* for abbreviations",
                 subtext=f"Separator: {query_str}",

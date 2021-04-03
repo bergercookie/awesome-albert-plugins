@@ -16,14 +16,12 @@ from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 from psutil import Process
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Kill Process v2"
-__version__ = "0.1.0"
-__trigger__ = "kill "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Kill Process v2"
+__version__ = "0.4.0"
+__triggers__ = "kill "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc"
 )
@@ -101,7 +99,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -120,7 +118,7 @@ def handleQuery(query) -> list:
 
 
 def notify(
-    msg: str, app_name: str=__prettyname__, image=str(icon_path),
+    msg: str, app_name: str=__title__, image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -194,7 +192,7 @@ def get_as_item(p: Process, *extra_actions):
         ]
         actions = [*extra_actions, *actions]
         return v0.Item(
-            id=__prettyname__,
+            id=__title__,
             icon=icon_path,
             text=name_field,
             subtext="",

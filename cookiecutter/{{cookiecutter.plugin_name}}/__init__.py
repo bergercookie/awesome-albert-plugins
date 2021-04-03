@@ -14,15 +14,15 @@ from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 {%- endif %}
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/{{ cookiecutter.albert_plugin_interface }}"
-__prettyname__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "{{ cookiecutter.version }}"
-__trigger__ = "{{ cookiecutter.trigger }} "
-__author__ = "{{ cookiecutter.author }}"
-__dependencies__ = []
+__title__ = "{{ cookiecutter.plugin_short_description }}"
+__version__ = "0.4.0"
+__triggers__ = "{{ cookiecutter.trigger }} "
+__authors__ = "{{ cookiecutter.author }}"
 __homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
+__exec_deps__ = []
+__py_deps__ = []
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 
@@ -113,7 +113,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -132,7 +132,7 @@ def handleQuery(query) -> list:
 
 {%- if cookiecutter.use_notifications == 'y' %}
 def notify(
-     msg: str, app_name: str=__prettyname__, image=str(icon_path),
+     msg: str, app_name: str=__title__, image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -142,7 +142,7 @@ def notify(
 def get_as_item():
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"{sys.version}",
         subtext="Python version",

@@ -6,14 +6,12 @@ from pathlib import Path
 
 import zoopla as z
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Zoopla - Search Properties"
-__version__ = "0.1.0"
-__trigger__ = "z "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Zoopla - Search Properties"
+__version__ = "0.4.0"
+__triggers__ = "z "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/zoopla-albert-plugin"
 
 iconPath = v0.iconLookup("zoopla")
@@ -71,7 +69,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=iconPath,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -104,7 +102,7 @@ def get_as_item(s):
         price_str = ""
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=iconPath,
         text=f"{s.description}",
         subtext="{}{}{}".format(

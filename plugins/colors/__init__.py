@@ -21,14 +21,12 @@ import numpy as np
 import colour
 from colour import Color
 from fuzzywuzzy import process
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Color Codes visualisation"
-__version__ = "0.1.0"
-__trigger__ = "col "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Color Codes visualisation"
+__version__ = "0.4.0"
+__triggers__ = "col "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors"
 )
@@ -99,7 +97,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -161,11 +159,11 @@ def get_as_item(color):
         actions.insert(0, v0.ClipAction("Copy Hex (Short)", h))
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=img_path,
         text=f'<p style="color:{hl}";>{hl}{name}</p>',
         subtext=f"{rgb}",
-        completion=" ".join([__trigger__, h]),
+        completion=" ".join([__triggers__, h]),
         actions=actions,
     )
 

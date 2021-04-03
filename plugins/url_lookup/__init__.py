@@ -7,14 +7,12 @@ from pathlib import Path
 
 import requests
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "HTTP URL Lookup operations"
-__version__ = "0.1.0"
-__trigger__ = "url "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "HTTP URL Lookup operations"
+__version__ = "0.4.0"
+__triggers__ = "url "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//url_lookup"
 )
@@ -70,7 +68,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -90,7 +88,7 @@ def handleQuery(query) -> list:
 
 def get_as_item(t: Tuple[str, tuple]):
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"{t[0]} - {t[1][0]}",
         subtext="",

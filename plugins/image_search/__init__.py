@@ -13,7 +13,7 @@ from typing import Dict, Iterator, List
 
 from gi.repository import GdkPixbuf, Notify
 
-import albertv0 as v0
+import albert as v0
 
 # load bing module - from the same directory as this file
 dir_ = Path(__file__).absolute().parent
@@ -23,12 +23,10 @@ spec.loader.exec_module(bing)  # type: ignore
 BingImage = bing.BingImage  # type: ignore
 bing_search = bing.bing_search  # type: ignore
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Image Search and Preview"
-__version__ = "0.1.0"
-__trigger__ = "img "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Image Search and Preview"
+__version__ = "0.4.0"
+__triggers__ = "img "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search"
 )
@@ -115,7 +113,7 @@ def handleQuery(query) -> list:
                     results.insert(
                         0,
                         v0.Item(
-                            id=__prettyname__,
+                            id=__title__,
                             icon=icon_path,
                             text="No images found",
                             subtext=f"Query: {query_str}",
@@ -133,7 +131,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -158,7 +156,7 @@ def bing_search_save_to_cache(query, limit) -> Iterator[BingImage]:
 
 
 def notify(
-    msg: str, app_name: str = __prettyname__, image=str(icon_path),
+    msg: str, app_name: str = __title__, image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -216,11 +214,11 @@ def get_as_item(result: BingImage):
         )
 
     item = v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=str(result.image),
         text=result.url[-20:],
         subtext=result.type,
-        completion=f"{__trigger__}",
+        completion=f"{__triggers__}",
         actions=actions,
     )
 

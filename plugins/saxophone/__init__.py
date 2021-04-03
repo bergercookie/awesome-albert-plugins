@@ -13,7 +13,7 @@ import time
 
 import traceback
 import mpv
-import albertv0 as v0
+import albert as v0
 
 import gi # isort:skip
 gi.require_version("Notify", "0.7")  # isort:skip
@@ -22,12 +22,10 @@ from gi.repository import (
     Notify,
 )  # isort:skip
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Saxophone - Play internet radio streams from albert"
-__version__ = "0.1.0"
-__trigger__ = "sax"
-__author__ = "Nikos Koukis"
-__dependencies__ = ["cvlc"]
+__title__ = "Saxophone - Play internet radio streams from albert"
+__version__ = "0.4.0"
+__triggers__ = "sax"
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//saxophone"
 )
@@ -208,7 +206,7 @@ def handleQuery(query) -> list:  # noqa
         results.insert(
             0,
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=stop_icon_path,
                 text="Stop Radio",
                 actions=[v0.FuncAction("Stop Radio", lambda: stop_radio())],
@@ -219,7 +217,7 @@ def handleQuery(query) -> list:  # noqa
         results.insert(
             0,
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=repeat_icon_path,
                 text="Reindex stations",
                 actions=[v0.FuncAction("Reindex", lambda: init_streams())],
@@ -255,7 +253,7 @@ def handleQuery(query) -> list:  # noqa
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -280,7 +278,7 @@ def get_as_item(stream: Stream):
         actions.append(v0.UrlAction("Go to radio homepage", stream.homepage))
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon,
         text=stream.name,
         subtext=stream.description if stream.description else "",

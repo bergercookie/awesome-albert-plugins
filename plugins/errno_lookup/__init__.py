@@ -6,14 +6,12 @@ import traceback
 from pathlib import Path
 from typing import Dict, Tuple
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Errno lookup operations"
-__version__ = "0.1.0"
-__trigger__ = "err "
-__author__ = "Nikos Koukis"
-__dependencies__ = ["errno"]
+__title__ = "Errno lookup operations"
+__version__ = "0.4.0"
+__triggers__ = "err "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//errno_lookup"
 )
@@ -77,7 +75,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -97,7 +95,7 @@ def handleQuery(query) -> list:
 
 def get_as_item(t: Tuple[str, Tuple[str, str]]):
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=f"{t[0]} - {t[1][0]}",
         subtext=f"{t[1][1]}",

@@ -10,21 +10,18 @@ import sys
 import threading
 import time
 from pathlib import Path
-from shutil import which
 
 import gi
 
-import albertv0 as v0
+import albert as v0
 
 gi.require_version("Notify", "0.7")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 
-__iid__ = "PythonInterface/v0.1"
-__prettyname__ = "Pomodoro"
-__version__ = "1.0"
-__author__ = "Manuel Schneider"
-__dependencies__ = ["cvlc"]
+__title__ = "Pomodoro"
+__version__ = "0.4.0"
+__authors__ = "Manuel Schneider"
 
 
 class PomodoroTimer:
@@ -132,7 +129,7 @@ def handleQuery(query):
         global pomodoro
         pattern = re.compile(query.string, re.IGNORECASE)
         item = v0.Item(
-            id=__prettyname__,
+            id=__title__,
             icon=icon_path_kill if pomodoro.is_active() else icon_path,
             text=pattern.sub(lambda m: "<u>%s</u>" % m.group(0), "Pomodoro Timer"),
             completion=query.rawString,

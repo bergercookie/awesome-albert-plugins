@@ -19,14 +19,12 @@ import traceback
 import urllib.parse
 import urllib.request
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.1"
-__prettyname__ = "Google Translate"
-__version__ = "1.0"
-__trigger__ = "tr "
-__author__ = "Manuel Schneider"
-__dependencies__ = []
+__title__ = "Google Translate"
+__version__ = "0.4.0"
+__triggers__ = "tr "
+__authors__ = "Manuel Schneider"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 __simplename__ = "google_translate"
 
@@ -189,12 +187,12 @@ def handleQuery(query):
                 query.disableSort()
 
             fields = query.string.split()
-            item = v0.Item(id=__prettyname__, icon=icon_path, completion=query.rawString)
+            item = v0.Item(id=__title__, icon=icon_path, completion=query.rawString)
 
             if len(fields) < 3:
                 keys_monitor.reset()
 
-                item.text = __prettyname__
+                item.text = __title__
                 item.subtext = 'Enter a query in the form of "&lt;srclang&gt; &lt;dstlang&gt; &lt;text&gt;"'
                 results.append(item)
                 return results
@@ -213,7 +211,7 @@ def handleQuery(query):
                     result = data[0][0][0]
                     item.text = result
                     item.subtext = "%s -> %s: %s" % (src.upper(), dst.upper(), txt,)
-                    item.completion = f"{__trigger__}{src} {dst} "
+                    item.completion = f"{__triggers__}{src} {dst} "
                     item.addAction(v0.ClipAction("Copy translation to clipboard", result))
                     item.addAction(
                         v0.UrlAction(
@@ -227,7 +225,7 @@ def handleQuery(query):
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[

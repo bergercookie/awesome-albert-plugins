@@ -16,7 +16,7 @@ from typing import (
 
 from overrides import overrides
 
-import albertv0 as v0
+import albert as v0
 
 import gi # isort:skip
 gi.require_version("Notify", "0.7")  # isort:skip
@@ -26,12 +26,10 @@ from gi.repository import (
 )  # isort:skip
 
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Countdown/Stopwatch functionalities"
-__version__ = "0.1.0"
-__trigger__ = "clock "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Countdown/Stopwatch functionalities"
+__version__ = "0.4.0"
+__triggers__ = "clock "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock"
 )
@@ -291,11 +289,11 @@ def handleQuery(query,) -> list:
             results.extend(
                 [
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=countdown_path,
                         text="Create countdown",
                         subtext=f'{subtext}{" - <u>Please provide a duration</u>" if not query_parts else ""}',
-                        completion=__trigger__,
+                        completion=__triggers__,
                         actions=[
                             v0.FuncAction(
                                 "Create countdown",
@@ -306,11 +304,11 @@ def handleQuery(query,) -> list:
                         ],
                     ),
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=stopwatch_path,
                         text="Create stopwatch",
                         subtext=subtext,
-                        completion=__trigger__,
+                        completion=__triggers__,
                         actions=[
                             v0.FuncAction(
                                 "Create stopwatch",
@@ -342,7 +340,7 @@ def handleQuery(query,) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=countdown_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -369,11 +367,11 @@ def get_as_item(item: Union[Countdown, Stopwatch]):
         actions.append(v0.FuncAction("Resume", lambda: item.start(),))
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=countdown_path if isinstance(item, Countdown) else stopwatch_path,
         text=str(item),
         subtext="",
-        completion=__trigger__,
+        completion=__triggers__,
         actions=actions,
     )
 

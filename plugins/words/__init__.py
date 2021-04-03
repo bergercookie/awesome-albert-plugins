@@ -12,14 +12,12 @@ from typing import Dict, List
 
 from PyDictionary import PyDictionary
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/v0.2"
-__prettyname__ = "Words: meaning, synonyms, antonyms, examples"
-__version__ = "0.1.0"
-__trigger__ = "word "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "Words: meaning, synonyms, antonyms, examples"
+__version__ = "0.4.0"
+__triggers__ = "word "
+__authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words"
 )
@@ -105,7 +103,7 @@ def handleQuery(query) -> list:
                 # pydictionary or synonyms.com don't seem to support this
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text="A term must be only a single word",
                         actions=[],
@@ -123,7 +121,7 @@ def handleQuery(query) -> list:
                     results.insert(
                         0,
                         v0.Item(
-                            id=__prettyname__, icon=icon_path, text="No results.", actions=[],
+                            id=__title__, icon=icon_path, text="No results.", actions=[],
                         ),
                     )
 
@@ -135,7 +133,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -181,11 +179,11 @@ def get_items_for_word(word: str) -> list:
             for vi in v:
                 items.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text=vi,
                         subtext=k,
-                        completion=f"{__trigger__} {word}",
+                        completion=f"{__triggers__} {word}",
                         actions=[v0.ClipAction("Copy", vi),],
                     )
                 )
@@ -194,7 +192,7 @@ def get_items_for_word(word: str) -> list:
     if synonyms:
         items.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path_g,
                 text="Synonyms",
                 subtext="|".join(synonyms),
@@ -207,7 +205,7 @@ def get_items_for_word(word: str) -> list:
     if antonyms:
         items.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path_r,
                 text="Antonyms",
                 subtext="|".join(antonyms),

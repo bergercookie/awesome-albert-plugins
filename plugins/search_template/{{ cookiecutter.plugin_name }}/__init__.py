@@ -18,15 +18,15 @@ from pathlib import Path
 
 from fuzzywuzzy import process
 
-import albertv0 as v0
+import albert as v0
 
-__iid__ = "PythonInterface/{{ cookiecutter.albert_plugin_interface }}"
-__prettyname__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "0.1.0"
-__trigger__ = "{{ cookiecutter.trigger }} "
-__author__ = "Nikos Koukis"
-__dependencies__ = []
+__title__ = "{{ cookiecutter.plugin_short_description }}"
+__version__ = "0.4.0"
+__triggers__ = "{{ cookiecutter.trigger }} "
+__authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
+__exec_deps__ = []
+__py_deps__ = []
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
@@ -119,10 +119,10 @@ def handleQuery(query) -> list:
             if not query.string:
                 results.append(
                     v0.Item(
-                        id=__prettyname__,
+                        id=__title__,
                         icon=icon_path,
                         text=f'Search {"_".join("{{ cookiecutter.plugin_name }}".split("_")[1:])}',
-                        completion=__trigger__,
+                        completion=__triggers__,
                     )
                 )
     else:
@@ -158,7 +158,7 @@ def handleQuery(query) -> list:
                     results.insert(
                         0,
                         v0.Item(
-                            id=__prettyname__, icon=icon_path, text="No results.", actions=[],
+                            id=__title__, icon=icon_path, text="No results.", actions=[],
                         ),
                     )
 
@@ -166,7 +166,7 @@ def handleQuery(query) -> list:
             results.insert(
                 0,
                 v0.Item(
-                    id=__prettyname__,
+                    id=__title__,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
@@ -231,7 +231,7 @@ def get_googler_result_as_item(googler_item: dict):
         )
 
     return v0.Item(
-        id=__prettyname__,
+        id=__title__,
         icon=icon_path,
         text=googler_item["title"],
         subtext=googler_item["abstract"],
@@ -280,7 +280,7 @@ def setup(query):
     if not shutil.which("googler"):
         results.append(
             v0.Item(
-                id=__prettyname__,
+                id=__title__,
                 icon=icon_path,
                 text=f'"googler" is not installed.',
                 subtext='Please install and configure "googler" accordingly.',
