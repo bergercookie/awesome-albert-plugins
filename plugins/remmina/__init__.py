@@ -16,7 +16,7 @@ __version__ = "0.4.0"
 __triggers__ = "rem"
 __authors__ = "Oğuzcan Küçükbayrak, Nikos Koukis"
 __exec_deps__ = ["remmina"]
-__py_deps__ = []
+__py_deps__ = ["configparser"]
 
 MODULE_PATH = os.path.dirname(__file__)
 ICON_PATH = MODULE_PATH + "/icons/remmina.svg"
@@ -59,6 +59,8 @@ def getConnectionProperties(f: str) -> Tuple[str, str, str, str, str]:
 
 def handleQuery(query):
     if query.isTriggered:
+        query.disableSort()
+
         files = getConfigFiles()
         all_connections = [getConnectionProperties(f) for f in files]
         stripped = query.string.strip()
@@ -73,6 +75,8 @@ def handleQuery(query):
             for p in all_connections:
                 results.append(getAsItem(*p))
 
+        # add it at the very end - fallback choice in case none of the connections is what the
+        # user wants
         results.append(
             Item(
                 id=__title__,
