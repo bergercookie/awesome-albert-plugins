@@ -2,6 +2,12 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "http://diesi.live24.gr/diesi1013",
+      "name": "Δίεση 101.3",
+      "homepage": "https://diesi.gr/",
+      "icon": "diesi.png"
+    },
+    {
       "url": "http://edge.espn.cdn.abacast.net/espn-networkmp3-48",
       "name": "ESPN Radio",
       "homepage": "https://www.espn.com/",
