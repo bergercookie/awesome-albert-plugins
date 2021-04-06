@@ -15,12 +15,6 @@
       "icon": "diesi.png"
     },
     {
-      "url": "http://edge.espn.cdn.abacast.net/espn-networkmp3-48",
-      "name": "ESPN Radio",
-      "homepage": "https://www.espn.com/",
-      "icon": "espn.png"
-    },
-    {
       "url": "http://uk1.internet-radio.com:8267/listen.pls&t=.pls",
       "name": "White Noise"
     },
@@ -32,18 +26,6 @@
       "url": "http://realfm.live24.gr/realfm",
       "name": "RealFM 97.8",
       "homepage": " http://www.realfm.gr/"
-    },
-    {
-      "url": "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1_mf_q",
-      "name": "BBC Radio 1",
-      "homepage": "https://www.bbc.co.uk/radio1",
-      "icon": "bbc1.png"
-    },
-    {
-      "url": "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio2_mf_q",
-      "name": "BBC Radio 2",
-      "homepage": "https://www.bbc.co.uk/radio2",
-      "icon": "bbc2.jpg"
     },
     {
       "url": "http://198.245.60.88:8128/listen.pls?sid=1",
@@ -116,11 +98,6 @@
       "name": "FM Blues"
     },
     {
-      "url": "http://1.ice1.firststreaming.com/kkjz_fm.mp3",
-      "name": "KKJZ - KJazz 88.1",
-      "homepage": "http://jazzandblues.org/"
-    },
-    {
       "url": "http://minnesota.publicradio.org/tools/play/streams/classical.pls",
       "name": "Classical MPR"
     },
@@ -131,10 +108,6 @@
     {
       "url": "http://minnesota.publicradio.org/tools/play/streams/radio_heartland.pls",
       "name": "MPR Radio Heartland"
-    },
-    {
-      "url": "http://choralstream1.publicradio.org/choral.m3u",
-      "name": "Clasical MPR Chora"
     },
     {
       "url": "http://www.wefunkradio.com/play/shoutcast.pls",
