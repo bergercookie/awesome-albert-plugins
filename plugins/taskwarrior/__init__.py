@@ -3,19 +3,19 @@
 import datetime
 import os
 import re
+import threading
 import traceback
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
+import albert as v0  # type: ignore
 import dateutil
 import gi
 import taskw
 from fuzzywuzzy import process
 from overrides import overrides
-
-import albert as v0  # type: ignore
 from taskw_gcal_sync import TaskWarriorSide
 
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
@@ -43,7 +43,9 @@ icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan.svg")
 icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 
 # initial configuration -----------------------------------------------------------------------
-always_show_today_subcommand = True
+# should the plugin show relevant some info without the trigger?
+show_items_wo_trigger = True
+
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
@@ -51,8 +53,24 @@ last_update_path = cache_path / "last_update"
 
 reminders_tag_path = config_path / "reminders_tag"
 
-tw_side = TaskWarriorSide(enable_caching=True)
-tw_side.start()
+class TaskWarriorSideWLock:
+    """Multithreading-safe version of TaskWarriorSide."""
+    def __init__(self):
+        self.tw = TaskWarriorSide(enable_caching=True)
+        self.tw_lock = threading.Lock()
+    def start(self, *args, **kargs):
+        with self.tw_lock:
+            return self.tw.start(*args, **kargs)
+
+    def get_all_items(self, *args, **kargs):
+        with self.tw_lock:
+            return self.tw.get_all_items(*args, **kargs)
+
+    def get_task_id(self, *args, **kargs):
+        with self.tw_lock:
+            return self.tw.get_task_id(*args, **kargs)
+
+tw_side = TaskWarriorSideWLock()
 
 dev_mode = True
 
@@ -69,8 +87,6 @@ def do_notify(msg: str, image=None):
     app_name = "Taskwarrior"
     Notify.init(app_name)
     image = image
-    print("msg: ", msg)
-    print("image: ", image)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
 
@@ -97,7 +113,7 @@ def initialize():
     config_path.mkdir(parents=False, exist_ok=True)
 
     if not last_update_path.is_file():
-        block_reload_tasks()
+        reload_items()
 
 
 def finalize():
@@ -114,13 +130,20 @@ def handleQuery(query):
     if datetime.datetime.now() - last_date > datetime.timedelta(
         hours=1
     ):  # run an update daily
-        block_reload_tasks()
+        reload_items()
 
     if not query.isTriggered:
-        if always_show_today_subcommand and len(query.string) < 2:
-            results.insert(0,
-                           TodayTasks(name="today", desc="Today's tasks").get_as_albert_item())
+        if show_items_wo_trigger and len(query.string) < 2:
+            results = [
+                ActiveTasks().get_as_albert_item(),
+                TodayTasks().get_as_albert_item(),
+                *results,
+            ]
     else:
+        # join any previously launched threads
+        for i in range(len(workers)):
+            workers.pop(i).join(2)
+
         try:
             query.disableSort()
 
@@ -136,7 +159,7 @@ def handleQuery(query):
                 results.append(
                     get_as_item(
                         text="Reload list of tasks",
-                        actions=[v0.FuncAction("Reload", block_reload_tasks)],
+                        actions=[v0.FuncAction("Reload", reload_items)],
                     )
                 )
 
@@ -166,7 +189,7 @@ def handleQuery(query):
 
         except Exception:  # user to report error
             if dev_mode:
-                print(traceback.format_exc())
+                v0.critical(traceback.format_exc())
                 raise
 
             results.insert(
@@ -197,21 +220,28 @@ def get_as_item(**kargs) -> v0.Item:
 
 # supplementary functions ---------------------------------------------------------------------
 
-
-def mark_for_reload():
-    tw_side.reload_items = True
+workers: List[threading.Thread] = []
 
 
-def block_reload_tasks():
-    global tasks
-    print("TaskWarrior: Updating list of tasks...")
-    mark_for_reload()
-    tasks = tw_side.get_all_items(include_completed=False)
 
-    with open(last_update_path, "w") as f:
-        now = (datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds()
+def reload_items():
+    def do_reload():
+        v0.info("TaskWarrior: Updating list of tasks...")
+        tw_side.reload_items = True
+        tw_side.get_all_items(include_completed=False)
+
         with open(last_update_path, "w") as f:
-            f.write(str(now))
+            now = (datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds()
+            with open(last_update_path, "w") as f:
+                f.write(str(now))
+
+
+    t = threading.Thread(target=do_reload)
+    t.start()
+    workers.append(t)
+
+
+
 
 
 def setup(query):  # type: ignore
@@ -297,7 +327,7 @@ def run_tw_action(args_list: list, need_pty=False):
         msg = stdout.decode("utf-8")
 
     do_notify(msg=msg, image=image)
-    mark_for_reload()
+    reload_items()
 
 
 def add_reminder(task_id, reminders_tag: list):
@@ -305,34 +335,33 @@ def add_reminder(task_id, reminders_tag: list):
     run_tw_action(args_list)
 
 
-def get_tw_item(task: taskw.task.Task) -> v0.Item:
+def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     """Get a single TW task as an Albert Item."""
     field = get_as_subtext_field
+    task_id = tw_side.get_task_id(task)
 
     actions = [
         v0.FuncAction(
             "Complete task",
-            lambda args_list=["done", tw_side.get_task_id(task)]: run_tw_action(args_list),
+            lambda args_list=["done", task_id]: run_tw_action(args_list),
         ),
         v0.FuncAction(
             "Delete task",
-            lambda args_list=["delete", tw_side.get_task_id(task)]: run_tw_action(args_list),
+            lambda args_list=["delete", task_id]: run_tw_action(args_list),
         ),
         v0.FuncAction(
             "Start task",
-            lambda args_list=["start", tw_side.get_task_id(task)]: run_tw_action(args_list),
+            lambda args_list=["start", task_id]: run_tw_action(args_list),
         ),
         v0.FuncAction(
             "Stop task",
-            lambda args_list=["stop", tw_side.get_task_id(task)]: run_tw_action(args_list),
+            lambda args_list=["stop", task_id]: run_tw_action(args_list),
         ),
         v0.FuncAction(
             "Edit task interactively",
-            lambda args_list=["edit", tw_side.get_task_id(task)]: run_tw_action(
-                args_list, need_pty=True
-            ),
+            lambda args_list=["edit", task_id]: run_tw_action(args_list, need_pty=True),
         ),
-        v0.ClipAction("Copy task UUID", f"{tw_side.get_task_id(task)}"),
+        v0.ClipAction("Copy task UUID", f"{task_id}"),
     ]
 
     found_urls = url_re.findall(task["description"])
@@ -349,15 +378,19 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:
                 f"Add to Reminders (+{reminders_tag})",
                 lambda args_list=[
                     "modify",
-                    tw_side.get_task_id(task),
+                    task_id,
                     f"+{reminders_tag}",
                 ]: run_tw_action(args_list),
             )
         )
 
     urgency_str, icon = urgency_to_visuals(task.get("urgency"))
+    text = f'{task["description"]}'
+    if "start" in task:
+        text = f'<p style="color:orange;">{text}</p>'
+
     return get_as_item(
-        text=f'{task["description"]}',
+        text=text,
         subtext="{}{}{}{}{}".format(
             field(urgency_str),
             "ID: {}... | ".format(tw_side.get_task_id(task)[:8]),
@@ -388,8 +421,8 @@ class Subcommand:
 
 
 class AddSubcommand(Subcommand):
-    def __init__(self, **kargs):
-        super(AddSubcommand, self).__init__(**kargs)
+    def __init__(self):
+        super(AddSubcommand, self).__init__(name="add", desc="Add a new task")
 
     @overrides
     def get_as_albert_items_full(self, query_str):
@@ -404,18 +437,32 @@ class AddSubcommand(Subcommand):
         return [item]
 
 
-class TodayTasks(Subcommand):
-    def __init__(self, **kargs):
-        super(TodayTasks, self).__init__(**kargs)
+class ActiveTasks(Subcommand):
+    def __init__(self):
+        super(ActiveTasks, self).__init__(name="active", desc="Active tasks")
 
     @overrides
     def get_as_albert_items_full(self, query_str):
+        return [
+            get_tw_item(t)
+            for t in tw_side.get_all_items(include_completed=False)
+            if "start" in t
+        ]
+
+
+class TodayTasks(Subcommand):
+    def __init__(self):
+        super(TodayTasks, self).__init__(name="today", desc="Today's tasks")
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+
         return [get_tw_item(t) for t in get_tasks_of_date(datetime.date.today())]
 
 
 class YesterdayTasks(Subcommand):
-    def __init__(self, **kargs):
-        super(YesterdayTasks, self).__init__(**kargs)
+    def __init__(self):
+        super(YesterdayTasks, self).__init__(name="yesterday", desc="Yesterday's tasks")
 
     @overrides
     def get_as_albert_items_full(self, query_str):
@@ -424,8 +471,8 @@ class YesterdayTasks(Subcommand):
 
 
 class TomorrowTasks(Subcommand):
-    def __init__(self, **kargs):
-        super(TomorrowTasks, self).__init__(**kargs)
+    def __init__(self):
+        super(TomorrowTasks, self).__init__(name="tomorrow", desc="Tomorrow's tasks")
 
     @overrides
     def get_as_albert_items_full(self, query_str):
@@ -449,10 +496,11 @@ class SubcommandQuery:
 
 
 subcommands = [
-    AddSubcommand(name="add", desc="Add a new task"),
-    TodayTasks(name="today", desc="Today's tasks"),
-    YesterdayTasks(name="yesterday", desc="Yesterday's tasks"),
-    TomorrowTasks(name="tomorrow", desc="Tomorrow's tasks"),
+    AddSubcommand(),
+    ActiveTasks(),
+    TodayTasks(),
+    YesterdayTasks(),
+    TomorrowTasks(),
 ]
 
 
