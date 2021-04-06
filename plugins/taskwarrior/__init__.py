@@ -1,5 +1,6 @@
 """Interact with Taskwarrior."""
 
+from abc import abstractmethod, ABCMeta
 import datetime
 import os
 import re
@@ -8,7 +9,7 @@ import traceback
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
-from typing import Optional, Tuple, Union, List
+from typing import List, Optional, Tuple, Union
 
 import albert as v0  # type: ignore
 import dateutil
@@ -49,15 +50,17 @@ show_items_wo_trigger = True
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
-last_update_path = cache_path / "last_update"
 
 reminders_tag_path = config_path / "reminders_tag"
 
+
 class TaskWarriorSideWLock:
     """Multithreading-safe version of TaskWarriorSide."""
+
     def __init__(self):
         self.tw = TaskWarriorSide(enable_caching=True)
         self.tw_lock = threading.Lock()
+
     def start(self, *args, **kargs):
         with self.tw_lock:
             return self.tw.start(*args, **kargs)
@@ -69,6 +72,18 @@ class TaskWarriorSideWLock:
     def get_task_id(self, *args, **kargs):
         with self.tw_lock:
             return self.tw.get_task_id(*args, **kargs)
+
+    @property
+    def reload_items(self):
+        return self.tw.reload_items
+
+    @reload_items.setter
+    def reload_items(self, val: bool):
+        self.tw.reload_items = val
+
+    def update_item(self, *args, **kargs):
+        self.tw.update_item(*args, **kargs)
+
 
 tw_side = TaskWarriorSideWLock()
 
@@ -112,9 +127,6 @@ def initialize():
     # create cache location
     config_path.mkdir(parents=False, exist_ok=True)
 
-    if not last_update_path.is_file():
-        reload_items()
-
 
 def finalize():
     pass
@@ -122,15 +134,6 @@ def finalize():
 
 def handleQuery(query):
     results = []
-
-    # Update the TaskWarrior cache ------------------------------------------------------------
-    with open(last_update_path, "r") as f:
-        date_str = float(f.readline().strip())
-    last_date = datetime.datetime.fromtimestamp(date_str)
-    if datetime.datetime.now() - last_date > datetime.timedelta(
-        hours=1
-    ):  # run an update daily
-        reload_items()
 
     if not query.isTriggered:
         if show_items_wo_trigger and len(query.string) < 2:
@@ -159,7 +162,7 @@ def handleQuery(query):
                 results.append(
                     get_as_item(
                         text="Reload list of tasks",
-                        actions=[v0.FuncAction("Reload", reload_items)],
+                        actions=[v0.FuncAction("Reload", async_reload_items)],
                     )
                 )
 
@@ -223,25 +226,15 @@ def get_as_item(**kargs) -> v0.Item:
 workers: List[threading.Thread] = []
 
 
-
-def reload_items():
+def async_reload_items():
     def do_reload():
         v0.info("TaskWarrior: Updating list of tasks...")
         tw_side.reload_items = True
         tw_side.get_all_items(include_completed=False)
 
-        with open(last_update_path, "w") as f:
-            now = (datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds()
-            with open(last_update_path, "w") as f:
-                f.write(str(now))
-
-
     t = threading.Thread(target=do_reload)
     t.start()
     workers.append(t)
-
-
-
 
 
 def setup(query):  # type: ignore
@@ -327,9 +320,10 @@ def run_tw_action(args_list: list, need_pty=False):
         msg = stdout.decode("utf-8")
 
     do_notify(msg=msg, image=image)
-    reload_items()
+    async_reload_items()
 
 
+# TODO Use this
 def add_reminder(task_id, reminders_tag: list):
     args_list = ["modify", task_id, f"+{reminders_tag}"]
     run_tw_action(args_list)
@@ -411,7 +405,7 @@ class Subcommand:
         self.desc = desc
 
     def get_as_albert_item(self):
-        return get_as_item(text=self.desc, completion=f"{__triggers__} {self.name} ")
+        return get_as_item(text=self.desc, completion=f"{__triggers__}{self.name} ")
 
     def get_as_albert_items_full(self, query_str):
         return [self.get_as_albert_item()]
@@ -450,34 +444,60 @@ class ActiveTasks(Subcommand):
         ]
 
 
-class TodayTasks(Subcommand):
-    def __init__(self):
-        super(TodayTasks, self).__init__(name="today", desc="Today's tasks")
+def move_tasks_of_date_to_next_day(date: datetime.date):
+    for t in get_tasks_of_date(date):
+        tw_side.update_item(item_id=str(t["uuid"]), due=t["due"] + datetime.timedelta(days=1))
+
+
+class DateTasks(Subcommand):
+    """
+    Common parent to classes like TodayTasks, and YesterdayTasks so as to not repeat ourselves.
+    """
+
+    def __init__(self, date: datetime.date, *args, **kargs):
+        super(DateTasks, self).__init__(*args, **kargs)
+        self.date = date
+
+    @overrides
+    def get_as_albert_item(self):
+        item = super().get_as_albert_item()
+        item.addAction(
+            v0.FuncAction(
+                "Move tasks to the day after",
+                lambda date=self.date: move_tasks_of_date_to_next_day(date),
+            )
+        )
+
+        return item
 
     @overrides
     def get_as_albert_items_full(self, query_str):
+        return [get_tw_item(t) for t in get_tasks_of_date(self.date)]
 
-        return [get_tw_item(t) for t in get_tasks_of_date(datetime.date.today())]
 
-
-class YesterdayTasks(Subcommand):
+class TodayTasks(DateTasks):
     def __init__(self):
-        super(YesterdayTasks, self).__init__(name="yesterday", desc="Yesterday's tasks")
-
-    @overrides
-    def get_as_albert_items_full(self, query_str):
-        date = datetime.date.today() - datetime.timedelta(days=1)
-        return [get_tw_item(t) for t in get_tasks_of_date(date)]
+        super(TodayTasks, self).__init__(
+            date=datetime.date.today(), name="today", desc="Today's tasks"
+        )
 
 
-class TomorrowTasks(Subcommand):
+class YesterdayTasks(DateTasks):
     def __init__(self):
-        super(TomorrowTasks, self).__init__(name="tomorrow", desc="Tomorrow's tasks")
+        super(YesterdayTasks, self).__init__(
+            date=datetime.date.today() - datetime.timedelta(days=1),
+            name="yesterday",
+            desc="Yesterday's tasks",
+        )
 
-    @overrides
-    def get_as_albert_items_full(self, query_str):
-        date = datetime.date.today() + datetime.timedelta(days=1)
-        return [get_tw_item(t) for t in get_tasks_of_date(date)]
+
+class TomorrowTasks(DateTasks):
+    def __init__(self):
+        super(TomorrowTasks, self).__init__(
+            date=datetime.date.today() + datetime.timedelta(days=1),
+            name="tomorrow",
+            desc="Tomorrow's tasks",
+        )
 
 
 class SubcommandQuery:
