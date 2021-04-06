@@ -2,6 +2,13 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "http://pepper966.live24.gr/pepperorigin",
+      "name": "Pepper 96.6",
+      "homepage": "https://www.pepper966.gr/",
+      "homepage": "https://www.pepper966.gr/",
+      "icon": "pepper966.jpg"
+    },
+    {
       "url": "http://diesi.live24.gr/diesi1013",
       "name": "Δίεση 101.3",
       "homepage": "https://diesi.gr/",
