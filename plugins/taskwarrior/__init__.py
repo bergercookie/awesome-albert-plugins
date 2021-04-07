@@ -1,11 +1,11 @@
 """Interact with Taskwarrior."""
 
-from abc import abstractmethod, ABCMeta
 import datetime
 import os
 import re
 import threading
 import traceback
+from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
@@ -323,12 +323,6 @@ def run_tw_action(args_list: list, need_pty=False):
     async_reload_items()
 
 
-# TODO Use this
-def add_reminder(task_id, reminders_tag: list):
-    args_list = ["modify", task_id, f"+{reminders_tag}"]
-    run_tw_action(args_list)
-
-
 def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     """Get a single TW task as an Albert Item."""
     field = get_as_subtext_field
@@ -383,6 +377,10 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     if "start" in task:
         text = f'<p style="color:orange;">{text}</p>'
 
+    due = None
+    if "due" in task:
+        due = task["due"].astimezone(dateutil.tz.tzlocal()).strftime("%Y-%m-%d %H:%M:%S")  # type: ignore
+
     return get_as_item(
         text=text,
         subtext="{}{}{}{}{}".format(
@@ -390,7 +388,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
             "ID: {}... | ".format(tw_side.get_task_id(task)[:8]),
             field(task["status"]),
             field(task.get("tags"), "tags"),
-            field(task.get("due"), "due"),
+            field(due, "due"),
         )[:-2],
         icon=str(icon),
         completion=f'{__triggers__}{task["description"]}',
