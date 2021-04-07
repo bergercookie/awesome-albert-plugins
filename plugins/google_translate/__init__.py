@@ -12,12 +12,15 @@ between two consecutive chars) so that we send less requests to google. This way
 blocked.
 """
 
+import ast
 import json
-import os
 import time
 import traceback
 import urllib.parse
 import urllib.request
+from collections import deque
+from pathlib import Path
+from typing import Deque, Dict, Optional
 
 import albert as v0
 
@@ -28,127 +31,52 @@ __authors__ = "Manuel Schneider"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 __simplename__ = "google_translate"
 
+
+dev_mode = True
+
 ua = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36"
-urltmpl = (
+url_template = (
     "https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s"
 )
 
-icon_path = os.path.join(os.path.dirname(__file__), "google_translate")
+icon_path = str(Path(__file__).parent / "google_translate")
+icon_path_hist = str(Path(__file__).parent / "google_translate_gray")
+cache_path = Path(v0.cacheLocation()) / "google_translate"
+data_path = Path(v0.dataLocation()) / "google_translate"
 
-# TODO Use these to provide autocompletion
-langs = [
-    {"Afrikaans": "af"},
-    {"Albanian": "sq"},
-    {"Amharic": "am"},
-    {"Arabic": "ar"},
-    {"Armenian": "hy"},
-    {"Azerbaijani": "az"},
-    {"Basque": "eu"},
-    {"Belarusian": "be"},
-    {"Bengali": "bn"},
-    {"Bosnian": "bs"},
-    {"Bulgarian": "bg"},
-    {"Catalan": "ca"},
-    {"Cebuano": "ceb"},
-    {"Chinese (Simplified)": "zh"},
-    {"Chinese (Traditional)": "zh-TW"},
-    {"Corsican": "co"},
-    {"Croatian": "hr"},
-    {"Czech": "cs"},
-    {"Danish": "da"},
-    {"Dutch": "nl"},
-    {"English": "en"},
-    {"Esperanto": "eo"},
-    {"Estonian": "et"},
-    {"Finnish": "fi"},
-    {"French": "fr"},
-    {"Frisian": "fy"},
-    {"Galician": "gl"},
-    {"Georgian": "ka"},
-    {"German": "de"},
-    {"Greek": "el"},
-    {"Gujarati": "gu"},
-    {"Haitian Creole": "ht"},
-    {"Hausa": "ha"},
-    {"Hawaiian": "haw"},
-    {"Hebrew": "he"},
-    {"Hindi": "hi"},
-    {"Hmong": "hmn"},
-    {"Hungarian": "hu"},
-    {"Icelandic": "is"},
-    {"Igbo": "ig"},
-    {"Indonesian": "id"},
-    {"Irish": "ga"},
-    {"Italian": "it"},
-    {"Japanese": "ja"},
-    {"Javanese": "jv"},
-    {"Kannada": "kn"},
-    {"Kazakh": "kk"},
-    {"Khmer": "km"},
-    {"Kinyarwanda": "rw"},
-    {"Korean": "ko"},
-    {"Kurdish": "ku"},
-    {"Kyrgyz": "ky"},
-    {"Lao": "lo"},
-    {"Latin": "la"},
-    {"Latvian": "lv"},
-    {"Lithuanian": "lt"},
-    {"Luxembourgish": "lb"},
-    {"Macedonian": "mk"},
-    {"Malagasy": "mg"},
-    {"Malay": "ms"},
-    {"Malayalam": "ml"},
-    {"Maltese": "mt"},
-    {"Maori": "mi"},
-    {"Marathi": "mr"},
-    {"Mongolian": "mn"},
-    {"Myanmar (Burmese)": "my"},
-    {"Nepali": "ne"},
-    {"Norwegian": "no"},
-    {"Nyanja (Chichewa)": "ny"},
-    {"Odia (Oriya)": "or"},
-    {"Pashto": "ps"},
-    {"Persian": "fa"},
-    {"Polish": "pl"},
-    {"Portuguese (Portugal, Brazil)": "pt"},
-    {"Punjabi": "pa"},
-    {"Romanian": "ro"},
-    {"Russian": "ru"},
-    {"Samoan": "sm"},
-    {"Scots Gaelic": "gd"},
-    {"Serbian": "sr"},
-    {"Sesotho": "st"},
-    {"Shona": "sn"},
-    {"Sindhi": "sd"},
-    {"Sinhala (Sinhalese)": "si"},
-    {"Slovak": "sk"},
-    {"Slovenian": "sl"},
-    {"Somali": "so"},
-    {"Spanish": "es"},
-    {"Sundanese": "su"},
-    {"Swahili": "sw"},
-    {"Swedish": "sv"},
-    {"Tagalog (Filipino)": "tl"},
-    {"Tajik": "tg"},
-    {"Tamil": "ta"},
-    {"Tatar": "tt"},
-    {"Telugu": "te"},
-    {"Thai": "th"},
-    {"Turkish": "tr"},
-    {"Turkmen": "tk"},
-    {"Ukrainian": "uk"},
-    {"Urdu": "ur"},
-    {"Uyghur": "ug"},
-    {"Uzbek": "uz"},
-    {"Vietnamese": "vi"},
-    {"Welsh": "cy"},
-    {"Xhosa": "xh"},
-    {"Yiddish": "yi"},
-    {"Yoruba": "yo"},
-    {"Zulu": "zu"},
-]
+# have a history of the previous results ------------------------------------------------------
+history_path = cache_path / "history.dat"
+history_deque: Deque[Dict[str, str]] = deque(maxlen=10)
+if history_path.exists and not history_path.is_file():
+    raise RuntimeError(f"History path [{history_path}] must be a file, can't handle its type!")
+if history_path.is_file():
+    with open(history_path, "r") as f:
+        lines = f.readlines()
+        history_deque.extend([ast.literal_eval(li) for li in lines])
+
+
+def flush_history():
+    v0.info(f"Flushing google_translate history -> {history_path}...")
+    # TODO this kind of usage is theoretically unsafe, but most likely wont affect. The timer
+    # fires every ~1hr and traversing the deque takes so little time.
+    with open(history_path, "w") as f:
+        for di in history_deque:
+            f.write(f"{di}\n")
+
 
 # plugin main functions -----------------------------------------------------------------------
+
+
+def initialize():
+    # Called when the extension is loaded (ticked in the settings) - blocking
+
+    # create plugin locations
+    for p in (cache_path, data_path):
+        p.mkdir(parents=False, exist_ok=True)
+
+
+def finalize():
+    flush_history()
 
 
 class KeystrokeMonitor:
@@ -161,7 +89,7 @@ class KeystrokeMonitor:
     def report(self):
         self.prev_time = time.time()
         self.curr_time = time.time()
-        self.report = self.report_after_first
+        self.report = self.report_after_first  # type: ignore
 
     def report_after_first(self):
         # update prev, curr time
@@ -172,7 +100,7 @@ class KeystrokeMonitor:
         return self.curr_time - self.prev_time > self.thres
 
     def reset(self) -> None:
-        self.report = self.report_after_first
+        self.report = self.report_after_first  # type: ignore
 
 
 keys_monitor = KeystrokeMonitor()
@@ -185,31 +113,41 @@ def handleQuery(query):
             query.disableSort()
 
             fields = query.string.split()
-            item = v0.Item(id=__title__, icon=icon_path, completion=query.rawString)
+            item = v0.Item(
+                id=__title__,
+                text=__title__,
+                subtext='Enter a query in the form of "&lt;srclang&gt; &lt;dstlang&gt; &lt;text&gt;"',
+                icon=icon_path,
+                completion=query.rawString,
+            )
 
+            results.append(item)
             if len(fields) < 3:
                 keys_monitor.reset()
-
-                item.text = __title__
-                item.subtext = 'Enter a query in the form of "&lt;srclang&gt; &lt;dstlang&gt; &lt;text&gt;"'
-                results.append(item)
                 return results
 
+            def completion():
+                return f"{__triggers__}{dst} {src} {txt}"
+
+            src = fields[0]
+            dst = fields[1]
+            txt = " ".join(fields[2:])
+            results[-1].completion = completion()
 
             # determine if we can make the request --------------------------------------------
             keys_monitor.report()
             if keys_monitor.triggered():
-                src = fields[0]
-                dst = fields[1]
-                txt = " ".join(fields[2:])
-                url = urltmpl % (src, dst, urllib.parse.quote_plus(txt))
+                url = url_template % (src, dst, urllib.parse.quote_plus(txt))
                 req = urllib.request.Request(url, headers={"User-Agent": ua})
                 with urllib.request.urlopen(req) as response:
                     data = json.loads(response.read().decode("utf-8"))
                     result = data[0][0][0]
                     item.text = result
-                    item.subtext = "%s -> %s: %s" % (src.upper(), dst.upper(), txt,)
-                    item.completion = f"{__triggers__}{src} {dst} "
+                    item.subtext = "%s -> %s: %s" % (
+                        src.upper(),
+                        dst.upper(),
+                        txt,
+                    )
                     item.addAction(v0.ClipAction("Copy translation to clipboard", result))
                     item.addAction(
                         v0.UrlAction(
@@ -217,9 +155,29 @@ def handleQuery(query):
                             f"https://translate.google.com/#view=home&op=translate&sl={src.lower()}&tl={dst.lower()}&text={txt}",
                         )
                     )
-                    results.append(item)
+                    save_search_result(src=src, dst=dst, src_txt=txt, dst_txt=result)
+
+            # Show previous results
+            iterator = reversed(history_deque)
+            try:
+                next(iterator)
+                for di in iterator:  # last is the most recent
+                    results.append(
+                        get_history_item(
+                            src=di["src"],
+                            dst=di["dst"],
+                            src_txt=di["src_txt"],
+                            dst_txt=di["dst_txt"],
+                        )
+                    )
+            except StopIteration:
+                pass
 
         except Exception:  # user to report error
+            if dev_mode:  # let exceptions fly!
+                print(traceback.format_exc())
+                raise
+
             results.insert(
                 0,
                 v0.Item(
@@ -236,3 +194,31 @@ def handleQuery(query):
             )
 
     return results
+
+
+def save_search_result(*, src: str, dst: str, src_txt: str, dst_txt: str):
+    # sanity checks
+    if len(src_txt) <= 2 or len(dst_txt) <= 2:
+        return
+
+    history_deque.append(
+        {
+            "src": src,
+            "dst": dst,
+            "src_txt": src_txt,
+            "dst_txt": dst_txt,
+        }
+    )
+
+    # write it to file as well
+    flush_history()
+
+
+def get_history_item(*, src: str, dst: str, src_txt: str, dst_txt) -> v0.Item:
+    return v0.Item(
+        id=__title__,
+        text=dst_txt,
+        subtext=src_txt,
+        icon=icon_path_hist,
+        completion=f"{__triggers__}{src} {dst} {src_txt}",
+    )
