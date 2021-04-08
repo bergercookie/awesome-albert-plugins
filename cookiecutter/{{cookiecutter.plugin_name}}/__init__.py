@@ -17,7 +17,7 @@ from gi.repository import GdkPixbuf, Notify
 import albert as v0
 
 __title__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "0.4.0"
+__version__ = "{{ cookiecutter.albert_version }}"
 __triggers__ = "{{ cookiecutter.trigger }} "
 __authors__ = "{{ cookiecutter.author }}"
 __homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
@@ -55,10 +55,10 @@ class KeystrokeMonitor:
 
     def reset(self) -> None:
         self.report = self.report_after_first
-{%- endif %}
 
 # Do not flood the web server with queries, otherwise it may block your IP.
 keys_monitor = KeystrokeMonitor()
+{%- endif %}
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ def handleQuery(query) -> list:
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
+                v0.critical(traceback.format_exc())
                 raise
 
             results.insert(

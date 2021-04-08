@@ -4,9 +4,8 @@
     "parent_repo_url": "https://github.com/bergercookie/awesome-albert-plugins",
     "repo_base_url": "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins",
     "plugin_short_description": "Some title for your plugin",
-    "albert_plugin_interface": "v0.2",
     "trigger": "{{ cookiecutter.plugin_name }}",
-    "version": "0.1.0",
+    "albert_version": "0.4.0",
     "include_keystroke_monitor": "n",
     "use_notifications": "y"
 }

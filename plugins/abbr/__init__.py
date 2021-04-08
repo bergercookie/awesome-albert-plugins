@@ -242,20 +242,6 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
 def submit_fname(p: Path):
     p = p.expanduser().resolve()
     if p.is_file():
