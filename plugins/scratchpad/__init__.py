@@ -40,7 +40,7 @@ if s_store_fname.is_file():
 
 def save_to_scratchpad(line: str):
     with open(s_path, "a+") as f:
-        f.write(line)
+        f.write(f"{line}\n")
 
 
 def initialize():
