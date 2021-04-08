@@ -38,9 +38,14 @@ if s_store_fname.is_file():
         s_path = p if p.is_file() else Path()
 
 
-def save_to_scratchpad(line: str):
+def save_to_scratchpad(line: str, sep=False):
     with open(s_path, "a+") as f:
-        f.write(f"{line}\n")
+        s = ""
+        if sep:
+            s = "\n" + "-" * 10 + "\n\n"
+
+        conts = f"{s}{line}\n"
+        f.write(conts)
 
 
 def initialize():
@@ -120,6 +125,10 @@ def get_as_item(query_str: str):
             v0.FuncAction(
                 f"Save to scratchpad -> {s_path}",
                 lambda line=query_str: save_to_scratchpad(line),
+            ),
+            v0.FuncAction(
+                f"Save to scratchpad - New Section -> {s_path}",
+                lambda line=query_str: save_to_scratchpad(line, sep=True),
             ),
         ],
     )
