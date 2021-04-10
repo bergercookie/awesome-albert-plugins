@@ -1,26 +1,22 @@
 """Saxophone - Play internet radio streams from albert."""
 
-# TODO When actually searching do not show favorites on top
 # TODO - Enable using dbus-send for wm widget integration
-
-from enum import Enum
-from pathlib import Path
-from typing import List, Optional
 import json
 import operator
 import os
-import time
-
+import random
 import traceback
-import mpv
-import albert as v0
+from enum import Enum
+from pathlib import Path
+from typing import List, Optional
 
-import gi # isort:skip
+import albert as v0
+import mpv
+
+import gi  # isort:skip
+
 gi.require_version("Notify", "0.7")  # isort:skip
-from gi.repository import (
-    GdkPixbuf,
-    Notify,
-)  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 __title__ = "Saxophone - Play internet radio streams from albert"
 __version__ = "0.4.0"
@@ -36,12 +32,24 @@ icons_path = Path(__file__).parent / "images"
 def get_icon(icon: str):
     return str(icons_path / icon)
 
+
 def notify(
-    app_name: str, msg: str, image=None,
+    app_name: str,
+    msg: str,
+    image=None,
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
+
+
+def sort_random(streams):
+    random.shuffle(streams)
+
+
+def sort_favorite(streams):
+    streams.sort(key=operator.attrgetter("favorite"), reverse=True)
+
 
 icon_path = get_icon("saxophone")
 stop_icon_path = get_icon("stop_icon")
@@ -52,6 +60,10 @@ pids_path = cache_path / "streams_on"
 data_path = Path(v0.dataLocation()) / "saxophone"
 
 json_config = str(Path(__file__).parent / "config" / "saxophone.json")
+
+sort_fn = sort_random
+# sort_fn = sort_favorite
+
 dev_mode = False
 
 # Stream class --------------------------------------------------------------------------------
@@ -103,14 +115,14 @@ class Stream:
 
     def on_metadata_change(self, name, value):
         if value:
-            notify("Saxophone", value.get('icy-title', ""), self.icon())
+            notify("Saxophone", value.get("icy-title", ""), self.icon())
 
         # Send to dbus
 
     def debug_print(self, loglevel, component, message):
         print(f"[{loglevel}] {component}: {message}")
 
-    def url_type(self) -> UrlType:
+    def url_type(self) -> UrlType:  # type: ignore
         return self._url_type
 
     def is_on(self) -> bool:
@@ -142,7 +154,7 @@ def init_streams():
 
         for item in conts["all"]:
             streams.append(Stream(**item))
-    streams.sort(key=operator.attrgetter("favorite"), reverse=True)
+    sort_fn(streams)
 
 
 # initialise all available streams
@@ -165,7 +177,6 @@ def check_pid(pid: int) -> bool:
 def is_radio_on() -> bool:
     """Check if any of the streams are on."""
     return any([s.is_on() for s in streams])
-    return True
 
 
 def stop_radio():
@@ -213,17 +224,14 @@ def handleQuery(query) -> list:  # noqa
             ),
         )
 
-    if query.isTriggered:
-        results.insert(
-            0,
-            v0.Item(
-                id=__title__,
-                icon=repeat_icon_path,
-                text="Reindex stations",
-                actions=[v0.FuncAction("Reindex", lambda: init_streams())],
-            ),
-        )
+    reindex_item = v0.Item(
+        id=__title__,
+        icon=repeat_icon_path,
+        text="Reindex stations",
+        actions=[v0.FuncAction("Reindex", lambda: init_streams())],
+    )
 
+    if query.isTriggered:
         try:
             query.disableSort()
 
@@ -234,14 +242,18 @@ def handleQuery(query) -> list:  # noqa
             query_str = query.string.strip().lower()
 
             if not query_str:
+                results.append(reindex_item)
                 for stream in streams:
                     results.append(get_as_item(stream))
             else:
                 for stream in streams:
                     if query_str in stream.name.lower() or (
-                        stream.description and stream.description.lower()
+                        stream.description and query_str.lower() in stream.description.lower()
                     ):
                         results.append(get_as_item(stream))
+
+                # reindex goes at the end of the list if we are searching for a stream
+                results.append(reindex_item)
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
@@ -286,9 +298,7 @@ def get_as_item(stream: Stream):
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable.
-
-    """
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
     if field:
         s = f"{field} | "

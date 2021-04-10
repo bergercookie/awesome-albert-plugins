@@ -106,7 +106,7 @@ def handleQuery(query) -> list:
 
             keys_monitor.report()
             if keys_monitor.triggered():
-                bing_images = list(bing_search_save_to_cache(query=query_str, limit=10))
+                bing_images = list(bing_search_save_to_cache(query=query_str, limit=3))
                 if not bing_images:
                     results.insert(
                         0,
@@ -154,7 +154,9 @@ def bing_search_save_to_cache(query, limit) -> Iterator[BingImage]:
 
 
 def notify(
-    msg: str, app_name: str = __title__, image=str(icon_path),
+    msg: str,
+    app_name: str = __title__,
+    image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -174,12 +176,8 @@ def copy_image(result: BingImage):
 
 def get_bing_results_as_items(bing_results: List[BingImage]):
     """Get bing results as Albert items ready to be rendered in the UI"""
-    # TODO download them in parallel
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {
-            executor.submit(get_as_item, result): "meanings" for result in bing_results
-        }
+        futures = {executor.submit(get_as_item, result): "meanings" for result in bing_results}
 
     items = []
     for future in concurrent.futures.as_completed(futures):

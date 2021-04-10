@@ -115,6 +115,7 @@ def notify(
 
 def get_as_item(query_str: str):
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
+    query_str = query_str.strip()
     return v0.Item(
         id=__title__,
         icon=icon_path,
