@@ -20,7 +20,7 @@
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-  - Albert Python Interface: ``v0.2``
+  - Albert Python Interface: ``v0.4``
 - Python version >= 3.5
 - Install [taskw_gcal_sync](https://github.com/bergercookie/taskw_gcal_sync)
 - Install `overrides` python module

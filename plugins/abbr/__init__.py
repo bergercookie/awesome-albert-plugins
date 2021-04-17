@@ -2,17 +2,21 @@
 
 # TODO Demo photos
 
+import hashlib
 import os
 import shutil
-import hashlib
 import subprocess
 import sys
 import traceback
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
+import gi
 from fuzzywuzzy import process
-from gi.repository import GdkPixbuf, Notify
+
+gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 import albert as v0
 

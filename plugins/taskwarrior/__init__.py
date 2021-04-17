@@ -19,10 +19,9 @@ from fuzzywuzzy import process
 from overrides import overrides
 from taskw_gcal_sync import TaskWarriorSide
 
-from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
-
-
 gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
 
 # metadata ------------------------------------------------------------------------------------
@@ -52,6 +51,26 @@ config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
 
 reminders_tag_path = config_path / "reminders_tag"
+
+
+class FileBackedVar:
+    def __init__(self, varname, convert_fn=str, init_val=None):
+        self._fpath = config_path / varname
+        self._convert_fn = convert_fn
+
+        if init_val:
+            with open(self._fpath, "w") as f:
+                f.write(str(init_val))
+        else:
+            self._fpath.touch()
+
+    def get(self):
+        with open(self._fpath, "r") as f:
+            return self._convert_fn(f.read().strip())
+
+    def set(self, val):
+        with open(self._fpath, "w") as f:
+            return f.write(str(val))
 
 
 class TaskWarriorSideWLock:
@@ -86,6 +105,11 @@ class TaskWarriorSideWLock:
 
 
 tw_side = TaskWarriorSideWLock()
+last_used_date = FileBackedVar(
+    "last_date_used",
+    convert_fn=lambda s: datetime.datetime.strptime(s, "%Y-%m-%d").date(),
+    init_val=datetime.datetime.today().date(),
+)
 
 dev_mode = True
 
@@ -134,6 +158,22 @@ def finalize():
 
 def handleQuery(query):
     results = []
+
+    # we're into the new day, create and assign a fresh instance
+    last_used = last_used_date.get()
+    current_date = datetime.datetime.today().date()
+
+    global tw_side
+    if last_used < current_date:
+        tw_side = TaskWarriorSideWLock()
+        last_used_date.set(current_date)
+    elif last_used > current_date:
+        # maybe due to NTP?
+        v0.critical(
+            f"Current date {current_date} < last_used date {last_used} ?! Overriding current date, please report this if it persists"
+        )
+        tw_side = TaskWarriorSideWLock()
+        last_used_date.set(current_date)
 
     if not query.isTriggered:
         if show_items_wo_trigger and len(query.string) < 2:

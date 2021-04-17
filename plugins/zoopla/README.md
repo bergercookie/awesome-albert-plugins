@@ -1,8 +1,8 @@
 # Zoopla - Search Properties - Albert plugin
 
-* Search properties on zoopla.co.uk based on postcode.
-* Use `--sale` or `--rent` to filter accordingly
-* Use `<ALT>` to show more clip/follow-url options
+- Search properties on zoopla.co.uk based on postcode.
+- Use `--sale` or `--rent` to filter accordingly
+- Use `<ALT>` to show more clip/follow-url options
 
 <a href="https://www.codacy.com/app/bergercookie/zoopla-albert-plugin">
 <img src="https://api.codacy.com/project/badge/Grade/b0dd386e12754770a8b03e190370b925"/></a>
@@ -22,16 +22,11 @@
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``v0.2``
+
+  - Albert Python Interface: `v0.4`
 
 - Python version >= 3.5
 
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-``````sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/zoopla/install-plugin.sh | bash
-``````
 ## Self Promotion
 
 If you find this tool useful, please [star it on

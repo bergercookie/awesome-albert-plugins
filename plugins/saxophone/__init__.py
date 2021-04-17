@@ -16,6 +16,7 @@ import mpv
 import gi  # isort:skip
 
 gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 __title__ = "Saxophone - Play internet radio streams from albert"

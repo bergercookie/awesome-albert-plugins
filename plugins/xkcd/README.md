@@ -29,16 +29,8 @@ thus this was the perfect opportunity to do so.
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-  - Albert Python Interface: v0.2
+  - Albert Python Interface: `v0.4`
 - Python version >= 3.5
-
-
-Download and run the ``install-plugin.sh`` script or run the following to do
-that automatically:
-
-``````sh
-curl https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/xkcd/install-plugin.sh | bash
-``````
 
 ## Self Promotion
 

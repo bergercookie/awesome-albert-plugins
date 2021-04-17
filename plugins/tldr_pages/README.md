@@ -20,7 +20,7 @@ pages_root = tldr_root / "pages"
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``v0.2``
+    - Albert Python Interface: ``v0.4``
 
 - Python version >= 3.5
 
