@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """Translate text using Google Translate.
 
 Usage: tr <src lang> <dest lang> <text>
@@ -14,6 +13,7 @@ blocked.
 
 import ast
 import json
+import subprocess
 import time
 import traceback
 import urllib.parse
@@ -106,6 +106,11 @@ class KeystrokeMonitor:
 keys_monitor = KeystrokeMonitor()
 
 
+def select_item(lang_config: Dict[str, str], result: str):
+    save_search_result(**lang_config, dst_txt=result)
+    subprocess.Popen(f"echo {result}| xclip -selection clipboard", shell=True)
+
+
 def handleQuery(query):
     results = []
     if query.isTriggered:
@@ -148,14 +153,24 @@ def handleQuery(query):
                         dst.upper(),
                         txt,
                     )
-                    item.addAction(v0.ClipAction("Copy translation to clipboard", result))
+                    item.addAction(
+                        v0.FuncAction(
+                            "Copy translation to clipboard",
+                            lambda lang_config={
+                                "src": src,
+                                "dst": dst,
+                                "src_txt": txt,
+                            }, result=result: select_item(
+                                lang_config=lang_config, result=result
+                            ),
+                        )
+                    )
                     item.addAction(
                         v0.UrlAction(
                             "Open in browser",
                             f"https://translate.google.com/#view=home&op=translate&sl={src.lower()}&tl={dst.lower()}&text={txt}",
                         )
                     )
-                    save_search_result(src=src, dst=dst, src_txt=txt, dst_txt=result)
 
             # Show previous results
             iterator = reversed(history_deque)
