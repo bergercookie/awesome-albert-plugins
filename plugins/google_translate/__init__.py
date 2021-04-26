@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from collections import deque
 from pathlib import Path
-from typing import Deque, Dict, Optional
+from typing import Deque, Dict
 
 import albert as v0
 
@@ -31,6 +31,8 @@ __authors__ = "Manuel Schneider"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
 __simplename__ = "google_translate"
 
+__exec_deps__ = ["xclip"]
+__py_deps__ = []
 
 dev_mode = True
 

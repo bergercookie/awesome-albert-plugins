@@ -2,16 +2,15 @@
 
 import subprocess
 import sys
+import textwrap
 import time
 import traceback
 from pathlib import Path
 from typing import Dict, List
-from pathlib import Path
-from typing import Dict, List
 
 import albert as v0
-import albert as v0
 from fuzzywuzzy import process
+
 __title__ = "Scratchpad - Dump all your thoughts into a single textfile"
 __version__ = "0.4.0"
 __triggers__ = "s "
@@ -20,7 +19,7 @@ __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/scratchpad"
 )
 __exec_deps__ = []
-__py_deps__ = []
+__py_deps__ = ["textwrap"]
 
 icon_path = str(Path(__file__).parent / "scratchpad")
 
@@ -30,6 +29,9 @@ data_path = Path(v0.dataLocation()) / "scratchpad"
 dev_mode = True
 
 s_store_fname = config_path / "fname"
+
+# break long lines at the specified width
+split_at_textwidth = 80
 
 # plugin main functions -----------------------------------------------------------------------
 if s_store_fname.is_file():
@@ -45,7 +47,14 @@ def save_to_scratchpad(line: str, sep=False):
             s = "\n" + "-" * 10 + "\n\n"
 
         conts = f"{s}{line}\n"
-        f.write(conts)
+
+        if split_at_textwidth is not None:
+            towrite = textwrap.fill(conts, split_at_textwidth)
+        else:
+            towrite = conts
+
+        towrite = f"{towrite}\n"
+        f.write(towrite)
 
 
 def initialize():

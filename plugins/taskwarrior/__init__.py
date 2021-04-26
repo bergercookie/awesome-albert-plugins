@@ -45,6 +45,7 @@ icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 # initial configuration -----------------------------------------------------------------------
 # should the plugin show relevant some info without the trigger?
 show_items_wo_trigger = True
+failure_annotation = "TASKFAILURE"
 
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
@@ -388,6 +389,10 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         v0.FuncAction(
             "Edit task interactively",
             lambda args_list=["edit", task_id]: run_tw_action(args_list, need_pty=True),
+        ),
+        v0.FuncAction(
+            "Fail task",
+            lambda args_list=[task_id, "done", failure_annotation]: run_tw_action(args_list),
         ),
         v0.ClipAction("Copy task UUID", f"{task_id}"),
     ]
