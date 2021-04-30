@@ -164,9 +164,10 @@ def handleQuery(query):
     last_used = last_used_date.get()
     current_date = datetime.datetime.today().date()
 
-    global tw_side
+    global tw_side, subcommands
     if last_used < current_date:
         tw_side = TaskWarriorSideWLock()
+        subcommands = create_subcommands()
         last_used_date.set(current_date)
     elif last_used > current_date:
         # maybe due to NTP?
@@ -174,6 +175,7 @@ def handleQuery(query):
             f"Current date {current_date} < last_used date {last_used} ?! Overriding current date, please report this if it persists"
         )
         tw_side = TaskWarriorSideWLock()
+        subcommands = create_subcommands()
         last_used_date.set(current_date)
 
     if not query.isTriggered:
@@ -558,13 +560,17 @@ class SubcommandQuery:
         return f"Command: {self.command}\nQuery Text: {self.query}"
 
 
-subcommands = [
-    AddSubcommand(),
-    ActiveTasks(),
-    TodayTasks(),
-    YesterdayTasks(),
-    TomorrowTasks(),
-]
+def create_subcommands():
+    return [
+        AddSubcommand(),
+        ActiveTasks(),
+        TodayTasks(),
+        YesterdayTasks(),
+        TomorrowTasks(),
+    ]
+
+
+subcommands = create_subcommands()
 
 
 def get_subcommand_for_name(name: str) -> Optional[Subcommand]:

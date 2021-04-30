@@ -42,16 +42,15 @@ if s_store_fname.is_file():
 
 def save_to_scratchpad(line: str, sep=False):
     with open(s_path, "a+") as f:
+        if split_at_textwidth is not None:
+            towrite = textwrap.fill(line, split_at_textwidth)
+        else:
+            towrite = line
+
         s = ""
         if sep:
-            s = "\n" + "-" * 10 + "\n\n"
-
-        conts = f"{s}{line}\n"
-
-        if split_at_textwidth is not None:
-            towrite = textwrap.fill(conts, split_at_textwidth)
-        else:
-            towrite = conts
+            s = "\n\n" + "-" * 10 + "\n\n"
+            towrite = f"{s}{towrite}\n"
 
         towrite = f"{towrite}\n"
         f.write(towrite)
