@@ -47,9 +47,11 @@ def save_to_scratchpad(line: str, sep=False):
         else:
             towrite = line
 
+        towrite = f"\n{towrite}"
+
         s = ""
         if sep:
-            s = "\n\n" + "-" * 10 + "\n\n"
+            s = "\n\n" + "-" * 10 + "\n"
             towrite = f"{s}{towrite}\n"
 
         towrite = f"{towrite}\n"
@@ -187,7 +189,7 @@ def setup(query):
                 id=__title__,
                 icon=icon_path,
                 text=f"Specify the location of the scratchpad file",
-                subtext="Paste the path to the file, then press <ENTER>",
+                subtext="Paste the path to the file, then press ENTER",
                 actions=[
                     v0.FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
                 ],

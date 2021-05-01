@@ -287,7 +287,7 @@ def setup(query) -> list:
                 id=__title__,
                 icon=icon_path,
                 text=f"Specify file to read/write abbreviations to/from",
-                subtext="Paste the path to the file, then press <ENTER>",
+                subtext="Paste the path to the file, then press ENTER",
                 actions=[
                     v0.FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
                 ],
