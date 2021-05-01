@@ -1,6 +1,8 @@
 """Saxophone - Play internet radio streams from albert."""
 
 # TODO - Enable using dbus-send for wm widget integration
+import select
+import socket
 import json
 import operator
 import os
@@ -11,7 +13,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import albert as v0
-import mpv
+import subprocess
 
 import gi  # isort:skip
 
@@ -65,30 +67,45 @@ json_config = str(Path(__file__).parent / "config" / "saxophone.json")
 sort_fn = sort_random
 # sort_fn = sort_favorite
 
+vlc_socket = Path("/tmp/cvlc.unix")
+socket_timeout = 0.2
 dev_mode = False
 
-# Stream class --------------------------------------------------------------------------------
+# Classes & supplementary functions -----------------------------------------------------------
 
 
-def enum(*sequential, **named) -> Enum:
-    """
-    Return a Python Enum with automatic enumeration.
-
-    Usage::
-
-    >>> Numbers = enum('ZERO', 'ONE', 'TWO')
-    >>> Numbers.ZERO
-    0
-    >>> Numbers.ONE
-    1
-    >>> Numbers.TWO
-    2
-    """
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    return type("Enum", (), enums)
+class UrlType(Enum):
+    PLAYLIST = 0
+    RAW_STREAM = 1
+    COUNT = 2
+    INVALID = 3
 
 
-UrlType = enum("PLAYLIST", "RAW_STREAM", "COUNT", "INVALID")
+def issue_cmd(cmd: str) -> str:
+    if not cmd.endswith("\n"):
+        cmd += "\n"
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.settimeout(socket_timeout)
+        s.connect(str(vlc_socket))
+
+        to_send = str.encode(cmd)
+        s.sendall(to_send)
+
+        # we don't want to block
+        res = ""
+        try:
+            ready = select.select([s], [], [], socket_timeout)
+            if ready[0]:
+                while True:
+                    b = s.recv(4096)
+                    if b:
+                        res += b.decode("utf-8")
+                    else:
+                        break
+        except socket.timeout:
+            pass
+
+        return res
 
 
 class Stream:
@@ -97,37 +114,19 @@ class Stream:
 
         self.url: str = url
         self.name: str = name
-        self.description: str = kargs.get("description")
-        self.homepage: str = kargs.get("homepage")
-        self._icon: str = kargs.get("icon")
+        self.description: Optional[str] = kargs.get("description")
+        self.homepage: Optional[str] = kargs.get("homepage")
+        self._icon: Optional[str] = kargs.get("icon")
         self.favorite: bool = kargs.get("favorite", False)
 
-        self._process: subprocess.Popen = None
-
-        self._url_type: UrlType = None
+        self._url_type: Optional[UrlType] = None
         if self.url.endswith(".pls") or self.url.endswith(".m3u"):
             self._url_type = UrlType.PLAYLIST
         else:
             self._url_type = UrlType.RAW_STREAM
 
-        self.player = mpv.MPV(config=False, log_handler=self.debug_print)
-        # TODO `on_metadata_change callback crashes the app -> SIGSEGV
-        # self.player.observe_property("metadata", self.on_metadata_change)
-
-    def on_metadata_change(self, name, value):
-        if value:
-            notify("Saxophone", value.get("icy-title", ""), self.icon())
-
-        # Send to dbus
-
-    def debug_print(self, loglevel, component, message):
-        print(f"[{loglevel}] {component}: {message}")
-
-    def url_type(self) -> UrlType:  # type: ignore
+    def url_type(self) -> Optional[UrlType]:  # type: ignore
         return self._url_type
-
-    def is_on(self) -> bool:
-        return self.player.idle_active == False
 
     def icon(self) -> Optional[str]:
         """Cache the icon."""
@@ -135,12 +134,6 @@ class Stream:
             return None
 
         return get_icon(self._icon)
-
-    def play(self):
-        self.player.play(self.url)
-
-    def stop(self):
-        self.player.stop()
 
 
 streams: List[Stream] = []
@@ -158,42 +151,40 @@ def init_streams():
     sort_fn(streams)
 
 
-# initialise all available streams
-init_streams()
-
-
-# plugin main functions -----------------------------------------------------------------------
-
-
-def check_pid(pid: int) -> bool:
-    """Check For the existence of a unix pid."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
+def launch_vlc():
+    if vlc_socket.exists():
+        if not vlc_socket.is_socket():
+            raise RuntimeError(f'Exected socket file "{vlc_socket}" is not a socket')
+        else:
+            v0.info("VLC RC Interface is already up.")
     else:
-        return True
+        # communicate over UNIX socket with vlc
+        subprocess.Popen(["vlc", "-I", "oldrc", "--rc-unix", vlc_socket])
 
 
 def is_radio_on() -> bool:
-    """Check if any of the streams are on."""
-    return any([s.is_on() for s in streams])
+    res = issue_cmd("is_playing")
+    return int(res) == 1
 
 
 def stop_radio():
     """Turn off the radio."""
-    for s in streams:
-        s.stop()
+    res = issue_cmd("stop")
+    v0.debug(f"Stopping radio,\n{res}")
 
 
 def start_stream(stream: Stream):
-    """Stop any running stream, then start the indicated one."""
+    res = issue_cmd(f"add {stream.url}")
+    v0.debug(f"Starting stream,\n{res}")
 
-    if stream.is_on():
-        return
 
-    stop_radio()
-    stream.play()
+# calls ---------------------------------------------------------------------------------------
+
+# initialise all available streams
+init_streams()
+
+# launch VLC
+launch_vlc()
 
 
 # albert functions ----------------------------------------------------------------------------
@@ -208,7 +199,7 @@ def initialize():
 
 
 def finalize():
-    pass
+    issue_cmd("logout")
 
 
 def handleQuery(query) -> list:  # noqa
