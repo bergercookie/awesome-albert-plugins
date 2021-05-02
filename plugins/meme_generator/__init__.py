@@ -109,7 +109,7 @@ class Template:
         if caption1 or caption2:
             subtext = f"UP: {caption1} | DOWN: {caption2}"
         else:
-            subtext = "USAGE: {self.id} [upper-text] | [lower-text]"
+            subtext = f"USAGE: {self.id} [upper-text] | [lower-text]"
         return v0.Item(
             id=__title__,
             icon=str(self.img),
@@ -129,6 +129,12 @@ class Template:
                         self._create_n_copy_path_to_clipboard(
                             caption1=caption1, caption2=caption2
                         )
+                    ),
+                ),
+                v0.FuncAction(
+                    "Copy generated custom meme to clipboard",
+                    lambda caption1=caption1, caption2=caption2: self._create_n_copy_to_clipboard(
+                        caption1=caption1, caption2=caption2
                     ),
                 ),
             ],
