@@ -7,7 +7,7 @@ Get definitions, synonyms and antonyms for the given word - uses
 
 ## Demo
 
-| ![basic-usage](misc/demo0.png) | ![basic-usage](misc/demo1.png) |
+| ![](misc/demo0.png) | ![](misc/demo1.png) |
 
 ## Installation instructions
 

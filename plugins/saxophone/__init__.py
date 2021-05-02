@@ -1,11 +1,9 @@
 """Saxophone - Play internet radio streams from albert."""
 
-# TODO - Enable using dbus-send for wm widget integration
 import select
 import socket
 import json
 import operator
-import os
 import random
 import traceback
 from enum import Enum
@@ -28,6 +26,7 @@ __authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//saxophone"
 )
+__exec_deps__ = ["vlc"]
 
 icons_path = Path(__file__).parent / "images"
 

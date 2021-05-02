@@ -25,7 +25,7 @@ __version__ = "0.4.0"
 __triggers__ = "{{ cookiecutter.trigger }} "
 __authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
-__exec_deps__ = []
+__exec_deps__ = ["googler"]
 __py_deps__ = []
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
