@@ -2,9 +2,27 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "https://radiostreaming.ert.gr/ert-proto",
+      "name": "Proto Programma / Πρώτο Πρόγραμμα 91.6 - ERT/ΕΡΤ",
+      "homepage": "https://webradio.ert.gr/proto/",
+      "icon": "proto.jpeg"
+    },
+
+    {
+      "url": "https://radiostreaming.ert.gr/ert-deftero",
+      "name": "Deftero Programma / Δεύτερο Πρόγραμμα 103.7 - ERT/ΕΡΤ",
+      "homepage": "https://webradio.ert.gr/deftero/",
+      "icon": "deftero.png"
+    },
+    {
+      "url": "https://radiostreaming.ert.gr/ert-trito",
+      "name": "Trito Programma / Τρίτο Πρόγραμμα 90.9 - ERT/ΕΡΤ",
+      "homepage": "https://webradio.ert.gr/trito/",
+      "icon": "trito.jpeg"
+    },
+    {
       "url": "http://pepper966.live24.gr/pepperorigin",
       "name": "Pepper 96.6",
-      "homepage": "https://www.pepper966.gr/",
       "homepage": "https://www.pepper966.gr/",
       "icon": "pepper966.jpg"
     },
@@ -118,16 +136,16 @@
       "name": "Sleepbot Environmental Broadcast 56K MP3"
     },
     {
-        "url": "https://somafm.com/thetrip130.pls",
-        "name": "The Trip",
-        "icon": "thetrip",
-        "homepage": "https://somafm.com/thetrip"
+      "url": "https://somafm.com/thetrip130.pls",
+      "name": "The Trip",
+      "icon": "thetrip",
+      "homepage": "https://somafm.com/thetrip"
     },
     {
-        "url": "https://somafm.com/beatblender130.pls",
-        "name": "Beat Blender",
-        "icon": "beatblender-400",
-        "homepage": "https://somafm.com/beatblender/"
+      "url": "https://somafm.com/beatblender130.pls",
+      "name": "Beat Blender",
+      "icon": "beatblender-400",
+      "homepage": "https://somafm.com/beatblender/"
     },
     {
       "url": "https://somafm.com/deepspaceone130.pls",
