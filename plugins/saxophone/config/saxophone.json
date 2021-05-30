@@ -185,12 +185,6 @@
       "homepage": "https://somafm.com"
     },
     {
-      "url": "http://somafm.com/sonicuniverse.pls",
-      "name": "Soma FM Sonic Universe",
-      "icon": "sonicuniverse120",
-      "homepage": "https://somafm.com"
-    },
-    {
       "url": "https://somafm.com/u80s130.pls",
       "name": "Underground 80s",
       "icon": "u80s-120",
@@ -214,7 +208,7 @@
       "favorite": true
     },
     {
-      "url": "https://somafm.com/sonicuniverse130.pls",
+      "url": " http://somafm.com/sonicuniverse130.pls",
       "name": "Sonic Universe",
       "icon": "sonicuniverse120",
       "description": " Transcending the world of jazz with eclectic, avant-garde takes on tradition. ",
@@ -242,6 +236,30 @@
       "icon": "sebsauvage",
       "description": "Background music for exploration/settlement management games such as Minecraft, RimWorld or Rise to Ruins",
       "homepage": "https://sebsauvage.net/ambient/"
+    },
+    {
+      "url": "http://somafm.com/synphaera130.pls",
+      "name": "Synphaera",
+      "icon": "synphaera400",
+      "description": " Featuring the music from an independent record label focused on modern electronic ambient and space music. ",
+      "homepage": "https://somafm.com/synphaera/",
+      "favorite": false
+    },
+    {
+      "url": "http://somafm.com/live130.pls",
+      "name": "Soma FM Live",
+      "icon": "live-400",
+      "description": " Special Live Events and rebroadcasts of past live events ",
+      "homepage": "https://somafm.com/live/",
+      "favorite": true
+    },
+    {
+      "url": "http://somafm.com/scanner130.pls",
+      "name": "SF Police Scanner",
+      "icon": "scanner-400",
+      "description": "San Francisco Public Safety Scanner Feed.",
+      "homepage": "https://somafm.com/scanner/",
+      "favorite": true
     }
   ]
 }
