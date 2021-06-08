@@ -8,9 +8,13 @@ import traceback
 from pathlib import Path
 from typing import Dict, Tuple
 
+import albert as v0
+import gi
 from fuzzywuzzy import process
 
-import albert as v0
+gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
 __title__ = "Fetch OTP codes using otp-cli and pass"
 __version__ = "0.4.0"
@@ -35,6 +39,14 @@ pass_dir = Path(
 pass_2fa_dir = pass_dir / "2fa"
 
 # plugin main functions -----------------------------------------------------------------------
+
+def do_notify(msg: str, image=None):
+    app_name = "pass_topt_cli"
+    Notify.init(app_name)
+    image = image
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
+
 
 
 def initialize():
@@ -83,18 +95,27 @@ def handleQuery(query) -> list:
 
 
 # supplementary functions ---------------------------------------------------------------------
+def totp_show(name: str) -> str:
+    try:
+        return subprocess.check_output(["totp", "show", name]).decode("utf-8")
+    except Exception:
+        exc = f"Exception:\n\n{traceback.format_exc()}"
+        v0.critical(exc)
+        do_notify(f"Couldn't fetch the OTP code. {exc}")
+        return ""
 
 
 def get_as_item(path: Path):
+    name = path.name
     return v0.Item(
         id=__title__,
         icon=icon_path,
-        text=path.stem,
+        text=name,
         completion="",
         actions=[
             v0.FuncAction(
                 "Copy 2FA code",
-                lambda name=path.stem: subprocess.check_output(["totp", "show", name]).strip(),
+                lambda name=name: totp_show(name=name).strip(),
             )
         ],
     )
