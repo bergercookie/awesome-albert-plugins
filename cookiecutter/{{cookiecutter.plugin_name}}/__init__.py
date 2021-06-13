@@ -31,8 +31,33 @@ config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
 dev_mode = True
 
+# create plugin locations
+for p in (cache_path, config_path, data_path):
+    p.mkdir(parents=False, exist_ok=True)
+
+{%- if cookiecutter.include_file_backed_var == 'y' %}
+# FileBackedVar class -------------------------------------------------------------------------
+class FileBackedVar:
+    def __init__(self, varname, convert_fn=str, init_val=None):
+        self._fpath = config_path / varname
+        self._convert_fn = convert_fn
+
+        if init_val:
+            with open(self._fpath, "w") as f:
+                f.write(str(init_val))
+        else:
+            self._fpath.touch()
+
+    def get(self):
+        with open(self._fpath, "r") as f:
+            return self._convert_fn(f.read().strip())
+
+    def set(self, val):
+        with open(self._fpath, "w") as f:
+            return f.write(str(val))
+{%- endif %}
 {%- if cookiecutter.include_keystroke_monitor == 'y' %}
-# KeystrokeMonitor clss -----------------------------------------------------------------------
+# KeystrokeMonitor class ----------------------------------------------------------------------
 class KeystrokeMonitor:
     def __init__(self):
         super(KeystrokeMonitor, self)
@@ -65,10 +90,8 @@ keys_monitor = KeystrokeMonitor()
 
 def initialize():
     """Called when the extension is loaded (ticked in the settings) - blocking."""
+    pass
 
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
 
 
 def finalize():

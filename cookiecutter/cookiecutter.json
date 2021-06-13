@@ -7,5 +7,6 @@
     "trigger": "{{ cookiecutter.plugin_name }}",
     "albert_version": "0.4.0",
     "include_keystroke_monitor": "n",
+    "include_file_backed_var": "n",
     "use_notifications": "y"
 }
