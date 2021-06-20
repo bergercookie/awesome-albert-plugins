@@ -26,7 +26,7 @@ __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki"
 )
 __exec_deps__ = []
-__py_deps__ = []
+__py_deps__ = ["httpx", "fuzzywuzzy"]
 
 icon_path = str(Path(__file__).parent / "anki")
 
