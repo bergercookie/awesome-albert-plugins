@@ -1,23 +1,22 @@
 """Image Search and Preview."""
 
-from requests.exceptions import RequestException
 import concurrent.futures
 import importlib.util
-import os
 import subprocess
-import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Dict, Iterator, List
-
-from gi.repository import GdkPixbuf, Notify
+from typing import Iterator, List
 
 import albert as v0
+from gi.repository import GdkPixbuf, Notify
+from requests.exceptions import RequestException
 
 # load bing module - from the same directory as this file
 dir_ = Path(__file__).absolute().parent
 spec = importlib.util.spec_from_file_location("bing", dir_ / "bing.py")
+if spec == None:
+    raise RuntimeError("Couldn't find bing.py in current dir.")
 bing = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bing)  # type: ignore
 BingImage = bing.BingImage  # type: ignore
@@ -106,7 +105,7 @@ def handleQuery(query) -> list:
 
             keys_monitor.report()
             if keys_monitor.triggered():
-                bing_images = list(bing_search_save_to_cache(query=query_str, limit=3))
+                bing_images = list(bing_search_set_download(query=query_str, limit=3))
                 if not bing_images:
                     results.insert(
                         0,
@@ -147,7 +146,7 @@ def handleQuery(query) -> list:
 # supplementary functions ---------------------------------------------------------------------
 
 
-def bing_search_save_to_cache(query, limit) -> Iterator[BingImage]:
+def bing_search_set_download(query, limit) -> Iterator[BingImage]:
     for img in bing_search(query=query, limit=limit):
         img.download_dir = cache_path
         yield img
@@ -175,18 +174,18 @@ def copy_image(result: BingImage):
 
 
 def get_bing_results_as_items(bing_results: List[BingImage]):
-    """Get bing results as Albert items ready to be rendered in the UI"""
+    """Get bing results as Albert items ready to be rendered in the UI."""
+    # TODO Seems to only run in a single thread?!
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(get_as_item, result): "meanings" for result in bing_results}
 
-    items = []
-    for future in concurrent.futures.as_completed(futures):
-        future_res = future.result()
-        if future_res is not None:
-            items.append(future_res)
+        items = []
+        for future in concurrent.futures.as_completed(futures):
+            future_res = future.result()
+            if future_res is not None:
+                items.append(future_res)
 
-    return items
-
+        return items
 
 def get_as_item(result: BingImage):
     """Return an item.
@@ -195,7 +194,8 @@ def get_as_item(result: BingImage):
     """
     try:
         img = str(result.image.absolute())
-    except RequestException:
+    except subprocess.CalledProcessError:
+        v0.debug(f"Could not fetch item -> {result.url}")
         return None
 
     actions = [
@@ -211,7 +211,7 @@ def get_as_item(result: BingImage):
 
     item = v0.Item(
         id=__title__,
-        icon=str(result.image),
+        icon=str(result.thumbnail),
         text=result.url[-20:],
         subtext=result.type,
         completion=f"{__triggers__}",

@@ -1,10 +1,13 @@
-import requests
-import json
-from bs4 import BeautifulSoup
-from typing import Optional, Iterator
-from pathlib import Path
-
 import imghdr
+import json
+import subprocess
+from functools import cached_property
+from pathlib import Path
+from typing import Iterator, Optional
+
+import albert as v0
+import requests
+from bs4 import BeautifulSoup
 
 """Search and potentially download images using Bing."""
 
@@ -12,17 +15,11 @@ user_agent = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:72.0) Gecko/20100101 Firefox/72.0"
 )
 
-timeout = 0.5
-
 
 class BingImage:
     def __init__(self, url: str, download_dir=Path()):
         self._url: str = url
         self._download_dir = download_dir
-
-        self._cached_image: Optional[Path] = None
-        self._cached_thumb: Optional[Path] = None
-
         self._type = ""
 
     @property
@@ -43,18 +40,16 @@ class BingImage:
     def download_dir(self, d):
         self._download_dir = d
 
-    @property
+    @cached_property
     def image(self):
-        """
-        Get the path to the downloaded image - On first call to this method, it caches it.
-        """
+        """Get the path to the downloaded image - Reuses the image if it's already in the cache."""
         assert self._url is not None
-        if not self._cached_image:
-            self._cached_image = download_image(
-                link=self._url, download_dir=self._download_dir
-            )
 
-        return self._cached_image
+        filepath = self.download_dir / self._url.split("/")[-1]
+        if not filepath.is_file():
+            download_image(url=self._url, filepath=filepath)
+
+        return filepath
 
     @property
     def thumbnail(self):
@@ -70,18 +65,10 @@ class BingImage:
         return self._url
 
 
-def download_image(link, download_dir: Path = Path(), timeout=timeout):
-    file_path = download_dir / link.split("/")[-1]
-
-    # Use a random user agent header for bot id
-    headers = {"User-Agent": user_agent}
-    r = requests.get(link, stream=True, headers=headers, timeout=timeout)
-    r.raise_for_status()
-    with open(file_path, "wb") as f:
-        r.raw.decode_content = True
-        f.write(r.content)
-
-    return file_path
+def download_image(url, filepath: Path = Path()):
+    v0.debug(f"Downloading image {url} -> {filepath}...")
+    subprocess.check_output(["wget", "-O", str(filepath), url], stderr=subprocess.STDOUT)
+    v0.debug(f"Downloaded image {url} -> {filepath}")
 
 
 def bing_search(query: str, limit: int, adult_filter=False) -> Iterator[BingImage]:

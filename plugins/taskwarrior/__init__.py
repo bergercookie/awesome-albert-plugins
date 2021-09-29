@@ -45,7 +45,8 @@ icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 # initial configuration -----------------------------------------------------------------------
 # should the plugin show relevant some info without the trigger?
 show_items_wo_trigger = True
-failure_annotation = "TASKFAILURE"
+
+failure_tag = "fail"
 
 cache_path = Path(v0.cacheLocation()) / __simplename__
 config_path = Path(v0.configLocation()) / __simplename__
@@ -136,7 +137,7 @@ def date_only_tzlocal(datetime: datetime.datetime):
 
 
 def get_tasks_of_date(date: datetime.date):
-    tasks = tw_side.get_all_items(include_completed=False)
+    tasks = tw_side.get_all_items(skip_completed=True)
 
     # You have to do the comparison in tzlocal. TaskWarrior stores the tasks in UTC and thus
     # the effetive date*time* may not match the given date parameter  because of the time
@@ -196,7 +197,7 @@ def handleQuery(query):
             results_setup = setup(query)
             if results_setup:
                 return results_setup
-            tasks = tw_side.get_all_items(include_completed=False)
+            tasks = tw_side.get_all_items(skip_completed=True)
 
             query_str = query.string
 
@@ -273,7 +274,7 @@ def async_reload_items():
     def do_reload():
         v0.info("TaskWarrior: Updating list of tasks...")
         tw_side.reload_items = True
-        tw_side.get_all_items(include_completed=False)
+        tw_side.get_all_items(skip_completed=True)
 
     t = threading.Thread(target=do_reload)
     t.start()
@@ -344,6 +345,9 @@ def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path
     else:
         return "↑", Path(icon_path_r)
 
+def fail_task(task_id: list):
+    run_tw_action(args_list=[task_id, "modify", "+fail"])
+    run_tw_action(args_list=[task_id, "done"])
 
 def run_tw_action(args_list: list, need_pty=False):
     args_list = ["task", "rc.recurrence.confirmation=no", "rc.confirmation=off", *args_list]
@@ -394,7 +398,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         ),
         v0.FuncAction(
             "Fail task",
-            lambda args_list=[task_id, "done", failure_annotation]: run_tw_action(args_list),
+            lambda task_id=task_id: fail_task(task_id=task_id),
         ),
         v0.ClipAction("Copy task UUID", f"{task_id}"),
     ]
@@ -484,7 +488,7 @@ class ActiveTasks(Subcommand):
     def get_as_albert_items_full(self, query_str):
         return [
             get_tw_item(t)
-            for t in tw_side.get_all_items(include_completed=False)
+            for t in tw_side.get_all_items(skip_completed=True)
             if "start" in t
         ]
 

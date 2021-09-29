@@ -1,23 +1,18 @@
 """Timezones lookup."""
 
 import concurrent.futures
-import os
-import shutil
-import subprocess
-import sys
 import time
 import traceback
 from datetime import datetime
 from multiprocessing import cpu_count
 from pathlib import Path
 
+import albert as v0  # type: ignore
+import pycountry
 import pytz
 import requests
 import tzlocal
 from fuzzywuzzy import process
-import pycountry
-
-import albert as v0
 
 __title__ = "Timezones lookup"
 __version__ = "0.4.0"
@@ -192,7 +187,7 @@ def get_as_item(city: str):
     dst_tz = pytz.timezone(city)
     dst_dt = utc_dt.astimezone(dst_tz)
 
-    text = f"{str(dst_dt)}"
+    text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
     subtext = f"[{code}] | {city}"
 
     return v0.Item(
