@@ -479,6 +479,22 @@ class AddSubcommand(Subcommand):
         )
         return [item]
 
+class LogSubcommand(Subcommand):
+    def __init__(self):
+        super(LogSubcommand, self).__init__(name="log", desc="Log an already done task")
+
+    @overrides
+    def get_as_albert_items_full(self, query_str):
+        item = self.get_as_albert_item()
+        item.subtext = query_str
+        item.addAction(
+            v0.FuncAction(
+                "Log task",
+                lambda args_list=["log", *query_str.split()]: run_tw_action(args_list),
+            )
+        )
+        return [item]
+
 
 class ActiveTasks(Subcommand):
     def __init__(self):
@@ -567,6 +583,7 @@ class SubcommandQuery:
 def create_subcommands():
     return [
         AddSubcommand(),
+        LogSubcommand(),
         ActiveTasks(),
         TodayTasks(),
         YesterdayTasks(),
