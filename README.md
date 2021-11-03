@@ -33,6 +33,7 @@ This is a collection of plugins and themes for the
 Currently the list of plugins includes:
 
 - Anki card generator: Generate Basic, Basic-Reverse and Cloze cards for [Anki](https://apps.ankiweb.net/)
+- bluetooth - Enable/disable the bluetooth module
 - meme-generator: Generate memes and copy them directly to clipboard for easy
   paste
 - image_search: Search, preview and directly copy-to-clipboard images from the web

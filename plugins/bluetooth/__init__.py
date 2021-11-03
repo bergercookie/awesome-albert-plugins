@@ -1,89 +1,33 @@
-"""{{ cookiecutter.plugin_short_description }}."""
+"""Interact with the Linux bluetooth resources."""
 
 from pathlib import Path
-from typing import List, Dict
-import os
-import shutil
 import subprocess
-import sys
-import time
 import traceback
 
-from fuzzywuzzy import process
-{%- if cookiecutter.use_notifications == 'y' %}
 from gi.repository import GdkPixbuf, Notify
-{%- endif %}
 
 import albert as v0
 
-__title__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "{{ cookiecutter.albert_version }}"
-__triggers__ = "{{ cookiecutter.trigger }} "
-__authors__ = "{{ cookiecutter.author }}"
-__homepage__ = "{{ cookiecutter.repo_base_url }}/{{ cookiecutter.plugin_name }}"
-__exec_deps__ = []
+__title__ = "bluetooth"
+__version__ = "0.4.0"
+__triggers__ = "bl "
+__authors__ = "Nikos Koukis"
+__homepage__ = (
+    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth"
+)
+__exec_deps__ = ["rfkill"]
 __py_deps__ = []
 
-icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
+icon_path = str(Path(__file__).parent / "bluetooth.png")
 
-cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
-config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
-data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
+cache_path = Path(v0.cacheLocation()) / "bluetooth"
+config_path = Path(v0.configLocation()) / "bluetooth"
+data_path = Path(v0.dataLocation()) / "bluetooth"
 dev_mode = True
 
 # create plugin locations
 for p in (cache_path, config_path, data_path):
     p.mkdir(parents=False, exist_ok=True)
-
-{%- if cookiecutter.include_file_backed_var == 'y' %}
-# FileBackedVar class -------------------------------------------------------------------------
-class FileBackedVar:
-    def __init__(self, varname, convert_fn=str, init_val=None):
-        self._fpath = config_path / varname
-        self._convert_fn = convert_fn
-
-        if init_val:
-            with open(self._fpath, "w") as f:
-                f.write(str(init_val))
-        else:
-            self._fpath.touch()
-
-    def get(self):
-        with open(self._fpath, "r") as f:
-            return self._convert_fn(f.read().strip())
-
-    def set(self, val):
-        with open(self._fpath, "w") as f:
-            return f.write(str(val))
-{%- endif %}
-{%- if cookiecutter.include_keystroke_monitor == 'y' %}
-# KeystrokeMonitor class ----------------------------------------------------------------------
-class KeystrokeMonitor:
-    def __init__(self):
-        super(KeystrokeMonitor, self)
-        self.thres = 0.3  # s
-        self.prev_time = time.time()
-        self.curr_time = time.time()
-
-    def report(self):
-        self.prev_time = time.time()
-        self.curr_time = time.time()
-        self.report = self.report_after_first
-
-    def report_after_first(self):
-        # update prev, curr time
-        self.prev_time = self.curr_time
-        self.curr_time = time.time()
-
-    def triggered(self) -> bool:
-        return self.curr_time - self.prev_time > self.thres
-
-    def reset(self) -> None:
-        self.report = self.report_after_first
-
-# Do not flood the web server with queries, otherwise it may block your IP.
-keys_monitor = KeystrokeMonitor()
-{%- endif %}
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -91,7 +35,6 @@ keys_monitor = KeystrokeMonitor()
 def initialize():
     """Called when the extension is loaded (ticked in the settings) - blocking."""
     pass
-
 
 
 def finalize():
@@ -111,20 +54,20 @@ def handleQuery(query) -> list:
                 return results_setup
 
             query_str = query.string
-
-{%- if cookiecutter.include_keystroke_monitor == 'y' %}
-            if len(query_str) < 2:
-                keys_monitor.reset()
-                return results
-
-            keys_monitor.report()
-            if keys_monitor.triggered():
-                # modify this...
-                results.append(get_as_item())
-{%- else %}
-            # modify this...
-            results.append(get_as_item())
-{%- endif %}
+            results.append(
+                get_shell_cmd_as_item(
+                    text="enable",
+                    command="rfkill unblock bluetooth",
+                    subtext="Enable bluetooth",
+                )
+            )
+            results.append(
+                get_shell_cmd_as_item(
+                    text="disable",
+                    command="rfkill block bluetooth",
+                    subtext="Disable bluetooth",
+                )
+            )
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
@@ -150,15 +93,15 @@ def handleQuery(query) -> list:
 
 
 # supplementary functions ---------------------------------------------------------------------
-
-{%- if cookiecutter.use_notifications == 'y' %}
 def notify(
-     msg: str, app_name: str=__title__, image=str(icon_path),
+    msg: str,
+    app_name: str = __title__,
+    image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
-{%- endif %}
+
 
 def get_shell_cmd_as_item(
     *, text: str, command: str, subtext: str = None, completion: str = None
@@ -189,24 +132,9 @@ def get_shell_cmd_as_item(
         ],
     )
 
-def get_as_item():
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=f"{sys.version}",
-        subtext="Python version",
-        completion="",
-        actions=[
-            v0.UrlAction("Open in xkcd.com", "https://www.xkcd.com/"),
-            v0.ClipAction("Copy URL", f"https://www.xkcd.com/"),
-        ],
-    )
-
 
 def sanitize_string(s: str) -> str:
     return s.replace("<", "&lt;")
-
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
