@@ -16,29 +16,31 @@ This is a collection of plugins and themes for the
 
 ## Demos
 
-|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png)      |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif)      |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png) |
 | :----------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
-|         ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif)         |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png)         |
-|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif)      |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif)      |
-|           ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png)            |              ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)               |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
-|     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png)       |
-|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png)       |
-|        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)        |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
-|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)       |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
-|    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif)    |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png) | ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png) |
 
 ## Plugins
 
 Currently the list of plugins includes:
 
 - Anki card generator: Generate Basic, Basic-Reverse and Cloze cards for [Anki](https://apps.ankiweb.net/)
-- bluetooth - Enable/disable the bluetooth module
-- meme-generator: Generate memes and copy them directly to clipboard for easy
+- Bluetooth - Enable/disable the bluetooth module
+- Meme-generator: Generate memes and copy them directly to clipboard for easy
   paste
-- image_search: Search, preview and directly copy-to-clipboard images from the web
-- harakiri - Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
+- Image_search: Search, preview and directly copy-to-clipboard images from the web
+- Harakiri - Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
 - Words - Get the definition, synonyms and antonyms for a word
+- Emoji - Quickly lookup and copy emojis to your clipboard
 - Killproc - Kill process(es); allows killing multiple processes with the same
   name or based on a glob - Improved version of the original albert plugin
 - Timezones - Fuzzy-search timezones
@@ -143,7 +145,7 @@ Very well, then after cloning this repo, just symlink or copy the plugin of
 choice under your local python plugins directory. For example for the `jira`
 plugin:
 
-```
+```sh
 cp -r plugins/jira ~/.local/share/albert/org.albert.extension.python/modules/jira
 ```
 
@@ -163,8 +165,6 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 
 ### Ideas List (feel free to contribute)
 
-- :construction: Emoji - Improved version of original `dango_kao` emojis plugin
-  with thumbnail-like preview of each one?
 - :construction: Giphy - https://github.com/Giphy/giphy-python-client
 - :construction: Devdocs.io/Zeal/Dash search
 - :construction: Manage your VPN connections - Frontend to `WireGuard`?
@@ -178,5 +178,3 @@ hesitate to either ask for clarifications or just do it and directly make a PR.
 - :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
 - :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
   - Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`
-- :construction: List previous google-translate items in the google-translate
-  plugin
