@@ -134,9 +134,12 @@ def handleQuery(query) -> list:
                 matched = process.extract(
                     query_str, list(label_to_emoji_tuple.keys()), limit=30
                 )
-                for m in [elem[0] for elem in matched]:
-                    emoji_tuple = label_to_emoji_tuple[m]
-                    results.append(get_emoji_as_item(emoji_tuple))
+                matched_emojis = list(
+                    dict([label_to_emoji_tuple[label] for label, _ in matched]).items()
+                )
+                results.extend(
+                    [get_emoji_as_item(emoji_tuple) for emoji_tuple in matched_emojis]
+                )
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
