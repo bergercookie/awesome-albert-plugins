@@ -135,7 +135,7 @@ def handleQuery(query) -> list:
                     query_str, list(label_to_emoji_tuple.keys()), limit=30
                 )
                 matched_emojis = list(
-                    dict([label_to_emoji_tuple[label] for label, _ in matched]).items()
+                    dict([label_to_emoji_tuple[label] for label, *_ in matched]).items()
                 )
                 results.extend(
                     [get_emoji_as_item(emoji_tuple) for emoji_tuple in matched_emojis]
