@@ -74,6 +74,14 @@ def handleQuery(query) -> list:
             query_str = query.string.strip()
 
             if not query_str:
+                results.append(
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        text="Give me color name, rgb triad or hex value",
+                        subtext="supports fuzzy-search...",
+                    )
+                )
                 return results
 
             # see if the name matches a color exactly
