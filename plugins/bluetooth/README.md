@@ -1,5 +1,9 @@
 # bluetooth - Albert plugin
 
+## Demo
+
+![](misc/img0.png)
+
 ## Description
 
 This is a small plugin that currently only allows for enabling/disabling the

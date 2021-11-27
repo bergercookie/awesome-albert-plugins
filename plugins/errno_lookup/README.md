@@ -4,7 +4,7 @@
 
 ## Demo
 
-![demo_png](https://github.com/bergercookie/awesome-albert-plugins/misc/errno_lookup.png)
+![demo](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png)
 
 ## Manual installation instructions
 

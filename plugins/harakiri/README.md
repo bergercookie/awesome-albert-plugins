@@ -1,8 +1,5 @@
 # harakiri - Albert plugin
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Add demo gif/pictures
-
 ## Description
 
 Create a temporary email at [harakirimail.com](https://harakirimail.com/). By

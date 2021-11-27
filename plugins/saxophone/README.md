@@ -1,5 +1,15 @@
 # saxophone - Albert plugin
 
+## Demo
+
+![](misc/img0.png)
+
+![](misc/img1.png)
+
+![](misc/img2.png)
+
+![](misc/img3.png)
+
 ## Description
 
 Current plugin allows you to play internet radio streams without any external

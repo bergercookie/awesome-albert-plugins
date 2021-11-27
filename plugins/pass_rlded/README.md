@@ -1,13 +1,14 @@
 # pass_rlded - Albert plugin
 
-## TODO Plugin is not ready yet - README info may be inaccurate
-## TODO - Add demo gif/pictures
-
 ## Description
 
 ## Demo
 
-![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
+![img0](misc/img0.png)
+
+![img1](misc/img1.png)
+
+![img2](misc/img2.png)
 
 ## Motivation
 
@@ -16,7 +17,8 @@
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-    - Albert Python Interface: ``v0.4``
+
+  - Albert Python Interface: `v0.4`
 
 - Python version >= 3.5
 
@@ -26,7 +28,8 @@ If you find this tool useful, please [star it on Github](https://github.com/berg
 
 ## TODO List
 
-See [ISSUES list](https://github.com/bergercookie/awesome-albert-plugins/issues) for the things that
-I'm currently either working on or interested in implementing in the near
-future. In case there's something you are interesting in working on, don't
-hesitate to either ask for clarifications or just do it and directly make a PR.
+See [ISSUES list](https://github.com/bergercookie/awesome-albert-plugins/issues)
+for the things that I'm currently either working on or interested in
+implementing in the near future. In case there's something you are interesting
+in working on, don't hesitate to either ask for clarifications or just do it and
+directly make a PR.

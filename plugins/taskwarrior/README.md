@@ -1,17 +1,14 @@
 # Taskwarrior - Albert plugin
 
-## TODO - Register on codacy - replace HTML link
-
-<a href="https://github.com/bergercookie/taskwarrior-albert-plugin">
-<img src="https://api.codacy.com/project/badge/Grade/126122966e844bed8e61e7cfbf7023c3"/></a>
-<a href=https://github.com/bergercookie/taskwarrior-albert-plugin/blob/master/LICENSE" alt="LICENCE">
-<img src="https://img.shields.io/github/license/bergercookie/taskwarrior-albert-plugin.svg" /></a>
-
-## Description
+Interact with [Taskwarrior](https://taskwarrior.org/)
 
 ## Demo
 
-![demo_gif](https://github.com/bergercookie/taskwarrior-albert-plugin/blob/master/misc/demo.gif)
+![img0](misc/img0.png)
+
+![img1](misc/img1.png)
+
+![img2](misc/img2.png)
 
 ## Motivation
 
@@ -20,11 +17,10 @@
 Requirements:
 
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-  - Albert Python Interface: ``v0.4``
+  - Albert Python Interface: `v0.4`
 - Python version >= 3.5
 - Install [taskw_gcal_sync](https://github.com/bergercookie/taskw_gcal_sync)
 - Install `overrides` python module
-
 
 ## Self Promotion
 

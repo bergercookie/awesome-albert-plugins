@@ -1,5 +1,11 @@
 # Scratchpad - Albert plugin
 
+## Demo
+
+![](misc/img0.png)
+
+![](misc/img1.png)
+
 ## Description
 
 Capture all of your thoughts and one-line notes to a single text file.
