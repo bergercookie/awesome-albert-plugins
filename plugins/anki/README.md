@@ -6,13 +6,13 @@
 
 ## Demo
 
+### Usage demo
+
 ![Usage demo](misc/anki.gif)
 
-Usage demo
+### User Interface
 
 ![User Interface](misc/anki0.png)
-
-User Interface
 
 ## Installation instructions
 

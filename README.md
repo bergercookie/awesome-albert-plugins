@@ -16,71 +16,73 @@ This is a collection of plugins and themes for the
 
 ## Demos
 
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png) |
+|        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png)        |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png)        |
 | :----------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/jira/misc/demo-basic.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/taskwarrior/misc/demo.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
+|         ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif)         |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png)         |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif)      |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif)      |
+|           ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png)            |              ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)               |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png) | ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png) |
+|     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png)       |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png)      |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png)       |
+|        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)        |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
+|      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)       |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
+|    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif)    |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |
 
 ## Plugins
 
 Currently the list of plugins includes:
 
-- Anki card generator: Generate Basic, Basic-Reverse and Cloze cards for [Anki](https://apps.ankiweb.net/)
-- Bluetooth - Enable/disable the bluetooth module
-- Meme-generator: Generate memes and copy them directly to clipboard for easy
-  paste
-- Image_search: Search, preview and directly copy-to-clipboard images from the web
-- Harakiri - Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
-- Words - Get the definition, synonyms and antonyms for a word
-- Emoji - Quickly lookup and copy emojis to your clipboard
-- Killproc - Kill process(es); allows killing multiple processes with the same
-  name or based on a glob - Improved version of the original albert plugin
-- Timezones - Fuzzy-search timezones
-- Colors - Lookup the RGB triplet or the hex code for the given color
-- Jira - Issue Tracking
-- Saxophone - Listen to internet Radio Streams
-- Zoopla - Search Property to Buy, Rent, House Prices
-- Xkcd - Fetch xkcd comics like a boss
-- Taskwarrior - Interact with Taskwarrior
-- Remmina - Search and start remmina connections easily
-- Google Maps - Fetch instructions from/to a specific place
-- Google Translate - Improved version of original albert plugin - avoids
-  occasional IP blocking by Google
-- [TL;DR](https://github.com/tldr-pages/tldr) pages lookup
-- Get 2FA codes using [totp-cli](https://github.com/bergercookie/totp-cli)
-- Lookup HTTP URL status codes
-- Lookup errno status codes
-- Show Internal, External IPs, Default Gateways
-- Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
+- [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
+- [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Enable/disable bluetooth functionality
+- [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
+- [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
+- [Deepl Translate](https://github.com/lilianmallardeau/deepl-plugin-albert/) with API key
+- [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
+- [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
+- [Google Translate](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/google_translate) - 🉑 Reimplementation of [this](https://github.com/dshoreman/albert-translate) plugin with persistent storage of previous searches, no need for API key and smart HTTP querying to avoid blocking from Google.
+- [Harakiri](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/harakiri) - 📫 Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
+- [IP show](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/ipshow) - 🌐 Display information about your network interfaces and public IPs
+- [Image Search](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/image_search) - 📷 Search the web for images, download them and/or copy them to clipboard
+- [Jira](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jira) - 📝 View and edit your [Jira](https://www.atlassian.com/software/jira) tickets from Albert
+- [Killproc](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/killproc) - ☠️ Kill processes based on fuzzy-search
+- [Meme_generator](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/meme_generator) - Generate memes and copy them to clipboard
+- [Pass TOTP](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_totp_cli) - 🔢 Generate 2FA codes with [Pass](https://www.passwordstore.org/) and [totp](https://pypi.org/project/totp/)
+- [Pass_rlded](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_rlded) - 🔒 UNIX Password Manager interaction with fuzzy-search capabilities
+- [Pulse Control](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pulse_control) - 🎤 Enable/disable sources and sinks from Pulse Control
+- [Remmina](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/remmina) - 🖥️ Start a [Remmina](https://remmina.org/) VNC/SFTP connection
+- [Saxophone](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/saxophone) - 🎷 Play your favorite internet radio stations / streams
+- [Scratchpad](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/scratchpad) - 📝 Take quick notes into a single textfile
+- [Taskwarrior](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/taskwarrior) - 🪖 Interact with the [Taskwarrior](https://taskwarrior.org/) task manager
+- [Template Albert Plugin](https://github.com/bergercookie/awesome-albert-plugins) - 🛠️ Template [cookiecutter](https://github.com/cookiecutter/cookiecutter) for creating new Albert plugins
+- [Timezones](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/timezones) - 🌏 Lookup timezone information
+- [Tldr Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/tldr_pages) - Lookup [tldr](https://github.com/tldr-pages/tldr) pages and commands
+- [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
+- [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
+- [Xkcd](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/xkcd) - 📓 List and fuzzy-search the latest [xkcd](https://fr.wikipedia.org/wiki/Xkcd) comics
+- [`googler`-based autocompletion search](https://github.com/bergercookie/awesome-albert-plugins#googler-based-plugins) - 🔎 for searching on google.com, github.com,
+  stackoverflow, amazon, and a variety of other websites using [googler](https://github.com/jarun/googler)
 
-  - Google
-  - Amazon
-  - Youtube
-  - Github
-  - Ebay
-  - Imdb
-  - Urban dictionary: Word/Slang definitions lookup
-  - Python, OpenCV, Dlib, C++ documentation lookup
-  - ...
-  - :warning: To avoid getting blocked by Google, a search request is only sent
-    when there is a 0.3 seconds difference between keystrokes. Thus, it's
-    common when you actually want to send a request to wait a bit and then
-    append a space character at the end of the query.
+  - Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
 
-  - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
-    mode" option
+    - Google
+    - Amazon
+    - Youtube
+    - Github
+    - Ebay
+    - Imdb
+    - Urban dictionary: Word/Slang definitions lookup
+    - Python, OpenCV, Dlib, C++ documentation lookup
+    - ...
+    - :warning: To avoid getting blocked by Google, a search request is only sent
+      when there is a 0.3 seconds difference between keystrokes. Thus, it's
+      common when you actually want to send a request to wait a bit and then
+      append a space character at the end of the query.
 
-- PulseAudio - Select pulseaudio input/output devices, sound card profiles
+    - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
+      mode" option
+    - See the [`googler`-specific section](#googler-based-plugins) for more
+
 - Improved implementations of the original `Pass`, `Pomodoro` plugins
-- Create stopwatches and countdowns
 
 Plugins have been tested with the Albert python `v0.4` interface. If you're
 looking for a version that works with earlier versions of the plugin, see the
@@ -158,20 +160,18 @@ Github](https://github.com/bergercookie/awesome-albert-plugins)
 
 ## TODO List
 
-See [ISSUES list](https://github.com/bergercookie/awesome-albert-plugins/issues) for the things
-that I'm currently either working on or interested in implementing in the near
-future. In case there's something you are interesting in working on, don't
-hesitate to either ask for clarifications or just do it and directly make a PR.
+See [ISSUES list](https://github.com/bergercookie/awesome-albert-plugins/issues)
+for the things that I'm currently either working on or interested in
+implementing in the near future. In case there's something you are interesting
+in working on, don't hesitate to either ask for clarifications or just do it and
+directly make a PR.
 
-### Ideas List (feel free to contribute)
+### Ideas List (feel free to implement)
 
 - :construction: Giphy - https://github.com/Giphy/giphy-python-client
 - :construction: Devdocs.io/Zeal/Dash search
 - :construction: Manage your VPN connections - Frontend to `WireGuard`?
 - :construction: Spotify mini player - similar to [this](https://github.com/vdesabou/alfred-spotify-mini-player)
-- :construction: [Radio Paradise player](https://radioparadise.com/player)
-  - Sign-in - grab password from `pass` as in `Jira` plugin
-  - Ability to mark as favorite / change stream
 - :construction: Movie search and ratings - be able to sign in to various
   services and (e.g., imdb) and submit a rating for a movie
 - :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
