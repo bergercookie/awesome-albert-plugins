@@ -1,12 +1,9 @@
 """2FA codes using otp-cli and pass."""
 
 import os
-import shutil
 import subprocess
-import sys
 import traceback
 from pathlib import Path
-from typing import Dict, Tuple
 
 import albert as v0
 import gi
@@ -72,7 +69,7 @@ def handleQuery(query) -> list:
             if results_setup:
                 return results_setup
 
-            for path in pass_2fa_dir.iterdir():
+            for path in pass_2fa_dir.glob("**/*.gpg"):
                 results.append(get_as_item(path))
 
         except Exception:  # user to report error

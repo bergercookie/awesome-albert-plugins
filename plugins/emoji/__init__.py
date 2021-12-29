@@ -89,7 +89,7 @@ def update_stats(emoji: str):
 
 def copy_emoji(emoji: str):
     update_stats(emoji)
-    subprocess.run(f"echo {emoji} | xclip -rmlastnl -selection clipboard", shell=True)
+    subprocess.run(f"echo {emoji} | xclip -r -selection clipboard", shell=True)
 
 
 def initialize():

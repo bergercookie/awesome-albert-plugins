@@ -18,7 +18,9 @@ __title__ = "IPs of the host machine"
 __version__ = "0.4.0"
 __triggers__ = "ip "
 __authors__ = "Nikos Koukis"
-__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
+__homepage__ = (
+    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
+)
 
 icon_path = str(Path(__file__).parent / "ipshow")
 
@@ -26,9 +28,12 @@ cache_path = Path(v0.cacheLocation()) / "ipshow"
 config_path = Path(v0.configLocation()) / "ipshow"
 data_path = Path(v0.dataLocation()) / "ipshow"
 
+# flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
-families = netifaces.address_families
+discard_bridge_ifaces = True
 dev_mode = False
+
+families = netifaces.address_families
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -72,7 +77,8 @@ def handleQuery(query) -> list:
             # IP address in all interfaces - by default IPv4 ----------------------------------
             ifaces = netifaces.interfaces()
 
-            for iface in ifaces:  # Each interface
+            # for each interface --------------------------------------------------------------
+            for iface in ifaces:
                 addrs = netifaces.ifaddresses(iface)
                 for family_to_addrs in addrs.items():
                     family = families[family_to_addrs[0]]
@@ -81,6 +87,11 @@ def handleQuery(query) -> list:
                     if show_ipv4_only and family != "AF_INET":
                         continue
 
+                    # discard bridge interfaces?
+                    if discard_bridge_ifaces and iface.startswith("br-"):
+                        continue
+
+                    # for all addresses in this interface -------------------------------------
                     for i, addr_dict in enumerate(family_to_addrs[1]):
                         own_addr = addr_dict["addr"]
                         broadcast = addr_dict.get("broadcast")
@@ -88,7 +99,8 @@ def handleQuery(query) -> list:
                         results.append(
                             get_as_item(
                                 text=own_addr,
-                                subtext=iface.ljust(15) + f" | {family} | Broadcast: {broadcast} | Netmask: {netmask}",
+                                subtext=iface.ljust(15)
+                                + f" | {family} | Broadcast: {broadcast} | Netmask: {netmask}",
                                 actions=[
                                     v0.ClipAction("Copy address", own_addr),
                                     v0.ClipAction("Copy interface", iface),
@@ -153,9 +165,7 @@ def get_as_item(text, subtext, completion="", actions=[]):
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable.
-
-    """
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
     if field:
         s = f"{field} | "
