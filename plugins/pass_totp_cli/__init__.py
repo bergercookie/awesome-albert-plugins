@@ -103,7 +103,7 @@ def totp_show(name: str) -> str:
 
 
 def get_as_item(path: Path):
-    name = path.name
+    name = str(path.relative_to(pass_2fa_dir).parent)
     return v0.Item(
         id=__title__,
         icon=icon_path,
