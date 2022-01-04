@@ -1,16 +1,11 @@
 """IPs of the host machine."""
 
 from typing import Dict
-import os
-import shutil
-import subprocess
-import sys
 import traceback
 from pathlib import Path
 import netifaces
 from urllib import request
 
-from fuzzywuzzy import process
 
 import albert as v0
 
@@ -62,8 +57,11 @@ def handleQuery(query) -> list:
                 return results_setup
 
             # External IP address -------------------------------------------------------------
-            with request.urlopen("https://ipecho.net/plain") as response:
-                external_ip = response.read().decode()
+            try:
+                with request.urlopen("https://ipecho.net/plain", timeout=1.5) as response:
+                    external_ip = response.read().decode()
+            except:
+                external_ip = "Timeout fetchcing public IP"
 
             results.append(
                 get_as_item(
