@@ -36,7 +36,6 @@ Currently the list of plugins includes:
 - [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Enable/disable bluetooth functionality
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
-- [Deepl Translate](https://github.com/lilianmallardeau/deepl-plugin-albert/) with API key
 - [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
 - [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
 - [Google Translate](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/google_translate) - 🉑 Reimplementation of [this](https://github.com/dshoreman/albert-translate) plugin with persistent storage of previous searches, no need for API key and smart HTTP querying to avoid blocking from Google.
@@ -45,7 +44,7 @@ Currently the list of plugins includes:
 - [Image Search](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/image_search) - 📷 Search the web for images, download them and/or copy them to clipboard
 - [Jira](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jira) - 📝 View and edit your [Jira](https://www.atlassian.com/software/jira) tickets from Albert
 - [Killproc](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/killproc) - ☠️ Kill processes based on fuzzy-search
-- [Meme_generator](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/meme_generator) - Generate memes and copy them to clipboard
+- [Meme Generator](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/meme_generator) - 😸 Generate memes and copy them to clipboard
 - [Pass TOTP](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_totp_cli) - 🔢 Generate 2FA codes with [Pass](https://www.passwordstore.org/) and [totp](https://pypi.org/project/totp/)
 - [Pass_rlded](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_rlded) - 🔒 UNIX Password Manager interaction with fuzzy-search capabilities
 - [Pulse Control](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pulse_control) - 🎤 Enable/disable sources and sinks from Pulse Control
