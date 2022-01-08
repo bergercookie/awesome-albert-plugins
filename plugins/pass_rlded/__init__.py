@@ -1,18 +1,18 @@
 """Access UNIX Password Manager Items using fuzzy search."""
 
-from pathlib import Path
 import os
+import shutil
 import subprocess
 import sys
-from typing import Iterable
+from pathlib import Path
+from typing import Sequence
 
-from fuzzywuzzy import process
 import albert as v0
-import shutil
+from fuzzywuzzy import process
 
 __title__ = "Pass - UNIX Password Manager - fuzzy search"
 __version__ = "0.4.0"
-__triggers__ = "pass2 "
+__triggers__ = "pass "
 __authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pass_rlded"
@@ -43,21 +43,39 @@ pass_open_doc_exts = [
 dev_mode = True
 
 
+def pass_open_doc_compatible(path: Path) -> bool:
+    """Determine if the given path can be opened via pass_open_doc."""
+    if not shutil.which("pass-open-doc"):
+        return False
+
+    return len(path.suffixes) >= 2 and path.suffixes[-2] in pass_open_doc_exts
+
+
 # passwords cache -----------------------------------------------------------------------------
 class PasswordsCacheManager:
-    def __init__(self):
+    def __init__(self, pass_dir: Path):
         self.refresh = True
+        self._pass_dir = pass_dir
 
-    def get_all_gpg_files(self, root: Path) -> Iterable[Path]:
+    def _refresh_passwords(self) -> Sequence[Path]:
+        passwords = tuple(self._pass_dir.rglob("**/*.gpg"))
+        save_data("\n".join((str(p) for p in passwords)), "password_paths")
+
+        return passwords
+
+    def get_all_gpg_files(self) -> Sequence[Path]:
         """Get a list of all the ggp-encrypted files under the given dir."""
-        self.refresh = False
-        return root.rglob("**/*.gpg")
+        passwords: Sequence[Path]
+        if self.refresh == True or not data_exists("password_paths"):
+            passwords = self._refresh_passwords()
+            self.refresh = False
+        else:
+            passwords = tuple(Path(p) for p in load_data("password_paths"))
 
-    def signal_refresh(self):
-        self.refresh = True
+        return passwords
 
 
-passwords_cache = PasswordsCacheManager()
+passwords_cache = PasswordsCacheManager(pass_dir=pass_dir)
 
 # plugin main functions -----------------------------------------------------------------------
 def initialize():
@@ -85,11 +103,10 @@ def handleQuery(query):
 
             query_str = query.string.strip()
             if len(query_str) == 0:
-                # refresh the passwords cache
-                passwords_cache.signal_refresh()
+                passwords_cache.refresh = True
 
-            # build a list of all the paths under pass_dir
-            gpg_files = passwords_cache.get_all_gpg_files(pass_dir)
+            # get a list of all the paths under pass_dir
+            gpg_files = passwords_cache.get_all_gpg_files()
 
             # fuzzy search on the paths list
             matched = process.extract(query_str, gpg_files, limit=10)
@@ -137,18 +154,19 @@ def get_as_item(password_path: Path):
         ),
     ]
 
-    if len(password_path.suffixes) >= 2 and password_path.suffixes[-2] in pass_open_doc_exts:
-        pass
-        # actions.insert(
-        #     0,
-        #     v0.FuncAction(
-        #         "Open with pass-open-doc", lambda p=str(password_path): subprocess.check_call(["pass-open-doc", p]),
-        #     ),
-        # )
+    if pass_open_doc_compatible(password_path):
+        actions.insert(
+            0,
+            v0.FuncAction(
+                "Open document with pass-open-doc",
+                lambda p=str(password_path): subprocess.run(["pass-open-doc", p], check=True),
+            ),
+        )
     else:
         actions.insert(0, v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
         actions.insert(
-            0, v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
+            0,
+            v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
         )
 
     return v0.Item(
@@ -162,9 +180,7 @@ def get_as_item(password_path: Path):
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable.
-
-    """
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
     if field:
         s = f"{field} | "
@@ -183,12 +199,14 @@ def save_data(data: str, data_name: str):
         f.write(data)
 
 
-def load_data(data_name) -> str:
+def load_data(data_name: str) -> Sequence[str]:
     """Load a piece of data from the configuration directory."""
     with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
+        return [s.strip() for s in f.readlines()]
 
-    return data
+
+def data_exists(data_name: str) -> bool:
+    return (config_path / data_name).is_file()
 
 
 def setup(query):

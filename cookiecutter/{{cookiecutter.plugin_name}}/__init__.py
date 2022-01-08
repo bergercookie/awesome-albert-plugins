@@ -229,12 +229,16 @@ def save_data(data: str, data_name: str):
         f.write(data)
 
 
-def load_data(data_name) -> str:
+def load_data(data_name: str) -> str:
     """Load a piece of data from the configuration directory."""
     with open(config_path / data_name, "r") as f:
         data = f.readline().strip().split()[0]
 
     return data
+
+def data_exists(data_name: str) -> bool:
+    """Check whwether a piece of data exists in the configuration directory."""
+    return (config_path / data_name).is_file()
 
 
 def setup(query):
