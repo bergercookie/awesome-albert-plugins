@@ -2,16 +2,24 @@
 
 ## Demo
 
-![](misc/img0.png)
+https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/plugins/bluetooth/misc/demo.mp4
+
+![](misc/demo0.png)
+
+![](misc/demo1.png)
 
 ## Description
 
-This is a small plugin that currently only allows for enabling/disabling the
-bluetooth resources.
+This is a small plugin that allows for:
+
+* Connecting/disconnecting a device
+* Pairing and trusting a device
+* Enabling/disabling bluetooth altogether
 
 ## Installation instructions
 
-Make sure you have the `rfkill` program installed
+Make sure you have `rfkill` and `bluetoothctl` installed and available in your
+`$PATH`
 
 ## Self Promotion
 
