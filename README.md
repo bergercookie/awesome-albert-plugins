@@ -34,7 +34,7 @@ This is a collection of plugins and themes for the
 Currently the list of plugins includes:
 
 - [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
-- [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Enable/disable bluetooth functionality
+- [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Manage bluetooth devices
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
 - [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
