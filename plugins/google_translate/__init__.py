@@ -49,7 +49,7 @@ data_path = Path(v0.dataLocation()) / "google_translate"
 # have a history of the previous results ------------------------------------------------------
 history_path = cache_path / "history.dat"
 history_deque: Deque[Dict[str, str]] = deque(maxlen=30)
-if history_path.exists and not history_path.is_file():
+if history_path.exists() and not history_path.is_file():
     raise RuntimeError(f"History path [{history_path}] must be a file, can't handle its type!")
 if history_path.is_file():
     with open(history_path, "r") as f:
