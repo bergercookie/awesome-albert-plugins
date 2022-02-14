@@ -148,6 +148,7 @@ def get_as_item(password_path: Path):
     actions = [
         v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
         v0.ClipAction("Copy Full Path", str(password_path)),
+        v0.ClipAction("Copy Password name", password_path.name),
         v0.ClipAction(
             "Copy pass-compatible path",
             str(password_path.relative_to(pass_dir).parent / password_path.stem),
@@ -173,7 +174,7 @@ def get_as_item(password_path: Path):
         id=__title__,
         icon=icon_path,
         text=f"{password_path.stem}",
-        subtext=full_path_no_suffix_str,
+        subtext=full_path_rel_root_str,
         completion=f"{__triggers__} {full_path_no_suffix_str}",
         actions=actions,
     )

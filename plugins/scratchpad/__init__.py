@@ -134,11 +134,11 @@ def get_as_item(query_str: str):
         completion=f"{__triggers__}{query_str}",
         actions=[
             v0.FuncAction(
-                f"Save to scratchpad -> {s_path}",
+                f"Save to scratchpad ➡️ {s_path}",
                 lambda line=query_str: save_to_scratchpad(line),
             ),
             v0.FuncAction(
-                f"Save to scratchpad - New Section -> {s_path}",
+                f"Save to scratchpad - New Section ➡️ {s_path}",
                 lambda line=query_str: save_to_scratchpad(line, sep=True),
             ),
         ],

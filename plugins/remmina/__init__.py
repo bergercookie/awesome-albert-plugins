@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
-
-"""Search and start Remmina connections."""
+"""Lookup and Start Remmina Connections."""
 
 import configparser
 import os
 import subprocess
 from glob import glob
+from pathlib import Path
 from re import IGNORECASE, search
-from typing import Tuple
+from typing import Tuple, Sequence
 
-from albert import FuncAction, Item, critical
+from albert import FuncAction, Item
 
 __title__ = "Remmina"
 __version__ = "0.4.0"
@@ -18,25 +17,32 @@ __authors__ = "Oğuzcan Küçükbayrak, Nikos Koukis"
 __exec_deps__ = ["remmina"]
 __py_deps__ = ["configparser"]
 
-MODULE_PATH = os.path.dirname(__file__)
-ICON_PATH = MODULE_PATH + "/icons/remmina.svg"
-PROTOCOL_ICONS_PATH = MODULE_PATH + "/icons/remmina-%s-symbolic.svg"
-CONNECTIONS_PATH = "%s/.local/share/remmina" % os.environ["HOME"]
+MODULE_PATH = Path(__file__).absolute().parent
+ICON_PATH = MODULE_PATH / "icons" / "remmina.svg"
+CONNECTIONS_PATH = Path(os.environ["HOME"]) / ".local" / "share" / "remmina"
 
 
-def runRemmina(cf=""):
+def get_protocol_icon_path(proto: str) -> Path:
+    path = MODULE_PATH / "icons" / f"remmina-{proto.lower()}-symbolic.svg"
+    if path.is_file():
+        return path
+    else:
+        return ICON_PATH
+
+
+def runRemmina(cf: str = "") -> None:
     args = (["remmina"], ["remmina", "-c", cf])[len(cf) > 0]
     subprocess.Popen(args)
 
 
-def getConfigFiles():
-    return [f for f in glob(CONNECTIONS_PATH + "**/*.remmina", recursive=True)]
+def getConfigFiles() -> Sequence[str]:
+    return [f for f in glob(str(CONNECTIONS_PATH) + "**/*.remmina", recursive=True)]
 
 
 def getAsItem(name, group, server, proto, file):
     return Item(
         id=__title__,
-        icon=PROTOCOL_ICONS_PATH % (proto.lower()),
+        icon=str(get_protocol_icon_path(proto)),
         text=(name, "%s/ %s" % (group, name))[len(group) > 0],
         subtext="%s %s" % (proto, server),
         actions=[FuncAction("Open connection", lambda cf=file: runRemmina(cf))],
@@ -80,7 +86,7 @@ def handleQuery(query):
         results.append(
             Item(
                 id=__title__,
-                icon=ICON_PATH,
+                icon=str(ICON_PATH),
                 text=__title__,
                 subtext=__doc__,
                 actions=[FuncAction("Open Remmina", runRemmina)],

@@ -71,18 +71,30 @@ def play_icon(started) -> str:
 
 class Watch(ABC):
     def __init__(
-        self, app_name: str, image_path: str, name: Optional[str], started: bool = False
+        self,
+        app_name: str,
+        image_path: str,
+        name: Optional[str],
+        started: bool = False,
+        total_time: float = 0.0,
     ):
         self._name = name if name is not None else ""
         self._to_remove = False
         self._started = started
         self._app_name = app_name
         self._image_path = image_path
+        self._total_time = total_time
 
     def name(
         self,
     ) -> Optional[str]:
         return self._name
+
+    def plus(self, mins: int):
+        self._total_time += 60 * mins
+
+    def minus(self, mins: int):
+        self._total_time -= 60 * mins
 
     @abstractmethod
     def start(self):
@@ -110,11 +122,10 @@ class Watch(ABC):
 class Stopwatch(Watch):
     def __init__(self, name=None):
         super(Stopwatch, self).__init__(
-            name=name, app_name="Stopwatch", image_path=stopwatch_path
+            name=name, app_name="Stopwatch", image_path=stopwatch_path, total_time=0
         )
-        self.total_time = 0
-        self.latest_start = 0
         self.latest_stop_time = 0
+        self.latest_interval = 0
         self.start()
 
     def start(self):
@@ -124,10 +135,11 @@ class Stopwatch(Watch):
 
     def pause(self):
         stop_time = time.time()
-        self.total_time += stop_time - self.latest_start
+        self.latest_interval = stop_time - self.latest_start
+        self._total_time += self.latest_interval
         self._started = False
         self.notify(
-            msg=f"Stopwatch [{self.name()}] paused, total: {format_time(self.total_time)}"
+            msg=f"Stopwatch [{self.name()}] paused, total: {format_time(self._total_time)}"
         )
         self.latest_stop_time = stop_time
 
@@ -135,10 +147,13 @@ class Stopwatch(Watch):
         # current interval
         if self.started():
             latest = time.time()
+            current_interval = latest - self.latest_start
+            total = self._total_time + current_interval
         else:
             latest = self.latest_stop_time
-        current_interval = latest - self.latest_start
-        total = self.total_time + current_interval
+            current_interval = self.latest_interval
+            total = self._total_time
+
         s = get_as_subtext_field(play_icon(self._started))
         s += get_as_subtext_field(self.name())
         s += get_as_subtext_field(
@@ -160,31 +175,30 @@ class Countdown(Watch):
         count_from: float,
     ):
         super(Countdown, self).__init__(
-            app_name="Countdown", image_path=countdown_path, name=name
+            app_name="Countdown", image_path=countdown_path, name=name, total_time=count_from
         )
         self.latest_start = 0
-        self.remaining_time = count_from
         self.start()
 
     def start(self):
         self._started = True
         self.latest_start = time.time()
         self.timer = threading.Timer(
-            self.remaining_time,
+            self._total_time,
             self.time_elapsed,
         )
         self.timer.start()
         self.notify(
-            msg=f"Countdown [{self.name()}] starting, remaining: {format_time(self.remaining_time)}"
+            msg=f"Countdown [{self.name()}] starting, remaining: {format_time(self._total_time)}"
         )
 
     def pause(self):
         self._started = False
-        self.remaining_time -= time.time() - self.latest_start
+        self._total_time -= time.time() - self.latest_start
         if self.timer:
             self.timer.cancel()
             self.notify(
-                msg=f"Countdown [{self.name()}] paused, remaining: {format_time(self.remaining_time)}"
+                msg=f"Countdown [{self.name()}] paused, remaining: {format_time(self._total_time)}"
             )
 
     def time_elapsed(self):
@@ -201,11 +215,11 @@ class Countdown(Watch):
         s += get_as_subtext_field(self.name())
 
         # compute remaining time
-        remaining_time = self.remaining_time
+        total_time = self._total_time
         if self.started():
-            remaining_time -= time.time() - self.latest_start
+            total_time -= time.time() - self.latest_start
 
-        s += f"Remaining: {format_time(remaining_time)}"
+        s += f"Remaining: {format_time(total_time)}"
         return s
 
 
@@ -332,10 +346,9 @@ def handleQuery(
             )
 
             # cleanup watches that are done
-            for li in all_watches:
-                for watch in li:
-                    if watch.to_remove():
-                        li.remove(watch)
+            to_remove = [watch for watch in all_watches if watch.to_remove()]
+            for watch in to_remove:
+                delete_item(watch)
 
         except Exception:  # user to report error
             v0.critical(traceback.format_exc())
@@ -363,14 +376,9 @@ def handleQuery(
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_as_item(item: Watch):
+def get_as_item(item: Watch) -> v0.Item:
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    actions = [
-        v0.FuncAction(
-            "Remove",
-            lambda: delete_item(item),
-        )
-    ]
+    actions = []
     if item.started():
         actions.append(
             v0.FuncAction(
@@ -385,6 +393,41 @@ def get_as_item(item: Watch):
                 lambda: item.start(),
             )
         )
+
+    actions.append(
+        v0.FuncAction(
+            "Remove",
+            lambda: delete_item(item),
+        )
+    )
+
+    actions.append(
+        v0.FuncAction(
+            "Add 30 mins",
+            lambda: item.plus(30),
+        )
+    )
+
+    actions.append(
+        v0.FuncAction(
+            "Substract 30 mins",
+            lambda: item.minus(30),
+        )
+    )
+
+    actions.append(
+        v0.FuncAction(
+            "Add 5 mins",
+            lambda: item.plus(5),
+        )
+    )
+
+    actions.append(
+        v0.FuncAction(
+            "Substract 5 mins",
+            lambda: item.minus(5),
+        )
+    )
 
     return v0.Item(
         id=__title__,
