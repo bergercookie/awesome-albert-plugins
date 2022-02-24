@@ -20,7 +20,7 @@ __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
 )
 __exec_deps__ = ["xclip"]
-__py_deps__ = ["em-keyboard"]
+__py_deps__ = ["em"]
 
 icon_path = str(Path(__file__).parent / "emoji.png")
 
