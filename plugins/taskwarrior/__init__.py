@@ -53,6 +53,7 @@ config_path = Path(v0.configLocation()) / __simplename__
 data_path = Path(v0.dataLocation()) / __simplename__
 
 reminders_tag_path = config_path / "reminders_tag"
+reminders_tag = "remindme"
 
 
 class FileBackedVar:
@@ -345,9 +346,11 @@ def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path
     else:
         return "↑", Path(icon_path_r)
 
+
 def fail_task(task_id: list):
     run_tw_action(args_list=[task_id, "modify", "+fail"])
     run_tw_action(args_list=[task_id, "done"])
+
 
 def run_tw_action(args_list: list, need_pty=False):
     args_list = ["task", "rc.recurrence.confirmation=no", "rc.confirmation=off", *args_list]
@@ -411,17 +414,21 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         actions.insert(0, v0.UrlAction(f"Open {url}", url))
 
     if reminders_tag_path.is_file():
+        global reminders_tag
         reminders_tag = load_data(reminders_tag_path)
-        actions.append(
-            v0.FuncAction(
-                f"Add to Reminders (+{reminders_tag})",
-                lambda args_list=[
-                    "modify",
-                    task_id,
-                    f"+{reminders_tag}",
-                ]: run_tw_action(args_list),
-            )
+    else:
+        save_data("remindme", reminders_tag_path)
+
+    actions.append(
+        v0.FuncAction(
+            f"Add to Reminders (+{reminders_tag})",
+            lambda args_list=[
+                "modify",
+                task_id,
+                f"+{reminders_tag}",
+            ]: run_tw_action(args_list),
         )
+    )
 
     urgency_str, icon = urgency_to_visuals(task.get("urgency"))
     text = f'{task["description"]}'
@@ -452,9 +459,10 @@ class Subcommand:
     def __init__(self, *, name, desc):
         self.name = name
         self.desc = desc
+        self.subcommand_prefix = f"{__triggers__}{self.name}"
 
     def get_as_albert_item(self):
-        return get_as_item(text=self.desc, completion=f"{__triggers__}{self.name} ")
+        return get_as_item(text=self.desc, completion=f"{self.subcommand_prefix} ")
 
     def get_as_albert_items_full(self, query_str):
         return [self.get_as_albert_item()]
@@ -469,15 +477,50 @@ class AddSubcommand(Subcommand):
 
     @overrides
     def get_as_albert_items_full(self, query_str):
-        item = self.get_as_albert_item()
-        item.subtext = query_str
-        item.addAction(
+        items = []
+
+        add_item = self.get_as_albert_item()
+        add_item.subtext = query_str
+        add_item.completion = f"{self.subcommand_prefix} {query_str}"
+        add_item.addAction(
             v0.FuncAction(
                 "Add task",
                 lambda args_list=["add", *query_str.split()]: run_tw_action(args_list),
             )
         )
-        return [item]
+        items.append(add_item)
+
+        to_reminders = self.get_as_albert_item()
+        to_reminders = v0.Item(
+            id=__title__,
+            text=f"Add +{reminders_tag} tag",
+            subtext="Add +remindme on [TAB]",
+            icon=icon_path_y,
+            completion=f"{self.subcommand_prefix} {query_str} +remindme",
+        )
+        items.append(to_reminders)
+
+        def item_at_date(date: datetime.date, time_24h: int):
+            dt_str = f'{date.strftime("%Y%m%d")}T{time_24h}0000'
+            return  v0.Item(
+                id=__title__,
+                text=f"Due {date}, at {time_24h}:00",
+                subtext="Add due:dt_str on [TAB]",
+                icon=icon_path_c,
+                completion=f"{self.subcommand_prefix} {query_str} due:{dt_str}",
+            )
+
+        items.append(item_at_date(datetime.date.today(), time_24h=15))
+        items.append(item_at_date(datetime.date.today(), time_24h=19))
+        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
+                                  time_24h=10))
+        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
+                                  time_24h=15))
+        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
+                                  time_24h=19))
+
+        return items
+
 
 class LogSubcommand(Subcommand):
     def __init__(self):
@@ -503,9 +546,7 @@ class ActiveTasks(Subcommand):
     @overrides
     def get_as_albert_items_full(self, query_str):
         return [
-            get_tw_item(t)
-            for t in tw_side.get_all_items(skip_completed=True)
-            if "start" in t
+            get_tw_item(t) for t in tw_side.get_all_items(skip_completed=True) if "start" in t
         ]
 
 

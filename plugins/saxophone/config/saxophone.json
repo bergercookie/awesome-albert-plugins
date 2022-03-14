@@ -2,6 +2,21 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "https://www.internet-radio.com/servers/tools/playlistgenerator/?u=http://us4.internet-radio.com:8193/listen.pls&t=.m3u",
+      "name": "Internet Radio - Deeply Beautiful Chillout Music - A Heavenly World of Sound",
+      "homepage": "https://www.internet-radio.com/stations/ambient/"
+    },
+    {
+      "url": "https://www.internet-radio.com/servers/tools/playlistgenerator/?u=http://us4.internet-radio.com:8193/listen.pls&t=.m3u",
+      "name": "Internet Radio - Radio Estilon Leblon",
+      "homepage": "https://www.internet-radio.com/stations/ambient/"
+    },
+    {
+      "url": "https://www.internet-radio.com/servers/tools/playlistgenerator/?u=http://uk1.internet-radio.com:8004/listen.pls&t=.m3u",
+      "name": "Internet Radio - Pink Noise Radio",
+      "homepage": "https://www.internet-radio.com/stations/ambient/"
+    },
+    {
       "url": "https://radiostreaming.ert.gr/ert-proto",
       "name": "Proto Programma / Πρώτο Πρόγραμμα 91.6 - ERT/ΕΡΤ",
       "homepage": "https://webradio.ert.gr/proto/",
@@ -33,7 +48,7 @@
       "icon": "diesi.png"
     },
     {
-      "url": "http://uk1.internet-radio.com:8267/listen.pls&t=.pls",
+      "url": "http://uk1.internet-radio.com:8267/listen.pls?sid=1",
       "name": "White Noise"
     },
     {
