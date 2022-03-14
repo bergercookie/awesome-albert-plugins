@@ -4,7 +4,6 @@ import concurrent.futures
 import time
 import traceback
 from datetime import datetime
-from multiprocessing import cpu_count
 from pathlib import Path
 
 import albert as v0  # type: ignore
@@ -13,6 +12,7 @@ import pytz
 import requests
 import tzlocal
 from fuzzywuzzy import process
+from PIL import Image, ImageOps
 
 __title__ = "Timezones lookup"
 __version__ = "0.4.0"
@@ -21,7 +21,7 @@ __authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones"
 )
-__py_deps__ = ["pycountry", "fuzzywuzzy", "tzlocal", "requests", "traceback", "pytz"]
+__py_deps__ = ["Pillow", "pycountry", "fuzzywuzzy", "tzlocal", "requests", "traceback", "pytz"]
 
 
 icon_path = str(Path(__file__).parent / "timezones")
@@ -52,10 +52,15 @@ def download_logo_for_code(code: str) -> bytes:
 
     .. raises:: KeyError if given code is invalid.
     """
-    ret = requests.get(f"https://www.countryflags.io/{code}/flat/64.png")
+    ret = requests.get(f"https://flagcdn.com/64x48/{code.lower()}.png")
     if not ret.ok:
         print(f"[E] Couldn't download logo for code {code}")
     return ret.content
+
+
+def get_logo_path_for_code_orig(code: str) -> Path:
+    """Return the path to the cached country logo"""
+    return country_logos_path / f"{code}-orig.png"
 
 
 def get_logo_path_for_code(code: str) -> Path:
@@ -64,8 +69,22 @@ def get_logo_path_for_code(code: str) -> Path:
 
 
 def save_logo_for_code(code: str, data: bytes):
-    with open(get_logo_path_for_code(code), "wb") as f:
+    fname_orig = get_logo_path_for_code_orig(code)
+    fname = get_logo_path_for_code(code)
+
+    with open(fname_orig, "wb") as f:
         f.write(data)
+
+    old_img = Image.open(fname_orig)
+    old_size = old_img.size
+    new_size = (80, 80)
+    new_img = Image.new("RGBA", new_size)
+    new_img.paste((255, 255, 255, 0), (0, 0, *new_size))
+    new_img.paste(
+        old_img, ((new_size[0] - old_size[0]) // 2, (new_size[1] - old_size[1]) // 2)
+    )
+
+    new_img.save(fname)
 
 
 def download_and_save_logo_for_code(code):
@@ -73,7 +92,7 @@ def download_and_save_logo_for_code(code):
 
 
 def download_all_logos():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
         future_to_code = {
             executor.submit(download_and_save_logo_for_code, code): code for code in codes
         }
@@ -81,6 +100,7 @@ def download_all_logos():
             code = future_to_code[future]
             try:
                 future.result()
+                print(f"Fetched logo for country {code}")
             except Exception as exc:
                 print(f"[W] Fetching logo for {code} generated an exception: {exc}")
 

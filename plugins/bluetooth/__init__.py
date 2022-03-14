@@ -4,7 +4,7 @@ import subprocess
 import threading
 import traceback
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence
+from typing import List, Mapping, MutableMapping, Optional, Sequence
 
 import albert as v0
 from gi.repository import GdkPixbuf, Notify
@@ -80,21 +80,27 @@ class BlDevice:
         self.is_blocked = False
         self.is_connected = False
         self.icon = icon_path
-
-        try:
-            d = self._parse_info()
-            self.is_paired = d["Paired"] == "yes"
-            self.is_trusted = d["Trusted"] == "yes"
-            self.is_blocked = d["Blocked"] == "yes"
-            self.is_connected = d["Connected"] == "yes"
-            self.icon = d["Icon"]
-        except:
-            pass
+        d = self._parse_info()
+        self.is_paired = d["Paired"] == "yes"
+        self.is_trusted = d["Trusted"] == "yes"
+        self.is_blocked = d["Blocked"] == "yes"
+        self.is_connected = d["Connected"] == "yes"
+        self.icon = d["Icon"]
 
     def _parse_info(self) -> Mapping[str, str]:
         proc = bl_cmd(["info", self.mac_address])
         lines = [li.decode("utf-8").strip() for li in proc.stdout.splitlines()][1:]
-        return dict(li.split(": ") for li in lines)
+        d: MutableMapping[str, str] = {}
+        for li in lines:
+            try:
+                key, val = li.split(": ")
+            except ValueError:
+                # ill-formatted key
+                continue
+
+            d[key] = val
+
+        return d
 
     def trust(self) -> None:
         """Trust a device."""

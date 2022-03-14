@@ -4,6 +4,7 @@
 
 Make sure you have the following python packages installed:
 
+* `Pillow`
 * `pytz`
 * `requests`
 * `tzlocal`
@@ -16,6 +17,8 @@ Lookup timezones based on either the city or the country name. The plugin will
 autocomplete all the appropriate city and country names based on fuzzy search
 
 On top it will always show you your local timezone so that you can compare.
+
+Thanks to https://flagpedia.net/ for the country logos
 
 ## Demo
 

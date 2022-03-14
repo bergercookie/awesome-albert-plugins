@@ -1,12 +1,10 @@
 """Meme Generator - Generate memes with custom quotes - ready to be copied / uploaded / shared at an instant."""
 
 from pathlib import Path
-from typing import List, Dict
-import os
+from typing import List
 import shutil
 import subprocess
-import sys
-import time
+import shutil
 import traceback
 
 from fuzzywuzzy import process
@@ -48,6 +46,9 @@ def finalize():
 
 def import_template_ids() -> List[str]:
     """Return a list of all the supported template IDs."""
+    if not shutil.which("meme"):
+        raise RuntimeError('Cannot find the "meme" go package - "'
+                           "Are you sure you installed https://github.com/nomad-software/meme?")
     return subprocess.check_output(["meme", "-list-templates"]).decode("utf-8").splitlines()
 
 
