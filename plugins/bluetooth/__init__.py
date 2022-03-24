@@ -75,17 +75,12 @@ class BlDevice:
         self.mac_address = mac_address
         self.name = name
 
-        self.is_paired = False
-        self.is_trusted = False
-        self.is_blocked = False
-        self.is_connected = False
-        self.icon = icon_path
         d = self._parse_info()
         self.is_paired = d["Paired"] == "yes"
         self.is_trusted = d["Trusted"] == "yes"
         self.is_blocked = d["Blocked"] == "yes"
         self.is_connected = d["Connected"] == "yes"
-        self.icon = d["Icon"]
+        self.icon = d.get("Icon", icon_path)
 
     def _parse_info(self) -> Mapping[str, str]:
         proc = bl_cmd(["info", self.mac_address])
