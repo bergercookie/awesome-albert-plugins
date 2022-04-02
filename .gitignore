@@ -111,3 +111,6 @@ Session.vim
 /.local/
 /.cookiecutter_replay/
 /.vim/
+
+# external plugins I use but don't develop myself
+/plugins/ext-*
