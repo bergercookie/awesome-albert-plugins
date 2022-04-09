@@ -1,6 +1,3 @@
 [submodule "themes/Mozhi"]
 	path = themes/Mozhi
 	url = https://github.com/Hsins/Albert-Mozhi.git
-[submodule "plugins/Shorten"]
-	path = plugins/Shorten
-	url = git@github.com:bergercookie/Shorten
