@@ -22,7 +22,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --upgrade wheel pyopenssl
-RUN pip3 install --upgrade secrets requests googler cookiecutter
+RUN pip3 install --upgrade secrets requests ddgr cookiecutter
 
 # don't be root ----------------------------------------------------------------
 RUN echo "$USERNAME:x:$UID_:$GID_:$USERNAME,,,:$HOME:/bin/bash" >> /etc/passwd

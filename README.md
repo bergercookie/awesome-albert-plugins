@@ -59,12 +59,13 @@ Currently the list of plugins includes:
 - [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
 - [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
 - [Xkcd](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/xkcd) - 📓 List and fuzzy-search the latest [xkcd](https://fr.wikipedia.org/wiki/Xkcd) comics
-- [`googler`-based autocompletion search](https://github.com/bergercookie/awesome-albert-plugins#googler-based-plugins) - 🔎 for searching on google.com, github.com,
-  stackoverflow, amazon, and a variety of other websites using [googler](https://github.com/jarun/googler)
+- [`DuckDuckGo`-based autocompletion search](https://github.com/bergercookie/awesome-albert-plugins#ddgr-based-plugins) - 🦆 for searching on duckduckgo.com, github.com,
+  stackoverflow, amazon, and a variety of other websites using [ddgr](https://github.com/jarun/ddgr)
 
-  - Suggestions-enabled search using [googler](https://github.com/jarun/googler) on a variety of websites. For example:
+  - Suggestions-enabled search using [ddgr](https://github.com/jarun/ddgr) on
+    a variety of websites. For example:
 
-    - Google
+    - DuckDuckGo
     - Amazon
     - Youtube
     - Github
@@ -73,16 +74,14 @@ Currently the list of plugins includes:
     - Urban dictionary: Word/Slang definitions lookup
     - Python, OpenCV, Dlib, C++ documentation lookup
     - ...
-    - :warning: To avoid getting blocked by Google, a search request is only sent
-      when there is a 0.3 seconds difference between keystrokes. Thus, it's
-      common when you actually want to send a request to wait a bit and then
-      append a space character at the end of the query.
+    - :warning: To avoid getting blocked, a search request is only sent when the
+        text ends with a dot `"."`.
 
     - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
       mode" option
-    - See the [`googler`-specific section](#googler-based-plugins) for more
+    - See the [`ddgr`-specific section](#ddgr-based-plugins) for more
 
-- Improved implementations of the original `Pass`, `Pomodoro` plugins
+- Improved implementations of the original 🍅 `Pomodoro` plugin
 
 Plugins have been tested with the Albert python `v0.4` interface. If you're
 looking for a version that works with earlier versions of the plugin, see the
@@ -116,19 +115,19 @@ the plugins you use. These dependencies will probably be pointed out either when
 you enable, or when you run the plugin for the first time. Refer to the
 directory of the corresponding plugin for more details.
 
-### `Googler`-based plugins
+### `ddgr`-based plugins
 
-The search plugins that use googler have not been committed to this repo. You
-can generate them offline using the `create_googler_plugins.py` script provided.
+The search plugins that use `ddgr` have not been committed to this repo. You
+can generate them offline using the `create_ddgr_plugins.py` script provided.
 Make sure you have Python >= 3.6 installed:
 
 ```
-pip3 install --user --upgrade secrets requests googler cookiecutter
-./create_googler_plugins.py
+pip3 install --user --upgrade secrets requests ddgr cookiecutter
+./create_ddgr_plugins.py
 ```
 
 This will generate an Albert plugin for each one of the search engines specified
-in `create_googler_plugins.py`. Adjust the latter as required if you want to
+in `create_ddgr_plugins.py`. Adjust the latter as required if you want to
 add more or remove plugins.
 
 ```py
@@ -177,4 +176,4 @@ directly make a PR.
 - :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
 - :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
 - :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
-  - Use googler asynchronously to get links to pages: `adcs site:developer.arm.com`
+  - Use ddgr asynchronously to get links to pages: `adcs site:developer.arm.com`

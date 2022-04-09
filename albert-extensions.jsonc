@@ -1,0 +1,32 @@
+// albert-extensions file that specifies what extensions can be found and at
+// which locations inside this (git) repository.
+{
+  // [REQUIRED] Version of the albert-extensions specification in use.
+  "version": 0.1,
+  // [OPTIONAL]
+  // If there's an overlap ,then the "extensions" section takes precedence
+  "extensions": {
+    // extension-name: path/to/extension/directory
+    // [OPTIONAL] root_dir: evaluate the extension paths based on this root
+    // directory. The root_dir itself is evaluated relative to the parent
+    // directory of albert-extensions.json[c]
+    //
+    // root_dir: plugins
+  },
+
+  // [OPTIONAL] automatically discover extensions
+  "autodiscovery": {
+    // [OPTIONAL] If the autodiscovery section exists, and there's no "enabled"
+    // subkey, we'll just use it nonetheless
+    "enabled": true,
+    // [REQUIRED] directory under which we'll look for extensions
+    // Each extension should be either a `.py` file or a python package (i.e.,
+    // directory containing at least a `__init__.py` file.). If we encounter a
+    // directory without a `__init__.py` file in it, we'll just ignore it.
+    "root_dir": "plugins",
+
+    // [OPTIONAL] A list of globs to use to ignore packages and/or python files
+    // under root_dir
+    "ignore_glob": [""]
+  }
+}

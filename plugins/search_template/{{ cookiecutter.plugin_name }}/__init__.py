@@ -1,5 +1,5 @@
 """
-Current file was autogeneratd by the search_template and the `create_googler_plugins.py`
+Current file was autogeneratd by the search_template and the `create_ddgr_plugins.py`
 script. In case you find a bug please submit a patch to the aforementioned directories and file
 instead.
 """
@@ -7,16 +7,12 @@ instead.
 """{{ cookiecutter.plugin_short_description }}."""
 
 import json
-import os
 import shutil
 import subprocess
-import sys
-import time
 import traceback
 from io import StringIO
 from pathlib import Path
-
-from fuzzywuzzy import process
+from typing import Dict, Tuple
 
 import albert as v0
 
@@ -25,7 +21,7 @@ __version__ = "0.4.0"
 __triggers__ = "{{ cookiecutter.trigger }} "
 __authors__ = "Nikos Koukis"
 __homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
-__exec_deps__ = ["googler"]
+__exec_deps__ = []
 __py_deps__ = []
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
@@ -34,8 +30,8 @@ config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
 
 # set it to the corresponding site for the search at hand
-# see: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
-googler_at = "{{ cookiecutter.googler_at }}"
+# e.g.,: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
+ddgr_at = "{{ cookiecutter.ddgr_at }}"
 
 # special way to handle the url? --------------------------------------------------------------
 url_handler = "{{ cookiecutter.url_handler }}"
@@ -82,40 +78,11 @@ def finalize():
     pass
 
 
-class KeystrokeMonitor:
-    def __init__(self):
-        super(KeystrokeMonitor, self)
-        self.thres = 0.3  # s
-        self.prev_time = time.time()
-        self.curr_time = time.time()
-
-    def report(self):
-        self.prev_time = time.time()
-        self.curr_time = time.time()
-        self.report = self.report_after_first
-
-    def report_after_first(self):
-        # update prev, curr time
-        self.prev_time = self.curr_time
-        self.curr_time = time.time()
-
-    def triggered(self) -> bool:
-        return self.curr_time - self.prev_time > self.thres
-
-    def reset(self) -> None:
-        self.report = self.report_after_first
-
-
-# I 'm only sending a request to Google once the user has stopped typing, otherwise Google
-# blocks my IP.
-keys_monitor = KeystrokeMonitor()
-
-
 def handleQuery(query) -> list:
     results = []
 
     if not query.isTriggered:
-        if {{ cookiecutter.show_on_top_no_trigger }}:
+        if {{cookiecutter.show_on_top_no_trigger}}:
             if not query.string:
                 results.append(
                     v0.Item(
@@ -138,27 +105,44 @@ def handleQuery(query) -> list:
 
             # too small request - don't even send it.
             if len(query_str) < 2:
-                keys_monitor.reset()
                 return results
 
             # determine if we can make the request --------------------------------------------
-            keys_monitor.report()
-            if keys_monitor.triggered():
-                json_results = query_googler(query_str)
-                googler_results = [
-                    get_googler_result_as_item(googler_result)
-                    for googler_result in json_results
-                ]
+            if not query_str.endswith("."):
+                results.insert(
+                    0,
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        text="typing...",
+                        subtext='Add a dot to the end of the query "." to trigger the search',
+                        actions=[],
+                    ),
+                )
+                return results
 
-                results.extend(googler_results)
+            query_str = query_str[:-1].strip()
 
-                if not results:
-                    results.insert(
-                        0,
-                        v0.Item(
-                            id=__title__, icon=icon_path, text="No results.", actions=[],
-                        ),
-                    )
+            # send request
+            json_results, stderr = query_ddgr(query_str)
+
+            ddgr_results = [
+                get_ddgr_result_as_item(ddgr_result) for ddgr_result in json_results
+            ]
+
+            results.extend(ddgr_results)
+
+            if not results:
+                results.insert(
+                    0,
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        text="No results.",
+                        subtext=stderr if stderr else "",
+                        actions=[],
+                    ),
+                )
 
         except Exception:  # user to report error
             results.insert(
@@ -182,27 +166,30 @@ def handleQuery(query) -> list:
 # supplementary functions ---------------------------------------------------------------------
 
 
-def query_googler(query_str) -> dict:
-    """Make a query to googler and return the results in json."""
+def query_ddgr(query_str) -> Tuple[Dict[str, str], str]:
+    """Make a query to ddgr and return the results in json."""
 
-    li = ["googler", "--unfilter", "--json", query_str]
-    if googler_at:
-        li = li[:2] + ["-w", googler_at] + li[2:]
+    li = ["ddgr", "--noprompt", "--unsafe", "--json", query_str]
+    if ddgr_at:
+        li = li[:2] + ["-w", ddgr_at] + li[2:]
 
     p = subprocess.Popen(li, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    stdout, stder = p.communicate()
-    if not stdout:
-        return {}
-    json_ret = json.load(StringIO(stdout.decode("utf-8")))
+    stdout, stderr = p.communicate()
+    if stdout:
+        json_ret = json.load(StringIO(stdout.decode("utf-8")))
+    else:
+        json_ret = {}
 
-    return json_ret
+    stderr = stderr.decode("utf-8")
+    return json_ret, stderr
 
 
-def get_googler_result_as_item(googler_item: dict):
+def get_ddgr_result_as_item(ddgr_item: dict):
+    print("ddgr_item: ", ddgr_item)
     actions = [
-        v0.UrlAction("Open in browser", googler_item["url"]),
-        v0.ClipAction("Copy URL", googler_item["url"]),
+        v0.UrlAction("Open in browser", ddgr_item["url"]),
+        v0.ClipAction("Copy URL", ddgr_item["url"]),
     ]
 
     # incognito search
@@ -211,7 +198,7 @@ def get_googler_result_as_item(googler_item: dict):
             1,
             v0.FuncAction(
                 "Open in browser [incognito mode]",
-                lambda url=googler_item["url"]: inco_cmd(url),
+                lambda url=ddgr_item["url"]: inco_cmd(url),  # type: ignore
             ),
         )
 
@@ -223,7 +210,7 @@ def get_googler_result_as_item(googler_item: dict):
             v0.FuncAction(
                 url_handler_desc,
                 lambda url_handler=url_handler: subprocess.Popen(
-                    f'{url_handler} {googler_item["url"]}', shell=True
+                    f'{url_handler} {ddgr_item["url"]}', shell=True
                 ),
             ),
         )
@@ -231,16 +218,14 @@ def get_googler_result_as_item(googler_item: dict):
     return v0.Item(
         id=__title__,
         icon=icon_path,
-        text=googler_item["title"],
-        subtext=googler_item["abstract"],
+        text=ddgr_item["title"],
+        subtext=ddgr_item["abstract"],
         actions=actions,
     )
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable.
-
-    """
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
     if field:
         s = f"{field} | "
@@ -275,15 +260,18 @@ def setup(query):
 
     results = []
 
-    if not shutil.which("googler"):
+    if not shutil.which("ddgr"):
         results.append(
             v0.Item(
                 id=__title__,
                 icon=icon_path,
-                text=f'"googler" is not installed.',
-                subtext='Please install and configure "googler" accordingly.',
+                text=f'"ddgr" is not installed.',
+                subtext='Please install and configure "ddgr" accordingly.',
                 actions=[
-                    v0.UrlAction('Open "googler" website', "https://github.com/jarun/googler")
+                    v0.UrlAction(
+                        'Open "ddgr" installation instructions',
+                        "https://github.com/jarun/ddgr#installation=",
+                    )
                 ],
             )
         )

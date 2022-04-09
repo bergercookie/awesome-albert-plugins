@@ -7,7 +7,7 @@ ls -lart $ROOT/plugins
 
 (
 cd $ROOT
-"$ROOT"/create_googler_plugins.py
+"$ROOT"/create_ddgr_plugins.py
 )
 test -d "$ROOT/plugins/search_wikipedia"
 test -d "$ROOT/plugins/search_amazon"
