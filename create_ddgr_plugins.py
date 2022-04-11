@@ -106,6 +106,10 @@ custom_plugins = {
         "url_handler_description": "Launch using mpv",
         "show_on_top_no_trigger": True,
     },
+    "search_cssreference_io": {
+        "ddgr_at": "cssreference.io",
+        "trigger": "css",
+    }
 }
 
 

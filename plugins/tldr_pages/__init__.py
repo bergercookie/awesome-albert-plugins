@@ -1,13 +1,10 @@
 """TL;DR pages from albert."""
 
-import os
 import re
-import shutil
 import subprocess
-import sys
 import traceback
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Optional, Tuple
 
 from fuzzywuzzy import process
 
@@ -30,7 +27,7 @@ data_path = Path(v0.dataLocation()) / "tldr_pages"
 tldr_root = cache_path / "tldr"
 pages_root = tldr_root / "pages"
 
-page_paths: Dict[str, Path] = None
+page_paths: Optional[Dict[str, Path]] = None
 
 # Is the plugin run in development mode?
 in_development = False
