@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import List, Dict
+from shutil import which
 import os
 import shutil
 import subprocess
@@ -17,7 +18,9 @@ __title__ = "Contact VCF Viewer"
 __version__ = "0.4.0"
 __triggers__ = "c "
 __authors__ = "Nikos Koukis"
-__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
+__homepage__ = (
+    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
+)
 __exec_deps__ = []
 __py_deps__ = []
 
@@ -31,6 +34,7 @@ dev_mode = True
 # create plugin locations
 for p in (cache_path, config_path, data_path):
     p.mkdir(parents=False, exist_ok=True)
+
 # FileBackedVar class -------------------------------------------------------------------------
 class FileBackedVar:
     def __init__(self, varname, convert_fn=str, init_val=None):
@@ -51,13 +55,13 @@ class FileBackedVar:
         with open(self._fpath, "w") as f:
             return f.write(str(val))
 
+
 # plugin main functions -----------------------------------------------------------------------
 
 
 def initialize():
     """Called when the extension is loaded (ticked in the settings) - blocking."""
     pass
-
 
 
 def finalize():
@@ -105,6 +109,7 @@ def handleQuery(query) -> list:
 
 # supplementary functions ---------------------------------------------------------------------
 
+
 def get_shell_cmd_as_item(
     *, text: str, command: str, subtext: str = None, completion: str = None
 ):
@@ -134,6 +139,7 @@ def get_shell_cmd_as_item(
         ],
     )
 
+
 def get_as_item():
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
     return v0.Item(
@@ -151,7 +157,6 @@ def get_as_item():
 
 def sanitize_string(s: str) -> str:
     return s.replace("<", "&lt;")
-
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
@@ -181,16 +186,33 @@ def load_data(data_name: str) -> str:
 
     return data
 
+
 def data_exists(data_name: str) -> bool:
     """Check whwether a piece of data exists in the configuration directory."""
     return (config_path / data_name).is_file()
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
-
-    Use this function if you need the user to provide you data
-    """
+def setup(query):  # type: ignore
 
     results = []
+
+    if not which("vcfxplr"):
+        results.append(
+            v0.Item(
+                id=__title__,
+                icon=icon_path,
+                text=f'"vcfxplr" is not installed.',
+                subtext="You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>",
+                actions=[
+                    v0.ClipAction(
+                        "Copy install command", "pip3 install --user --upgrade vcfxplr"
+                    ),
+                    v0.UrlAction(
+                        'Open "vcfxplr" page', "https://github.com/bergercookie/vcfxplr"
+                    ),
+                ],
+            )
+        )
+        return results
+
     return results

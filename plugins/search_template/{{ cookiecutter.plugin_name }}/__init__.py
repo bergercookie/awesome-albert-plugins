@@ -186,7 +186,6 @@ def query_ddgr(query_str) -> Tuple[Dict[str, str], str]:
 
 
 def get_ddgr_result_as_item(ddgr_item: dict):
-    print("ddgr_item: ", ddgr_item)
     actions = [
         v0.UrlAction("Open in browser", ddgr_item["url"]),
         v0.ClipAction("Copy URL", ddgr_item["url"]),
