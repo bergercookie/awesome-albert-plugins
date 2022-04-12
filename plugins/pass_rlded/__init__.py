@@ -10,6 +10,12 @@ from typing import Sequence
 import albert as v0
 from fuzzywuzzy import process
 
+import gi
+
+gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
+
 __title__ = "Pass - UNIX Password Manager - fuzzy search"
 __version__ = "0.4.0"
 __triggers__ = "pass "
@@ -78,6 +84,14 @@ class PasswordsCacheManager:
 passwords_cache = PasswordsCacheManager(pass_dir=pass_dir)
 
 # plugin main functions -----------------------------------------------------------------------
+def do_notify(msg: str, image=None):
+    app_name = "pass_rlded"
+    Notify.init(app_name)
+    image = image
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
+
+
 def initialize():
     # Called when the extension is loaded (ticked in the settings) - blocking
 
@@ -88,6 +102,14 @@ def initialize():
 
 def finalize():
     pass
+
+
+def generate_passwd_cmd(passwd_name: str) -> str:
+    return f"pass generate -c -f {passwd_name}"
+
+
+def generate_passwd_cmd_li(passwd_name: str) -> Sequence[str]:
+    return f"pass generate -c -f {passwd_name}".split()
 
 
 def handleQuery(query):
@@ -104,6 +126,54 @@ def handleQuery(query):
             query_str = query.string.strip()
             if len(query_str) == 0:
                 passwords_cache.refresh = True
+                results.append(
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        text="Continue typing to fuzzy-search on passwords...",
+                        actions=[],
+                    )
+                )
+                results.append(
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        text="Generate a new password...",
+                        completion=f"{__triggers__}generate",
+                        actions=[],
+                    )
+                )
+
+            if query_str.startswith("generate"):
+                if len(query_str) > 1:
+                    passwd_name = " ".join(query_str.split()[1:])
+                    results.insert(
+                        0,
+                        v0.Item(
+                            id=__title__,
+                            icon=icon_path,
+                            text="Generate new password",
+                            subtext=generate_passwd_cmd(passwd_name),
+                            completion=f"{__triggers__}{query_str}",
+                            actions=[
+                                v0.ProcAction(
+                                    "Generate new password",
+                                    generate_passwd_cmd_li(passwd_name=passwd_name),
+                                )
+                            ],
+                        ),
+                    )
+                else:
+                    results.append(
+                        v0.Item(
+                            id=__title__,
+                            icon=icon_path,
+                            text="What's the path of this new password?",
+                            subtext="e.g., awesome-e-shop/johndoe@mail.com",
+                            completion=f"{__triggers__}generate",
+                            actions=[],
+                        )
+                    )
 
             # get a list of all the paths under pass_dir
             gpg_files = passwords_cache.get_all_gpg_files()
@@ -175,7 +245,7 @@ def get_as_item(password_path: Path):
         icon=icon_path,
         text=f"{password_path.stem}",
         subtext=full_path_rel_root_str,
-        completion=f"{__triggers__} {full_path_no_suffix_str}",
+        completion=f"{__triggers__}{full_path_no_suffix_str}",
         actions=actions,
     )
 

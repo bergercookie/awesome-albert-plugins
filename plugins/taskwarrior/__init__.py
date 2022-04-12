@@ -417,7 +417,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         global reminders_tag
         reminders_tag = load_data(reminders_tag_path)
     else:
-        save_data("remindme", reminders_tag_path)
+        save_data("remindme", str(reminders_tag_path))
 
     actions.append(
         v0.FuncAction(
