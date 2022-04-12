@@ -1,18 +1,23 @@
 """Contact VCF Viewer."""
 
-from pathlib import Path
-from typing import List, Dict
-from shutil import which
 import os
-import shutil
+import json
+import pickle
 import subprocess
 import sys
 import time
 import traceback
-
-from fuzzywuzzy import process
+from pathlib import Path
+from shutil import copyfile, which
+from typing import Any, Dict, List, Optional, Sequence
 
 import albert as v0
+import gi
+from fuzzywuzzy import process
+
+gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
 __title__ = "Contact VCF Viewer"
 __version__ = "0.4.0"
@@ -31,9 +36,74 @@ config_path = Path(v0.configLocation()) / "contacts"
 data_path = Path(v0.dataLocation()) / "contacts"
 dev_mode = True
 
+stats_path = config_path / "stats"
+vcf_path = Path(cache_path / "contacts.vcf")
+
+
+class Contact:
+    def __init__(
+        self,
+        fullname: str,
+        telephones: Optional[Sequence[str]],
+        emails: Optional[Sequence[str]] = None,
+    ):
+
+        self._fullname = fullname
+        self._telephones = telephones or []
+        self._emails = emails or []
+
+    @property
+    def fullname(self) -> str:
+        return self._fullname
+
+    @property
+    def telephones(self) -> Sequence[str]:
+        return self._telephones
+
+    @property
+    def emails(self) -> Sequence[str]:
+        return self._emails
+
+    @classmethod
+    def parse(cls, k, v):
+        def values(name: str) -> Sequence[Any]:
+            array = v.get(name)
+            if array is None:
+                return []
+
+            return [item["value"] for item in array]
+
+        return cls(
+            fullname=k,
+            telephones=[tel.replace(" ", "") for tel in values("tel")],
+            emails=values("email"),
+        )
+
+
+contacts: List[Contact]
+fullnames_to_contacts: Dict[str, Contact]
+
 # create plugin locations
 for p in (cache_path, config_path, data_path):
     p.mkdir(parents=False, exist_ok=True)
+
+
+def reindex_contacts() -> None:
+    global contacts, fullnames_to_contacts
+    contacts = get_new_contacts()
+    fullnames_to_contacts = {c.fullname: c for c in contacts}
+
+
+def get_new_contacts() -> List[Contact]:
+    proc = subprocess.run(
+        ["vcfxplr", "-c", str(vcf_path), "json", "-g", "fn"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    contacts_json = json.loads(proc.stdout)
+    return [Contact.parse(k, v) for k, v in contacts_json.items()]
+
 
 # FileBackedVar class -------------------------------------------------------------------------
 class FileBackedVar:
@@ -59,9 +129,18 @@ class FileBackedVar:
 # plugin main functions -----------------------------------------------------------------------
 
 
+def do_notify(msg: str, image=None):
+    app_name = "Contacts"
+    Notify.init(app_name)
+    image = image
+    n = Notify.Notification.new(app_name, msg, image)
+    n.show()
+
+
 def initialize():
     """Called when the extension is loaded (ticked in the settings) - blocking."""
-    pass
+    if vcf_path.is_file():
+        reindex_contacts()
 
 
 def finalize():
@@ -81,8 +160,24 @@ def handleQuery(query) -> list:
                 return results_setup
 
             query_str = query.string
-            # modify this...
-            results.append(get_as_item())
+
+            # ---------------------------------------------------------------------------------
+            if not query_str:
+                results.append(
+                    v0.Item(
+                        id=__title__,
+                        icon=icon_path,
+                        completion=__triggers__,
+                        text="Add more characters to fuzzy-search",
+                        actions=[],
+                    )
+                )
+                results.append(get_reindex_item())
+            else:
+                matched = process.extract(query_str, fullnames_to_contacts.keys(), limit=10)
+                results.extend(
+                    [get_contact_as_item(fullnames_to_contacts[m[0]]) for m in matched]
+                )
 
         except Exception:  # user to report error
             v0.critical(traceback.format_exc())
@@ -108,25 +203,29 @@ def handleQuery(query) -> list:
 
 
 # supplementary functions ---------------------------------------------------------------------
+def get_reindex_item():
+    return v0.Item(
+        id=__title__,
+        icon=icon_path,
+        text="Re-index contacts",
+        completion=__triggers__,
+        actions=[v0.FuncAction("Re-index contacts", reindex_contacts)],
+    )
 
 
-def get_shell_cmd_as_item(
-    *, text: str, command: str, subtext: str = None, completion: str = None
-):
-    """Return shell command as an item - ready to be appended to the items list and be rendered by Albert."""
+def get_contact_as_item(contact: Contact):
+    """Return an item - ready to be appended to the items list and be rendered by Albert."""
+    text = contact.fullname
+    phones_and_emails = set(contact.emails).union(contact.telephones)
+    subtext = " | ".join(phones_and_emails)
+    completion = f"{__triggers__}{contact.fullname}"
 
-    if subtext is None:
-        subtext = text
+    actions = []
 
-    if completion is None:
-        completion = f"{__triggers__}{text}"
+    for field in phones_and_emails:
+        actions.append(v0.ClipAction(f"Copy {field}", field))
 
-    def run(command: str):
-        proc = subprocess.run(command.split(" "), capture_output=True, check=False)
-        if proc.returncode != 0:
-            stdout = proc.stdout.decode("utf-8")
-            stderr = proc.stderr.decode("utf-8")
-            notify(f"Error when executing {command}\n\nstdout: {stdout}\n\nstderr: {stderr}")
+    actions.append(v0.ClipAction("Copy name", contact.fullname))
 
     return v0.Item(
         id=__title__,
@@ -134,24 +233,7 @@ def get_shell_cmd_as_item(
         text=text,
         subtext=subtext,
         completion=completion,
-        actions=[
-            v0.FuncAction(text, lambda command=command: run(command=command)),
-        ],
-    )
-
-
-def get_as_item():
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=f"{sys.version}",
-        subtext="Python version",
-        completion="",
-        actions=[
-            v0.UrlAction("Open in xkcd.com", "https://www.xkcd.com/"),
-            v0.ClipAction("Copy URL", f"https://www.xkcd.com/"),
-        ],
+        actions=actions,
     )
 
 
@@ -192,8 +274,17 @@ def data_exists(data_name: str) -> bool:
     return (config_path / data_name).is_file()
 
 
-def setup(query):  # type: ignore
+def save_vcf_file(query: str):
+    p = Path(query).expanduser().absolute()
+    if not p.is_file():
+        do_notify(f'Given path "{p}" is not valid - please input it again.')
 
+    copyfile(p, vcf_path)
+    reindex_contacts()
+    do_notify(f"Copied VCF contacts file to -> {vcf_path}. You should be ready to go...")
+
+
+def setup(query):  # type: ignore
     results = []
 
     if not which("vcfxplr"):
@@ -203,6 +294,7 @@ def setup(query):  # type: ignore
                 icon=icon_path,
                 text=f'"vcfxplr" is not installed.',
                 subtext="You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>",
+                completion=__triggers__,
                 actions=[
                     v0.ClipAction(
                         "Copy install command", "pip3 install --user --upgrade vcfxplr"
@@ -214,5 +306,24 @@ def setup(query):  # type: ignore
             )
         )
         return results
+
+    if vcf_path.exists() and not vcf_path.is_file():
+        raise RuntimeError(f"vcf file exists but it's not a file -> {vcf_path}")
+
+    if not vcf_path.exists():
+        results.append(
+            v0.Item(
+                id=__title__,
+                icon=icon_path,
+                text=f"Please input the path to your VCF contacts file.",
+                subtext=f"{query.string}",
+                completion=__triggers__,
+                actions=[
+                    v0.FuncAction(
+                        "Save VCF file", lambda query=query: save_vcf_file(query.string)
+                    ),
+                ],
+            )
+        )
 
     return results
