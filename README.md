@@ -18,6 +18,7 @@ This is a collection of plugins and themes for the
 
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png) |
 | :----------------------------------------------------------------------------------------------------| :--------------------------------------------------------------------------------------------------: |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo1.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo1.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png) |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
@@ -36,6 +37,7 @@ Currently the list of plugins includes:
 - [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
 - [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Manage bluetooth devices
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
+- [Contacts](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/contacts) - 📕 View your contacts and copy emails/telephones, etc.
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
 - [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
 - [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
