@@ -212,18 +212,20 @@ def get_as_item(password_path: Path):
     full_path_no_suffix = Path(f"{password_path.parent}/{password_path.stem}")
     full_path_rel_root = full_path_no_suffix.relative_to(pass_dir)
 
-    full_path_no_suffix_str = str(full_path_no_suffix)
     full_path_rel_root_str = str(full_path_rel_root)
 
     actions = [
         v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
         v0.ClipAction("Copy Full Path", str(password_path)),
         v0.ClipAction("Copy Password name", password_path.name),
-        v0.ClipAction(
-            "Copy pass-compatible path",
-            str(password_path.relative_to(pass_dir).parent / password_path.stem),
-        ),
+        v0.ClipAction("Copy pass-compatible path", full_path_rel_root_str),
     ]
+
+    actions.insert(0, v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
+    actions.insert(
+        0,
+        v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
+    )
 
     if pass_open_doc_compatible(password_path):
         actions.insert(
@@ -233,19 +235,13 @@ def get_as_item(password_path: Path):
                 lambda p=str(password_path): subprocess.run(["pass-open-doc", p], check=True),
             ),
         )
-    else:
-        actions.insert(0, v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
-        actions.insert(
-            0,
-            v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
-        )
 
     return v0.Item(
         id=__title__,
         icon=icon_path,
         text=f"{password_path.stem}",
         subtext=full_path_rel_root_str,
-        completion=f"{__triggers__}{full_path_no_suffix_str}",
+        completion=f"{__triggers__}{full_path_rel_root_str}",
         actions=actions,
     )
 
