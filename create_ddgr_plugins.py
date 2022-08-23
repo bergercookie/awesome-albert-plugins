@@ -85,6 +85,7 @@ custom_plugins = {
     "search_opencv": {"ddgr_at": "docs.opencv.org", "trigger": "cv2"},
     "search_patreon": {"trigger": "patreon", "ddgr_at": "patreon.com"},
     "search_pydocs": {"ddgr_at": "docs.python.org", "trigger": "pydocs"},
+    "search_pypi": {"ddgr_at": "pypi.org", "trigger": "pypi"},
     "search_qt5_docs": {"ddgr_at": "doc.qt.io/qt-5", "trigger": "qt5"},
     "search_rust": {"ddgr_at": "https://doc.rust-lang.org", "trigger": "ru"},
     "search_rustcreates": {"ddgr_at": "https://docs.rs", "trigger": "rc"},
@@ -92,6 +93,7 @@ custom_plugins = {
     "search_scipy": {"ddgr_at": "docs.scipy.org", "trigger": "sp"},
     "search_ubuntu": {"ddgr_at": "https://packages.ubuntu.com", "trigger": "ubu"},
     "search_urbandictionary": {"ddgr_at": "urbandictionary.com", "trigger": "ud"},
+    "search_ikea": {"ddgr_at": "ikea.com", "trigger": "ik"},
     "search_wikipedia": {
         "ddgr_at": "en.wikipedia.org",
         "trigger": "w",
@@ -109,7 +111,11 @@ custom_plugins = {
     "search_cssreference_io": {
         "ddgr_at": "cssreference.io",
         "trigger": "css",
-    }
+    },
+    "search_octopart": {
+        "ddgr_at": "octopart.com",
+        "trigger": "octo",
+    },
 }
 
 
