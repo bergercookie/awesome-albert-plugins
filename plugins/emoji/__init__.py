@@ -13,14 +13,14 @@ from gi.repository import GdkPixbuf, Notify
 import pickle
 
 __title__ = "Emoji picker"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __triggers__ = "em "
 __authors__ = "Nikos Koukis"
 __homepage__ = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
 )
 __exec_deps__ = ["xclip"]
-__py_deps__ = ["em"]
+__py_deps__ = ["em", "fuzzywuzzy"]
 
 icon_path = str(Path(__file__).parent / "emoji.png")
 

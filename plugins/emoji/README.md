@@ -25,7 +25,30 @@ On additional key presses it allows for fuzzy search on the labels of each emoji
 
 ## Installation instructions
 
-Install [em-keyboard](https://github.com/hugovk/em-keyboard) via `pip3`:
+### Requisites
+
+#### Exec requisites
+
+- `xclip`: you must have installed xclip; ensure that xlip path is in PATH environment variable.
+
+_Example for Ubuntu_:
+
+```bash
+sudo apt-get install xclip
+which xclip  # i.e. /usr/bin/xclip
+export PATH="$PATH:/usr/bin/xclip"
+```
+
+##### Python requisites
+
+- `em-keyboard`: [link to repository](https://github.com/hugovk/em-keyboard)
+- `fuzzywuzzy`
+  
+Install all dependencies via `pip3`:
+
+```bash
+pip3 install em-keyboard fuzzywuzzy
+```
 
 Refer to the parent project for more information: [Awesome albert plugins](https://github.com/bergercookie/awesome-albert-plugins)
 
