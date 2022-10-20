@@ -13,7 +13,7 @@ from gi.repository import GdkPixbuf, Notify
 import pickle
 
 __title__ = "Emoji picker"
-__version__ = "0.4.1"
+__version__ = "0.4.0"
 __triggers__ = "em "
 __authors__ = "Nikos Koukis"
 __homepage__ = (
