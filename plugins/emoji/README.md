@@ -25,21 +25,13 @@ On additional key presses it allows for fuzzy search on the labels of each emoji
 
 ## Installation instructions
 
-### Requisites
+### Prerequisites
 
-#### Exec requisites
+#### Exec prerequisites
 
 - `xclip`: you must have installed xclip; ensure that xlip path is in PATH environment variable.
 
-_Example for Ubuntu_:
-
-```bash
-sudo apt-get install xclip
-which xclip  # i.e. /usr/bin/xclip
-export PATH="$PATH:/usr/bin/xclip"
-```
-
-##### Python requisites
+##### Python prerequisites
 
 - `em-keyboard`: [link to repository](https://github.com/hugovk/em-keyboard)
 - `fuzzywuzzy`
