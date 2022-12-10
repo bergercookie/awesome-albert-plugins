@@ -68,6 +68,15 @@ custom_plugins = {
         "ddgr_at": "amazon.co.uk",
         "show_on_top_no_trigger": True,
     },
+    "search_cmake": {
+        "trigger": "cmake",
+        "ddgr_at": "cmake.org",
+    },
+    "search_ros2": {
+        "trigger": "ros2",
+        "ddgr_at": "docs.ros2.org/",
+        "show_on_top_no_trigger": False,
+    },
     "search_cambridge_dictionary": {
         "ddgr_at": "dictionary.cambridge.org",
         "trigger": "cam",

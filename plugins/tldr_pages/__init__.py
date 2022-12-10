@@ -107,6 +107,7 @@ def handleQuery(query) -> list:
                     results.append(get_cmd_as_item((m, page_paths[m])))
 
         except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
             if in_development:
                 raise
 
@@ -179,6 +180,10 @@ def get_cmd_as_item(pair: Tuple[str, Path]):
     )
 
 
+def get_cmd_sanitized(s: str) -> str:
+    return sanitize_string(s.strip("`").replace("{{", "").replace("}}", ""))
+
+
 def get_cmd_items(pair: Tuple[str, Path]):
     """Return a list of Albert items - one per example."""
 
@@ -186,14 +191,36 @@ def get_cmd_items(pair: Tuple[str, Path]):
         lines = [li.strip() for li in f.readlines()]
 
     items = []
-    for i, li in enumerate(lines):
+    i = 0
+    if len(lines) < 2:
+        return items
+
+    while i < len(lines):
+        li = lines[i]
         if not li.startswith("- "):
+            i += 1
             continue
 
         desc = li.lstrip("- ")[:-1]
-        example_cmd = sanitize_string(
-            lines[i + 2].strip("`").replace("{{", "").replace("}}", "")
-        )
+
+        # Support multine commands ------------------------------------------------------------
+        #
+        # find the start of the example - parse it differently if it's a single quote or if
+        # it's a multiline one
+        i += 2
+        example_line_start = lines[i]
+        if example_line_start.startswith("```"):
+            # multi-line string, find end
+            j = i + 1
+            while j < len(lines) and lines[j] != "```":
+                j += 1
+                continue
+
+            example_cmd = get_cmd_sanitized("\n".join(lines[i + 1 : j]))
+            i = j
+        else:
+            example_cmd = get_cmd_sanitized(lines[i])
+
 
         items.append(
             v0.Item(
@@ -210,6 +237,8 @@ def get_cmd_items(pair: Tuple[str, Path]):
                 ],
             )
         )
+
+        i += 1
 
     return items
 

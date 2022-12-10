@@ -46,6 +46,9 @@ def parse_emojis():
     emojis = em.parse_emojis()
     emojis_li = list(emojis.items())
 
+    # example:
+    # label:  'folded_hands'
+    # emoji_tuple:    ('🙏', ['folded_hands', 'please', 'hope', 'wish', 'namaste', 'highfive', 'pray'])
     for emoji_tuple in emojis.items():
         label_list = emoji_tuple[1]
         for label in label_list:
@@ -56,6 +59,7 @@ emojis_li = []
 emojis = {}
 label_to_emoji_tuple = {}
 parse_emojis()
+print("label_to_emoji_tuple: ", label_to_emoji_tuple)
 
 def update_emojis():
     prev_len = len(emojis_li)
@@ -134,6 +138,10 @@ def handleQuery(query) -> list:
                 matched = process.extract(
                     query_str, list(label_to_emoji_tuple.keys()), limit=30
                 )
+                # print("label_to_emoji_tuple.keys(): ", label_to_emoji_tuple.keys())
+                # print("query_str: ", query_str)
+                # print("matched: ", matched)
+                # print("type(matched): ", type(matched))
                 matched_emojis = list(
                     dict([label_to_emoji_tuple[label] for label, *_ in matched]).items()
                 )

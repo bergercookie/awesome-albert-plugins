@@ -429,6 +429,17 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         )
     )
 
+    actions.append(
+        v0.FuncAction(
+            "Work on next (+next)",
+            lambda args_list=[
+                "modify",
+                task_id,
+                "+next",
+            ]: run_tw_action(args_list),
+        )
+    )
+
     urgency_str, icon = urgency_to_visuals(task.get("urgency"))
     text = f'{task["description"]}'
     if "start" in task:
@@ -501,7 +512,7 @@ class AddSubcommand(Subcommand):
 
         def item_at_date(date: datetime.date, time_24h: int):
             dt_str = f'{date.strftime("%Y%m%d")}T{time_24h}0000'
-            return  v0.Item(
+            return v0.Item(
                 id=__title__,
                 text=f"Due {date}, at {time_24h}:00",
                 subtext="Add due:dt_str on [TAB]",
@@ -511,12 +522,15 @@ class AddSubcommand(Subcommand):
 
         items.append(item_at_date(datetime.date.today(), time_24h=15))
         items.append(item_at_date(datetime.date.today(), time_24h=19))
-        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
-                                  time_24h=10))
-        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
-                                  time_24h=15))
-        items.append(item_at_date(datetime.date.today() + datetime.timedelta(days=1),
-                                  time_24h=19))
+        items.append(
+            item_at_date(datetime.date.today() + datetime.timedelta(days=1), time_24h=10)
+        )
+        items.append(
+            item_at_date(datetime.date.today() + datetime.timedelta(days=1), time_24h=15)
+        )
+        items.append(
+            item_at_date(datetime.date.today() + datetime.timedelta(days=1), time_24h=19)
+        )
 
         return items
 
