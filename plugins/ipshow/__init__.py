@@ -6,69 +6,74 @@ from pathlib import Path
 import netifaces
 from urllib import request
 
+from albert import *
 
-import albert as v0
-
-__title__ = "IPs of the host machine"
-__version__ = "0.4.0"
-__triggers__ = "ip "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
-)
+md_iid = "0.5"
+md_version = "0.5"
+#md_id = "overwrite"
+md_name = "IPs of the host machine"
+md_description = "Shows machine ips"
+md_license = "BSD-2"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
+md_maintainers = "Nikos Koukis"
 
 icon_path = str(Path(__file__).parent / "ipshow")
 
-cache_path = Path(v0.cacheLocation()) / "ipshow"
-config_path = Path(v0.configLocation()) / "ipshow"
-data_path = Path(v0.dataLocation()) / "ipshow"
+cache_path = Path(cacheLocation()) / "ipshow"
+config_path = Path(configLocation()) / "ipshow"
+data_path = Path(dataLocation()) / "ipshow"
+
 
 # flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
 discard_bridge_ifaces = True
-dev_mode = False
+dev_mode = True
 
 families = netifaces.address_families
 
-# plugin main functions -----------------------------------------------------------------------
+class ClipAction(Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: setClipboardText(copy_text))
 
+class Plugin(QueryHandler):
+    def id(self):
+        return __name__
 
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
+    def name(self):
+        return md_name
 
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
+    def description(self):
+        return md_description
 
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
 
-def finalize():
-    pass
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
 
+    def finalize(self):
+        pass
 
-def handleQuery(query) -> list:
-    results = []
+    def defaultTrigger(self):
+        return 'ip'
 
-    if query.isTriggered:
+    def handleQuery(self, query):
+        results = []
         try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
             # External IP address -------------------------------------------------------------
             try:
                 with request.urlopen("https://ipecho.net/plain", timeout=1.5) as response:
                     external_ip = response.read().decode()
             except:
-                external_ip = "Timeout fetchcing public IP"
+                external_ip = "Timeout fetching public IP"
 
             results.append(
-                get_as_item(
+                self.get_as_item(
                     text=external_ip,
                     subtext="External IP Address",
                     actions=[
-                        v0.ClipAction("Copy address", external_ip),
+                        ClipAction("Copy address", external_ip),
                     ],
                 )
             )
@@ -95,13 +100,13 @@ def handleQuery(query) -> list:
                         broadcast = addr_dict.get("broadcast")
                         netmask = addr_dict.get("netmask")
                         results.append(
-                            get_as_item(
+                            self.get_as_item(
                                 text=own_addr,
                                 subtext=iface.ljust(15)
                                 + f" | {family} | Broadcast: {broadcast} | Netmask: {netmask}",
                                 actions=[
-                                    v0.ClipAction("Copy address", own_addr),
-                                    v0.ClipAction("Copy interface", iface),
+                                    ClipAction("Copy address", own_addr),
+                                    ClipAction("Copy interface", iface),
                                 ],
                             )
                         )
@@ -115,12 +120,12 @@ def handleQuery(query) -> list:
                 addr = def_gw[1][0]
                 iface = def_gw[1][1]
                 results.append(
-                    get_as_item(
+                    self.get_as_item(
                         text=f"[GW - {iface}] {addr}",
                         subtext=families[family_int],
                         actions=[
-                            v0.ClipAction("Copy address", addr),
-                            v0.ClipAction("Copy interface", iface),
+                            ClipAction("Copy address", addr),
+                            ClipAction("Copy interface", iface),
                         ],
                     )
                 )
@@ -132,34 +137,34 @@ def handleQuery(query) -> list:
 
             results.insert(
                 0,
-                v0.Item(
-                    id=__title__,
+                Item(
+                    id=self.name,
                     icon=icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
                             f"{traceback.format_exc()}",
                         )
                     ],
                 ),
             )
 
-    return results
+        query.add(results)
+        return results
+
+    def get_as_item(self, text, subtext, completion="", actions=[]):
+        return Item(
+            id=self.name(),
+            icon=[icon_path],
+            text=text,
+            subtext=subtext,
+            completion=completion,
+            actions=actions,
+        )
 
 
 # supplementary functions ---------------------------------------------------------------------
-
-
-def get_as_item(text, subtext, completion="", actions=[]):
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=text,
-        subtext=subtext,
-        completion=completion,
-        actions=actions,
-    )
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
@@ -189,12 +194,3 @@ def load_data(data_name) -> str:
 
     return data
 
-
-def setup(query):
-    """setup is successful if an empty list is returned.
-
-    Use this function if you need the user to provide you data
-    """
-
-    results = []
-    return results
