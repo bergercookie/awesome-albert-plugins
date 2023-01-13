@@ -27,7 +27,7 @@ data_path = Path(dataLocation()) / "ipshow"
 # flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
 discard_bridge_ifaces = True
-dev_mode = True
+dev_mode = False
 
 families = netifaces.address_families
 
