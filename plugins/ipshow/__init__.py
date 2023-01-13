@@ -5,17 +5,18 @@ import traceback
 from pathlib import Path
 import netifaces
 from urllib import request
+from fuzzywuzzy import process
 
 from albert import *
 
 md_iid = "0.5"
 md_version = "0.5"
-#md_id = "overwrite"
 md_name = "IPs of the host machine"
-md_description = "Shows machine ips"
+md_description = "Shows machine IPs"
 md_license = "BSD-2"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
 md_maintainers = "Nikos Koukis"
+md_lib_dependencies = ["fuzzywuzzy"]
 
 icon_path = str(Path(__file__).parent / "ipshow")
 
@@ -31,9 +32,33 @@ dev_mode = True
 
 families = netifaces.address_families
 
+
+def filter_actions_by_query(items, query, score_cutoff=20):
+    sorted_results_text = process.extractBests(
+        query, [x.text for x in items], score_cutoff=score_cutoff
+    )
+    sorted_results_subtext = process.extractBests(
+        query, [x.subtext for x in items], score_cutoff=score_cutoff
+    )
+
+    results_arr = [(x, score_cutoff) for x in items]
+    for text_res, score in sorted_results_text:
+        for i in range(len(items)):
+            if items[i].text == text_res and results_arr[i][1] < score:
+                results_arr[i] = (items[i], score)
+
+    for subtext_res, score in sorted_results_subtext:
+        for i in range(len(items)):
+            if items[i].subtext == subtext_res and results_arr[i][1] < score:
+                results_arr[i] = (items[i], score)
+
+    return [x[0] for x in results_arr if x[1] > score_cutoff or len(query.strip()) == 0]
+
+
 class ClipAction(Action):
     def __init__(self, name, copy_text):
         super().__init__(name, name, lambda: setClipboardText(copy_text))
+
 
 class Plugin(QueryHandler):
     def id(self):
@@ -56,10 +81,14 @@ class Plugin(QueryHandler):
         pass
 
     def defaultTrigger(self):
-        return 'ip'
+        return "ip "
 
     def handleQuery(self, query):
         results = []
+
+        if not query.isValid:
+            return
+
         try:
             # External IP address -------------------------------------------------------------
             try:
@@ -139,7 +168,7 @@ class Plugin(QueryHandler):
                 0,
                 Item(
                     id=self.name,
-                    icon=icon_path,
+                    icon=[icon_path],
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
                         ClipAction(
@@ -149,17 +178,15 @@ class Plugin(QueryHandler):
                     ],
                 ),
             )
+        query.add(filter_actions_by_query(results, query.string, 20))
 
-        query.add(results)
-        return results
-
-    def get_as_item(self, text, subtext, completion="", actions=[]):
+    def get_as_item(self, text, subtext, actions=[]):
         return Item(
             id=self.name(),
             icon=[icon_path],
             text=text,
             subtext=subtext,
-            completion=completion,
+            completion=self.defaultTrigger() + text,
             actions=actions,
         )
 
@@ -179,18 +206,3 @@ def get_as_subtext_field(field, field_title=None) -> str:
         s = f"{field_title} :" + s
 
     return s
-
-
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
