@@ -19,13 +19,13 @@ md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plu
 md_maintainers = "Nikos Koukis"
 md_bin_dependencies = ["rfkill", "bluetoothctl"]
 
-icon_path = str(Path(__file__).parent / "bluetooth0.svg")
+icon_path = str(Path(__file__).parent / "bluetooth-orig.png")
 icon_error_path = str(Path(__file__).parent / "bluetooth1.svg")
 
 cache_path = Path(cacheLocation()) / "bluetooth"
 config_path = Path(configLocation()) / "bluetooth"
 data_path = Path(dataLocation()) / "bluetooth"
-dev_mode = True
+dev_mode = False
 
 workers: List[threading.Thread] = []
 
@@ -103,9 +103,12 @@ class Plugin(QueryHandler):
         pass
 
     def defaultTrigger(self):
-        return 'bl'
+        return 'bl '
 
     def handleQuery(self, query):
+        if not query.isValid:
+            return
+
         results = []
 
         # join any previously launched threads

@@ -5,6 +5,7 @@ import traceback
 from pathlib import Path
 import netifaces
 from urllib import request
+from fuzzywuzzy import process
 
 from albert import *
 
@@ -16,6 +17,7 @@ md_description = "Shows machine ips"
 md_license = "BSD-2"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
 md_maintainers = "Nikos Koukis"
+md_lib_dependencies = ["fuzzywuzzy"]
 
 icon_path = str(Path(__file__).parent / "ipshow")
 
@@ -27,7 +29,7 @@ data_path = Path(dataLocation()) / "ipshow"
 # flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
 discard_bridge_ifaces = True
-dev_mode = False
+dev_mode = True
 
 families = netifaces.address_families
 
@@ -56,10 +58,14 @@ class Plugin(QueryHandler):
         pass
 
     def defaultTrigger(self):
-        return 'ip'
+        return 'ip '
 
     def handleQuery(self, query):
         results = []
+
+        if not query.isValid:
+            return
+
         try:
             # External IP address -------------------------------------------------------------
             try:
@@ -153,13 +159,13 @@ class Plugin(QueryHandler):
         query.add(results)
         return results
 
-    def get_as_item(self, text, subtext, completion="", actions=[]):
+    def get_as_item(self, text, subtext, actions=[]):
         return Item(
             id=self.name(),
             icon=[icon_path],
             text=text,
             subtext=subtext,
-            completion=completion,
+            completion=self.defaultTrigger() + text,
             actions=actions,
         )
 
