@@ -6,6 +6,11 @@ import traceback
 from pathlib import Path
 from typing import List, Mapping, MutableMapping, Optional, Sequence
 
+import gi
+
+gi.require_version("Notify", "0.7")  # isort:skip
+gi.require_version("GdkPixbuf", "2.0")  # isort:skip
+
 from gi.repository import Notify
 
 from albert import *
