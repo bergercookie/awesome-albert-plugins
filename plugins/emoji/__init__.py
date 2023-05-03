@@ -5,260 +5,225 @@ import traceback
 from pathlib import Path
 from shutil import which
 
-import albert as v0
+from albert import *
 import em
 from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 
 import pickle
 
-__title__ = "Emoji picker"
-__version__ = "0.4.0"
-__triggers__ = "em "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
-)
-__exec_deps__ = ["xclip"]
-__py_deps__ = ["em", "fuzzywuzzy"]
+md_iid = "0.5"
+md_version = "0.5"
+md_name = "Emoji picker"
+md_description = "Lookup and copy various emojis to your clipboard"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
+md_maintainers = "Nikos Koukis"
+md_bin_dependencies = ["xclip"]
+md_lib_dependencies = ["em", "fuzzywuzzy"]
 
-icon_path = str(Path(__file__).parent / "emoji.png")
-
-cache_path = Path(v0.cacheLocation()) / "emoji"
-config_path = Path(v0.configLocation()) / "emoji"
-data_path = Path(v0.dataLocation()) / "emoji"
+# Let Exceptions fly
 dev_mode = True
 
-stats_path = config_path / "stats"
 
-# create plugin locations
-for p in (cache_path, config_path, data_path):
-    p.mkdir(parents=False, exist_ok=True)
+class Plugin(QueryHandler):
 
-if not stats_path.exists():
-    with stats_path.open("wb") as f:
-        pickle.dump({}, f)
+    def id(self):
+        return __name__
 
-# plugin main functions -----------------------------------------------------------------------
+    def name(self):
+        return md_name
 
-def parse_emojis():
-    global emojis, emojis_li, label_to_emoji_tuple
-    emojis = em.parse_emojis()
-    emojis_li = list(emojis.items())
+    def description(self):
+        return md_description
 
-    # example:
-    # label:  'folded_hands'
-    # emoji_tuple:    ('🙏', ['folded_hands', 'please', 'hope', 'wish', 'namaste', 'highfive', 'pray'])
-    for emoji_tuple in emojis.items():
-        label_list = emoji_tuple[1]
-        for label in label_list:
-            label_to_emoji_tuple[label] = emoji_tuple
+    def defaultTrigger(self):
+        return "em "
 
+    def synopsis(self):
+        return "<emoji name>"
 
-emojis_li = []
-emojis = {}
-label_to_emoji_tuple = {}
-parse_emojis()
-print("label_to_emoji_tuple: ", label_to_emoji_tuple)
+    def initialize(self):
+        self.iconPath = str(Path(__file__).parent / "emoji.png")
+        self.cache_path = Path(cacheLocation()) / "emoji"
+        self.config_path = Path(configLocation()) / "emoji"
+        self.data_path = Path(dataLocation()) / "emoji"
+        self.stats_path = self.config_path / "stats"
 
-def update_emojis():
-    prev_len = len(emojis_li)
-    parse_emojis()
-    curr_len = len(emojis_li)
+        # create plugin locations
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=False, exist_ok=True)
 
-    if curr_len == prev_len:
-        notify(msg=f"Found no new emojis - Total emojis count: {curr_len}")
-    else:
-        diff = curr_len - prev_len
-        notify(
-            msg=f'Found {diff} {"more" if diff > 0 else "less"} emojis - Total emojis count: {curr_len}'
-        )
+        if not self.stats_path.exists():
+            with self.stats_path.open("wb") as f:
+                pickle.dump({}, f)
 
+    def parse_emojis(self):
+        self.emojis = em.parse_emojis()
+        self.emojis_li = list(self.emojis.items())
 
-def get_stats():
-    with stats_path.open("rb") as f:
-        return pickle.load(f)
+        # example:
+        # label:  'folded_hands'
+        # emoji_tuple:    ('🙏', ['folded_hands', 'please', 'hope', 'wish', 'namaste', 'highfive', 'pray'])
+        self.label_to_emoji_tuple = {}
+        for emoji_tuple in self.emojis.items():
+            label_list = emoji_tuple[1]
+            for label in label_list:
+                self.label_to_emoji_tuple[label] = emoji_tuple
+        print("label_to_emoji_tuple: ", self.label_to_emoji_tuple)
 
+    def update_emojis(self):
+        prev_len = len(self.emojis_li)
+        self.parse_emojis()
+        curr_len = len(self.emojis_li)
 
-def update_stats(emoji: str):
-    stats = get_stats()
-    if emoji in stats:
-        stats[emoji] += 1
-    else:
-        stats[emoji] = 1
+        if curr_len == prev_len:
+            self.notify(msg=f"Found no new emojis - Total emojis count: {curr_len}")
+        else:
+            diff = curr_len - prev_len
+            self.notify(
+                msg=f'Found {diff} {"more" if diff > 0 else "less"} emojis - Total emojis count: {curr_len}'
+            )
 
-    with stats_path.open("wb") as f:
-        pickle.dump(stats, f)
+    def get_stats(self):
+        with self.stats_path.open("rb") as f:
+            return pickle.load(f)
 
+    def update_stats(self, emoji: str):
+        stats = self.get_stats()
+        if emoji in stats:
+            stats[emoji] += 1
+        else:
+            stats[emoji] = 1
 
-def copy_emoji(emoji: str):
-    update_stats(emoji)
-    subprocess.run(f"echo {emoji} | xclip -r -selection clipboard", shell=True)
+        with self.stats_path.open("wb") as f:
+            pickle.dump(stats, f)
 
+    def copy_emoji(self, emoji: str):
+        self.update_stats(emoji)
+        subprocess.run(f"echo {emoji} | xclip -r -selection clipboard", shell=True)
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-    pass
+    def handleQuery(self, query):
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
 
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
         try:
-            query.disableSort()
+            query_str = query.string.strip()
 
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-
-            if not query_str:
-                results.append(get_reindex_item())
+            if query_str == '':
+                results.append(self.get_reindex_item())
                 recent = [
                     k
                     for k, _ in sorted(
-                        get_stats().items(), key=lambda item: item[1], reverse=True
+                        self.get_stats().items(), key=lambda item: item[1], reverse=True
                     )[:10]
                 ]
-                results.extend([get_emoji_as_item((emoji, emojis[emoji])) for emoji in recent])
+                results.extend([self.get_emoji_as_item((emoji, self.emojis[emoji])) for emoji in recent])
 
                 if len(results) < 30:
                     results.extend(
-                        get_emoji_as_item(emoji_tuple)
-                        for emoji_tuple in emojis_li[: 30 - len(results)]
+                        self.get_emoji_as_item(emoji_tuple)
+                        for emoji_tuple in self.emojis_li[: 30 - len(results)]
                     )
             else:
                 matched = process.extract(
-                    query_str, list(label_to_emoji_tuple.keys()), limit=30
+                    query_str, list(self.label_to_emoji_tuple.keys()), limit=30
                 )
                 # print("label_to_emoji_tuple.keys(): ", label_to_emoji_tuple.keys())
                 # print("query_str: ", query_str)
                 # print("matched: ", matched)
                 # print("type(matched): ", type(matched))
                 matched_emojis = list(
-                    dict([label_to_emoji_tuple[label] for label, *_ in matched]).items()
+                    dict([self.label_to_emoji_tuple[label] for label, *_ in matched]).items()
                 )
                 results.extend(
-                    [get_emoji_as_item(emoji_tuple) for emoji_tuple in matched_emojis]
+                    [self.get_emoji_as_item(emoji_tuple) for emoji_tuple in matched_emojis]
                 )
 
         except Exception:  # user to report error
             if dev_mode:  # let exceptions fly!
-                v0.critical(traceback.format_exc())
+                critical(traceback.format_exc())
                 raise
 
             results.insert(
                 0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
+                Item(
+                    id=md_name,
+                    icon=self.icon_path,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
+                        Action(
+                            "copy_error",
+                            f"Copy error - report it to {md_url[8:]}",
+                            lambda t=traceback.format_exc(): setClipboardText(t),
                         )
                     ],
                 ),
             )
 
-    return results
+        query.add(results)
 
+    def notify(self, msg: str, app_name: str = md_name):
+        Notify.init(app_name)
+        n = Notify.Notification.new(app_name, msg, str(self.icon_path))
+        n.show()
 
-# supplementary functions ---------------------------------------------------------------------
-def notify(
-    msg: str,
-    app_name: str = __title__,
-    image=str(icon_path),
-):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    def get_reindex_item(self):
+        return self.get_as_item(
+            text="Re-index list of emojis",
+            actions=[Action("reindex", "Re-index list of emojis", self.update_emojis)],
+        )
 
+    def get_as_item(self, *, text: str, actions: list, subtext: str = None, completion: str = None):
+        if subtext is None:
+            subtext = text
 
-def get_reindex_item():
-    return get_as_item(
-        text="Re-index list of emojis",
-        actions=[v0.FuncAction("Re-index list of emojis", update_emojis)],
-    )
+        if completion is None:
+            completion = f"{self.defaultTrigger()}{text}"
 
+        """Return an item - ready to be appended to the items list and be rendered by Albert."""
+        return Item(
+            id=md_name,
+            icon=self.icon_path,
+            text=text,
+            subtext=subtext,
+            completion=completion,
+            actions=actions,
+        )
 
-def get_shell_cmd_as_item(
-    *, text: str, command: str, subtext: str = None, completion: str = None
-):
-    """Return shell command as an item - ready to be appended to the items list and be rendered by Albert."""
+    def get_emoji_as_item(self, emoji_tuple: tuple):
+        """Return an item - ready to be appended to the items list and be rendered by Albert."""
+        emoji = emoji_tuple[0]
+        labels = [label.replace("_", " ") for label in emoji_tuple[1]]
+        main_label = labels[0]
 
-    if subtext is None:
-        subtext = text
+        text = f"{emoji} {main_label}"
+        subtext = " | ".join(labels[1:])
+        return Item(
+            id=md_name,
+            icon=self.icon_path,
+            text=text,
+            subtext=subtext,
+            completion=f"{self.defaultTrigger()}{main_label}",
+            actions=[
+                Action("copy", f"Copy this emoji", lambda emoji=emoji: self.copy_emoji(emoji)),
+                Action(
+                    "google", f"Google this emoji",
+                    lambda u=f"https://www.google.com/search?q={main_label} emoji": openUrl(u)
+                ),
+            ],
+        )
 
-    if completion is None:
-        completion = f"{__triggers__}{text}"
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
 
-    def run(command: str):
-        proc = subprocess.run(command.split(" "), capture_output=True, check=False)
-        if proc.returncode != 0:
-            stdout = proc.stdout.decode("utf-8")
-            stderr = proc.stderr.decode("utf-8")
-            notify(f"Error when executing {command}\n\nstdout: {stdout}\n\nstderr: {stderr}")
+    def load_data(self, data_name: str) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
 
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=text,
-        subtext=subtext,
-        completion=completion,
-        actions=[
-            v0.FuncAction(text, lambda command=command: run(command=command)),
-        ],
-    )
-
-
-def get_as_item(*, text: str, actions: list, subtext: str = None, completion: str = None):
-    if subtext is None:
-        subtext = text
-
-    if completion is None:
-        completion = f"{__triggers__}{text}"
-
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=text,
-        subtext=subtext,
-        completion=completion,
-        actions=actions,
-    )
-
-
-def get_emoji_as_item(emoji_tuple: tuple):
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    emoji = emoji_tuple[0]
-    labels = [label.replace("_", " ") for label in emoji_tuple[1]]
-    main_label = labels[0]
-
-    text = f"{emoji} {main_label}"
-    subtext = " | ".join(labels[1:])
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=text,
-        subtext=subtext,
-        completion=f"{__triggers__}{main_label}",
-        actions=[
-            v0.FuncAction(f"Copy this emoji", lambda emoji=emoji: copy_emoji(emoji)),
-            v0.UrlAction(
-                f"Google this emoji", f"https://www.google.com/search?q={main_label} emoji"
-            ),
-        ],
-    )
+        return data
 
 
 def sanitize_string(s: str) -> str:
@@ -277,43 +242,3 @@ def get_as_subtext_field(field, field_title=None) -> str:
         s = f"{field_title}: " + s
 
     return s
-
-
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name: str) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-def setup(query):
-    """Setup is successful if an empty list is returned.
-
-    Use this function if you need the user to provide you data
-    """
-
-    results = []
-    if not which("em"):
-        results.append(
-            v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f'"em-keyboard" is not installed.',
-                subtext='Please install and configure "em-keyboard" accordingly.',
-                actions=[
-                    v0.UrlAction(
-                        "em-keyboard Github page", "https://github.com/hugovk/em-keyboard"
-                    )
-                ],
-            )
-        )
-        return results
-
-    return results
