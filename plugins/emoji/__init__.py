@@ -3,12 +3,10 @@
 import subprocess
 import traceback
 from pathlib import Path
-from shutil import which
 
 from albert import *
 import em
 from fuzzywuzzy import process
-from gi.repository import GdkPixbuf, Notify
 
 import pickle
 
@@ -24,9 +22,14 @@ md_lib_dependencies = ["em", "fuzzywuzzy"]
 # Let Exceptions fly
 dev_mode = True
 
+if "parse_emojis" not in dir(em):
+    raise RuntimeError(
+        "Was able  to import the em module but no parse_emojis method in it. "
+        "Are you sure you have pip-installed the em-keyboard module and not the empy module?"
+    )
+
 
 class Plugin(QueryHandler):
-
     def id(self):
         return __name__
 
@@ -43,7 +46,9 @@ class Plugin(QueryHandler):
         return "<emoji name>"
 
     def initialize(self):
-        self.iconPath = str(Path(__file__).parent / "emoji.png")
+        self.parse_emojis()
+
+        self.icon_path = [str(Path(__file__).parent / "emoji.png")]
         self.cache_path = Path(cacheLocation()) / "emoji"
         self.config_path = Path(configLocation()) / "emoji"
         self.data_path = Path(dataLocation()) / "emoji"
@@ -69,7 +74,7 @@ class Plugin(QueryHandler):
             label_list = emoji_tuple[1]
             for label in label_list:
                 self.label_to_emoji_tuple[label] = emoji_tuple
-        print("label_to_emoji_tuple: ", self.label_to_emoji_tuple)
+        debug(f"label_to_emoji_tuple: {self.label_to_emoji_tuple}")
 
     def update_emojis(self):
         prev_len = len(self.emojis_li)
@@ -109,7 +114,7 @@ class Plugin(QueryHandler):
         try:
             query_str = query.string.strip()
 
-            if query_str == '':
+            if query_str == "":
                 results.append(self.get_reindex_item())
                 recent = [
                     k
@@ -117,7 +122,9 @@ class Plugin(QueryHandler):
                         self.get_stats().items(), key=lambda item: item[1], reverse=True
                     )[:10]
                 ]
-                results.extend([self.get_emoji_as_item((emoji, self.emojis[emoji])) for emoji in recent])
+                results.extend(
+                    [self.get_emoji_as_item((emoji, self.emojis[emoji])) for emoji in recent]
+                )
 
                 if len(results) < 30:
                     results.extend(
@@ -128,10 +135,6 @@ class Plugin(QueryHandler):
                 matched = process.extract(
                     query_str, list(self.label_to_emoji_tuple.keys()), limit=30
                 )
-                # print("label_to_emoji_tuple.keys(): ", label_to_emoji_tuple.keys())
-                # print("query_str: ", query_str)
-                # print("matched: ", matched)
-                # print("type(matched): ", type(matched))
                 matched_emojis = list(
                     dict([self.label_to_emoji_tuple[label] for label, *_ in matched]).items()
                 )
@@ -163,9 +166,7 @@ class Plugin(QueryHandler):
         query.add(results)
 
     def notify(self, msg: str, app_name: str = md_name):
-        Notify.init(app_name)
-        n = Notify.Notification.new(app_name, msg, str(self.icon_path))
-        n.show()
+        sendTrayNotification(title=app_name, msg=msg, ms=2000)
 
     def get_reindex_item(self):
         return self.get_as_item(
@@ -173,7 +174,9 @@ class Plugin(QueryHandler):
             actions=[Action("reindex", "Re-index list of emojis", self.update_emojis)],
         )
 
-    def get_as_item(self, *, text: str, actions: list, subtext: str = None, completion: str = None):
+    def get_as_item(
+        self, *, text: str, actions: list, subtext: str = None, completion: str = None
+    ):
         if subtext is None:
             subtext = text
 
@@ -207,8 +210,9 @@ class Plugin(QueryHandler):
             actions=[
                 Action("copy", f"Copy this emoji", lambda emoji=emoji: self.copy_emoji(emoji)),
                 Action(
-                    "google", f"Google this emoji",
-                    lambda u=f"https://www.google.com/search?q={main_label} emoji": openUrl(u)
+                    "google",
+                    f"Google this emoji",
+                    lambda u=f"https://www.google.com/search?q={main_label} emoji": openUrl(u),
                 ),
             ],
         )

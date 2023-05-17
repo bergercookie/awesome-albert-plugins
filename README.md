@@ -16,9 +16,10 @@ This is a collection of plugins and themes for the
 work in progress and we're in the process of migrating the plugins to abide to
 the new Albert API.
 
-Curerntly the following plugins have been migrated:
+Currently the following plugins have been migrated:
 
 - Remmina
+- Emoji Picker
 
 ## Demos
 
