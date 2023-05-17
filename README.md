@@ -12,23 +12,29 @@
 ## Description
 
 This is a collection of plugins and themes for the
-[Albert](https://albertlauncher.github.io/) launcher.
+[Albert](https://albertlauncher.github.io/) launcher. This branch is still a
+work in progress and we're in the process of migrating the plugins to abide to
+the new Albert API.
+
+Curerntly the following plugins have been migrated:
+
+- Remmina
 
 ## Demos
 
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png) |
-| :----------------------------------------------------------------------------------------------------| :--------------------------------------------------------------------------------------------------: |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png)               |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png)        |
+| :----------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------: |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo0.png)            |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo1.png)       |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo0.png)           |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo1.png)      |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki.gif)                 |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki/misc/anki0.png)         |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo.gif)           |     ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo2.gif)      |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/errno_lookup.png)                      |              ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)               |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pulse_control/misc/pulse-demo2.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png) | ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png) |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif) | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png) |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/albert-suggestions-demo3.gif)          |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors/misc/colors1.png)       |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones/misc/demo1.png)           |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc/misc/demo0.png)       |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)               |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)            |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif)       |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |
 
 ## Plugins
 
@@ -77,7 +83,7 @@ Currently the list of plugins includes:
     - Python, OpenCV, Dlib, C++ documentation lookup
     - ...
     - :warning: To avoid getting blocked, a search request is only sent when the
-        text ends with a dot `"."`.
+      text ends with a dot `"."`.
 
     - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
       mode" option
@@ -178,4 +184,3 @@ directly make a PR.
 - :construction: An alternative to [Alfred's pkgman](https://github.com/willfarrell/alfred-pkgman-workflow)
 - :construction: Vagrant start/stop boxes - see [this](https://github.com/m1keil/alfred-vagrant-workflow)
 - :construction: Assembly instructions lookup - use [this](https://github.com/asmjit/asmdb)
-  - Use ddgr asynchronously to get links to pages: `adcs site:developer.arm.com`
