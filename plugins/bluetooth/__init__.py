@@ -12,18 +12,16 @@ gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 
 from gi.repository import Notify
-
 from albert import *
 
 md_iid = "0.5"
 md_version = "0.5"
-md_name = "bluetooth"
-md_description = "Controls bluetooth"
+md_name = "Bluetooth - Connect / Disconnect bluetooth devices"
+md_description = "Connect / Disconnect bluetooth devices"
 md_license = "BSD-2"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth"
 md_maintainers = "Nikos Koukis"
 md_bin_dependencies = ["rfkill", "bluetoothctl"]
-
 icon_path = str(Path(__file__).parent / "bluetooth-orig.png")
 icon_error_path = str(Path(__file__).parent / "bluetooth1.svg")
 
@@ -33,6 +31,7 @@ data_path = Path(dataLocation()) / "bluetooth"
 dev_mode = False
 
 workers: List[threading.Thread] = []
+
 
 class BlDevice:
     """Represent a single bluetooth device."""
@@ -84,6 +83,7 @@ class ClipAction(Action):
     def __init__(self, name, copy_text):
         super().__init__(name, name, lambda: setClipboardText(copy_text))
 
+
 class FuncAction(Action):
     def __init__(self, name, command):
         super().__init__(name, name, command)
@@ -108,7 +108,7 @@ class Plugin(QueryHandler):
         pass
 
     def defaultTrigger(self):
-        return 'bl '
+        return "bl "
 
     def handleQuery(self, query):
         if not query.isValid:
@@ -146,7 +146,7 @@ class Plugin(QueryHandler):
                 results.insert(
                     0,
                     Item(
-                        id = self.name(),
+                        id=self.name(),
                         icon=icon_path,
                         text="Something went wrong! Press [ENTER] to copy error and report it",
                         actions=[
@@ -156,10 +156,9 @@ class Plugin(QueryHandler):
                             )
                         ],
                     ),
-                    )
+                )
 
         query.add(results)
-
 
     def get_device_as_item(self, dev: BlDevice):
         text = dev.name
@@ -191,7 +190,6 @@ class Plugin(QueryHandler):
             actions=actions,
         )
 
-
     def get_shell_cmd_as_item(self, *, text: str, command: str):
         """Return shell command as an item - ready to be appended to the items list and be rendered by Albert."""
 
@@ -203,7 +201,7 @@ class Plugin(QueryHandler):
             if proc.returncode != 0:
                 stdout = proc.stdout.decode("utf-8").strip()
                 stderr = proc.stderr.decode("utf-8").strip()
-                self.notify(
+                notify(
                     msg=f"Error when executing {command}\n\nstdout: {stdout}\n\nstderr: {stderr}",
                     image=icon_error_path,
                 )
@@ -217,7 +215,8 @@ class Plugin(QueryHandler):
             actions=[
                 FuncAction(text, lambda command=command: run(command=command)),
             ],
-    )
+        )
+
 
 def notify(
     msg: str,
@@ -258,13 +257,10 @@ def async_bl_cmd(cmd: Sequence[str]):
     workers.append(t)
 
 
-
 # BlDevice class ------------------------------------------------------------------------------
 def bl_cmd(cmd: Sequence[str], check: bool = False) -> subprocess.CompletedProcess:
     """Run a bluetoothctl-wrapped command."""
     return subprocess.run(["bluetoothctl", *cmd], check=check, capture_output=True)
-
-
 
 
 def _bl_devices_cmd(cmd: Sequence[str]) -> Sequence[BlDevice]:
@@ -287,8 +283,8 @@ def list_avail_devices() -> Sequence[BlDevice]:
     return _bl_devices_cmd(["devices"])
 
 
-
 # supplementary functions ---------------------------------------------------------------------
+
 
 def sanitize_string(s: str) -> str:
     return s.replace("<", "&lt;")
@@ -320,6 +316,7 @@ def load_data(data_name) -> str:
         data = f.readline().strip().split()[0]
 
     return data
+
 
 def lookup_icon(icon_name: str) -> Optional[str]:
     icons = list(Path(__file__).parent.glob("*.png"))

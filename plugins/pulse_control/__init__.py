@@ -13,11 +13,12 @@ from albert import *
 
 md_iid = "0.5"
 md_version = "1.2"
-#md_id = "overwrite"
-md_name = "PulseAudio - Set I/O Audio devices and Profile"
-md_description = "pulse audio handler"
+md_name = "PulseAudio - Set I/O Audio devices and profile"
+md_description = "Switch between PulseAudio sources and sinks"
 md_license = "BSD-2"
-md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//pulse_control"
+md_url = (
+    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//pulse_control"
+)
 md_maintainers = "Nikos Koukis"
 md_lib_dependencies = ["pulsectl"]
 
@@ -40,11 +41,10 @@ class ClipAction(Action):
     def __init__(self, name, copy_text):
         super().__init__(name, name, lambda: setClipboardText(copy_text))
 
+
 class FuncAction(Action):
     def __init__(self, name, command):
         super().__init__(name, name, command)
-
-
 
 
 class Plugin(QueryHandler):
@@ -58,7 +58,7 @@ class Plugin(QueryHandler):
         return md_description
 
     def defaultTrigger(self):
-        return 'p '
+        return "p "
 
     def initialize(self):
         """Called when the extension is loaded (ticked in the settings) - blocking."""
@@ -66,7 +66,6 @@ class Plugin(QueryHandler):
         # create plugin locations
         for p in (cache_path, config_path, data_path):
             p.mkdir(parents=False, exist_ok=True)
-
 
     def finalize(self):
         pass
@@ -115,7 +114,8 @@ class Plugin(QueryHandler):
 
         query.add(results)
 
-    def render_noargs(self,
+    def render_noargs(
+        self,
         query,
         sources_sinks: List[Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]],
         cards: List[pulsectl.PulseCardInfo],
@@ -170,8 +170,8 @@ class Plugin(QueryHandler):
 
         return results
 
-
-    def render_search(self,
+    def render_search(
+        self,
         sources_sinks: List[Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]],
         cards: List[pulsectl.PulseCardInfo],
         query,
@@ -223,7 +223,6 @@ class Plugin(QueryHandler):
         return results
 
 
-
 def get_as_subtext_field(field, field_title=None) -> str:
     """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
@@ -237,6 +236,6 @@ def get_as_subtext_field(field, field_title=None) -> str:
 
     return s
 
+
 def is_sink(s):
     return isinstance(s, pulsectl.PulseSinkInfo)
-

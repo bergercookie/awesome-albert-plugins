@@ -11,9 +11,8 @@ from albert import *
 
 md_iid = "0.5"
 md_version = "0.5"
-#md_id = "overwrite"
 md_name = "IPs of the host machine"
-md_description = "Shows machine ips"
+md_description = "Shows machine IPs"
 md_license = "BSD-2"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
 md_maintainers = "Nikos Koukis"
@@ -33,26 +32,33 @@ dev_mode = True
 
 families = netifaces.address_families
 
+
 def filter_actions_by_query(items, query, score_cutoff=20):
-    sorted_results_text = process.extractBests(query, [x.text for x in items], score_cutoff=score_cutoff)
-    sorted_results_subtext = process.extractBests(query, [x.subtext for x in items], score_cutoff=score_cutoff)
+    sorted_results_text = process.extractBests(
+        query, [x.text for x in items], score_cutoff=score_cutoff
+    )
+    sorted_results_subtext = process.extractBests(
+        query, [x.subtext for x in items], score_cutoff=score_cutoff
+    )
 
     results_arr = [(x, score_cutoff) for x in items]
-    for (text_res, score) in sorted_results_text:
+    for text_res, score in sorted_results_text:
         for i in range(len(items)):
             if items[i].text == text_res and results_arr[i][1] < score:
                 results_arr[i] = (items[i], score)
 
-    for (subtext_res, score) in sorted_results_subtext:
+    for subtext_res, score in sorted_results_subtext:
         for i in range(len(items)):
             if items[i].subtext == subtext_res and results_arr[i][1] < score:
                 results_arr[i] = (items[i], score)
 
     return [x[0] for x in results_arr if x[1] > score_cutoff or len(query.strip()) == 0]
 
+
 class ClipAction(Action):
     def __init__(self, name, copy_text):
         super().__init__(name, name, lambda: setClipboardText(copy_text))
+
 
 class Plugin(QueryHandler):
     def id(self):
@@ -75,7 +81,7 @@ class Plugin(QueryHandler):
         pass
 
     def defaultTrigger(self):
-        return 'ip '
+        return "ip "
 
     def handleQuery(self, query):
         results = []
@@ -200,4 +206,3 @@ def get_as_subtext_field(field, field_title=None) -> str:
         s = f"{field_title} :" + s
 
     return s
-
