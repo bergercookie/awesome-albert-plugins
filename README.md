@@ -11,6 +11,12 @@
 
 ## Description
 
+**NOTE** This branch corresponds to the Albert Python API prior to the v0.5
+changes - i.e., the plugins won't work with Albert >= 0.18. We're in the process
+of moving each of the plugins to the new API. For this work and to see the
+plugins that have currently been migrated, head to the [python_api_v0.5
+branch](https://github.com/bergercookie/awesome-albert-plugins/tree/python_api_v0.5)
+
 This is a collection of plugins and themes for the
 [Albert](https://albertlauncher.github.io/) launcher.
 
