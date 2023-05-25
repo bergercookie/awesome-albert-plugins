@@ -6,6 +6,7 @@ instead.
 
 """{{ cookiecutter.plugin_short_description }}."""
 
+import albert as v0
 import json
 import shutil
 import subprocess
@@ -14,20 +15,21 @@ from io import StringIO
 from pathlib import Path
 from typing import Dict, Tuple
 
-import albert as v0
 
-__title__ = "{{ cookiecutter.plugin_short_description }}"
-__version__ = "0.4.0"
-__triggers__ = "{{ cookiecutter.trigger }} "
-__authors__ = "Nikos Koukis"
-__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
-__exec_deps__ = []
-__py_deps__ = []
+md_iid = "0.5"
+md_version = "0.5"
+md_name = "Search - {{ cookiecutter.plugin_name }}"
+md_description = "{{ cookiecutter.plugin_short_description }}"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_bin_dependencies = ["ddgr"]
+md_lib_dependencies = []
 
 icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
+dev_mode = True
 
 # set it to the corresponding site for the search at hand
 # e.g.,: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at
@@ -63,106 +65,6 @@ else:
     inco_cmd = None
 
 
-# plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    results = []
-
-    if not query.isTriggered:
-        if {{cookiecutter.show_on_top_no_trigger}}:
-            if not query.string:
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text=f'Search {"_".join("{{ cookiecutter.plugin_name }}".split("_")[1:])}',
-                        completion=__triggers__,
-                    )
-                )
-    else:
-        try:
-            query.disableSort()
-
-            # setup stage ---------------------------------------------------------------------
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-
-            # too small request - don't even send it.
-            if len(query_str) < 2:
-                return results
-
-            # determine if we can make the request --------------------------------------------
-            if not query_str.endswith("."):
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="typing...",
-                        subtext='Add a dot to the end of the query "." to trigger the search',
-                        actions=[],
-                    ),
-                )
-                return results
-
-            query_str = query_str[:-1].strip()
-
-            # send request
-            json_results, stderr = query_ddgr(query_str)
-
-            ddgr_results = [
-                get_ddgr_result_as_item(ddgr_result) for ddgr_result in json_results
-            ]
-
-            results.extend(ddgr_results)
-
-            if not results:
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="No results.",
-                        subtext=stderr if stderr else "",
-                        actions=[],
-                    ),
-                )
-
-        except Exception:  # user to report error
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
@@ -187,15 +89,15 @@ def query_ddgr(query_str) -> Tuple[Dict[str, str], str]:
 
 def get_ddgr_result_as_item(ddgr_item: dict):
     actions = [
-        v0.UrlAction("Open in browser", ddgr_item["url"]),
-        v0.ClipAction("Copy URL", ddgr_item["url"]),
+        UrlAction("Open in browser", ddgr_item["url"]),
+        ClipAction("Copy URL", ddgr_item["url"]),
     ]
 
     # incognito search
     if inco_cmd:
         actions.insert(
             1,
-            v0.FuncAction(
+            FuncAction(
                 "Open in browser [incognito mode]",
                 lambda url=ddgr_item["url"]: inco_cmd(url),  # type: ignore
             ),
@@ -206,7 +108,7 @@ def get_ddgr_result_as_item(ddgr_item: dict):
         # check that the handler is actually there
         actions.insert(
             0,
-            v0.FuncAction(
+            FuncAction(
                 url_handler_desc,
                 lambda url_handler=url_handler: subprocess.Popen(
                     f'{url_handler} {ddgr_item["url"]}', shell=True
@@ -215,8 +117,8 @@ def get_ddgr_result_as_item(ddgr_item: dict):
         )
 
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=ddgr_item["title"],
         subtext=ddgr_item["abstract"],
         actions=actions,
@@ -251,7 +153,7 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
+def setup(query) -> bool:
     """setup is successful if an empty list is returned.
 
     Use this function if you need the user to provide you data
@@ -262,16 +164,138 @@ def setup(query):
     if not shutil.which("ddgr"):
         results.append(
             v0.Item(
-                id=__title__,
+                id=md_name,
                 icon=icon_path,
-                text=f'"ddgr" is not installed.',
+                text='"ddgr" is not installed.',
                 subtext='Please install and configure "ddgr" accordingly.',
                 actions=[
-                    v0.UrlAction(
+                    UrlAction(
                         'Open "ddgr" installation instructions',
                         "https://github.com/jarun/ddgr#installation=",
                     )
                 ],
             )
         )
-        return results
+
+        query.add(results)
+        return True
+
+    return False
+
+
+# main class ----------------------------------------------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name: str, copy_text: str):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name: str, command: str):
+        super().__init__(name, name, command)
+
+
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "{{ cookiecutter.trigger }} "
+
+    def synopsis(self):
+        return "TODO"
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        results = []
+
+        try:
+            # setup stage ---------------------------------------------------------------------
+            did_setup = setup(query)
+            if did_setup:
+                return
+
+            query_str = query.string.strip()
+
+            # too small request - don't even send it.
+            if len(query_str) < 2:
+                return
+
+            # determine if we can make the request --------------------------------------------
+            if not query_str.endswith("."):
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="typing...",
+                        subtext='Add a dot to the end of the query "." to trigger the search',
+                        actions=[],
+                    ),
+                )
+                return
+
+            query_str = query_str[:-1].strip()
+
+            # proceed, fill the results then query.add that only at the end -------------------
+
+            # send request
+            json_results, stderr = query_ddgr(query_str)
+
+            ddgr_results = [
+                get_ddgr_result_as_item(ddgr_result) for ddgr_result in json_results
+            ]
+
+            results.extend(ddgr_results)
+
+            if not results:
+                results.insert(
+                    0,
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="No results.",
+                        subtext=stderr if stderr else "",
+                        actions=[],
+                    ),
+                )
+
+        except Exception:  # user to report error
+            if dev_mode:  # let exceptions fly!
+                print(traceback.format_exc())
+                raise
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

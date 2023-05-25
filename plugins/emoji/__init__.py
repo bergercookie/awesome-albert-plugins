@@ -74,7 +74,7 @@ class Plugin(QueryHandler):
             label_list = emoji_tuple[1]
             for label in label_list:
                 self.label_to_emoji_tuple[label] = emoji_tuple
-        debug(f"label_to_emoji_tuple: {self.label_to_emoji_tuple}")
+        # debug(f"label_to_emoji_tuple: {self.label_to_emoji_tuple}")
 
     def update_emojis(self):
         prev_len = len(self.emojis_li)

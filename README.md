@@ -16,13 +16,14 @@ This is a collection of plugins and themes for the
 work in progress and we're in the process of migrating the plugins to abide to
 the new Albert API.
 
-Currently the following plugins have been migrated to the v0.5 API (5/34):
+Currently the following plugins have been migrated to the v0.5 API (6/34):
 
 - Remmina
 - Emoji Picker
 - Bluetooth
 - Pulse Audio
 - IP Show
+- `DuckDuckGo`-based autocompletion search (all search plugins)
 
 ## Demos
 
