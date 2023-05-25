@@ -1,15 +1,9 @@
 """User-defined abbreviations read/written a file."""
 
-# TODO Demo photos
-
 import hashlib
-import os
-import shutil
-import subprocess
-import sys
 import traceback
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import gi
 from fuzzywuzzy import process
@@ -20,13 +14,14 @@ from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 import albert as v0
 
-__title__ = "User-defined abbreviations read/written a file"
-__version__ = "0.4.0"
-__triggers__ = "ab "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr"
-)
+md_name = "User-defined abbreviations read/written a file"
+md_description = "TODO"
+md_iid = "0.5"
+md_description = "TODO"
+md_iid = "0.5"
+md_version = "0.5"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr"
 
 icon_path = str(Path(__file__).parent / "abbr")
 
@@ -62,147 +57,17 @@ if abbr_store_sep.is_file():
         split_at = sep
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
 def save_abbr(name: str, desc: str):
     with open(abbreviations_path, "a") as f:
         li = f"\n* {name}: {desc}"
         f.write(li)
 
 
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-
-            if len(query_str.strip().split()) == 0:
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="[new] Add a new abbreviation",
-                        subtext="new <u>abbreviation</u> <u>description</u>",
-                        completion=f"{__triggers__}new ",
-                    )
-                )
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Write more to query the database",
-                        subtext="",
-                        completion=f"{__triggers__}",
-                    )
-                )
-                return results
-
-
-            # new behavior
-            tokens = query_str.split()
-            if len(tokens) >= 1 and tokens[0] == "new":
-                if len(tokens) > 1:
-                    name = tokens[1]
-                else:
-                    name = ""
-                if len(tokens) > 2:
-                    desc = " ".join(tokens[2:])
-                else:
-                    desc = ""
-
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text=f"New abbreviation: {name}",
-                        subtext=f"Description: {desc}",
-                        actions=[
-                            v0.FuncAction(
-                                f"Save abbreviation to file",
-                                lambda name=name, desc=desc: save_abbr(name, desc),
-                            )
-                        ],
-                    )
-                )
-
-                return results
-
-            curr_hash = hash_file(abbreviations_path)
-            global abbr_latest_hash, abbr_latest_d, abbr_latest_d_bi
-            if abbr_latest_hash != curr_hash:
-                abbr_latest_hash = curr_hash
-                with open(abbreviations_path) as f:
-                    conts = f.readlines()
-                    abbr_latest_d = make_latest_dict(conts)
-                    abbr_latest_d_bi = abbr_latest_d.copy()
-                    abbr_latest_d_bi.update({v: k for k, v in abbr_latest_d.items()})
-
-            if not abbr_latest_d:
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text=f'No lines split by "{split_at}" in the file provided',
-                        actions=[
-                            v0.ClipAction(f"Copy provided filename", str(abbreviations_path),)
-                        ],
-                    )
-                )
-
-                return results
-
-            # do fuzzy search on both the abbreviations and their description
-            matched = process.extract(query_str, abbr_latest_d_bi.keys(), limit=10)
-            for m in [elem[0] for elem in matched]:
-                if m in abbr_latest_d.keys():
-                    results.append(get_abbr_as_item((m, abbr_latest_d[m])))
-                else:
-                    results.append(get_abbr_as_item((abbr_latest_d_bi[m], m)))
-
-        except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 def notify(
-    msg: str, app_name: str = __title__, image=str(icon_path),
+    msg: str,
+    app_name: str = md_name,
+    image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -215,15 +80,14 @@ def get_abbr_as_item(abbr: Tuple[str, str]):
     subtext = abbr[1].strip()
 
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=f"{text}",
         subtext=f"{subtext}",
-        completion=f"{__triggers__}{text.strip()}",
         actions=[
-            v0.UrlAction("Open in Google", f"https://www.google.com/search?&q={text}"),
-            v0.ClipAction("Copy abbreviation", text),
-            v0.ClipAction("Copy description", subtext),
+            UrlAction("Open in Google", f"https://www.google.com/search?&q={text}"),
+            ClipAction("Copy abbreviation", text),
+            ClipAction("Copy description", subtext),
         ],
     )
 
@@ -260,7 +124,7 @@ def submit_fname(p: Path):
 
 def submit_sep(c: str):
     if len(c) > 1:
-        notify(f"Separator must be a single character!")
+        notify("Separator must be a single character!")
         return
 
     with open(abbr_store_sep, "w") as f:
@@ -270,46 +134,44 @@ def submit_sep(c: str):
     split_at = c
 
 
-def setup(query) -> list:
+def setup(query) -> bool:
     """Setup is successful if an empty list is returned.
 
     Use this function if you need the user to provide you data
     """
 
-    results = []
-
     query_str = query.string
 
     # abbreviations file
     if not abbr_store_fname.is_file():
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f"Specify file to read/write abbreviations to/from",
+                id=md_name,
+                icon=[icon_path],
+                text="Specify file to read/write abbreviations to/from",
                 subtext="Paste the path to the file, then press ENTER",
                 actions=[
-                    v0.FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
+                    FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
                 ],
             )
         )
-        return results
+        return True
 
     if not abbr_store_sep.is_file():
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f"Specify separator *character* for abbreviations",
+                id=md_name,
+                icon=[icon_path],
+                text="Specify separator *character* for abbreviations",
                 subtext=f"Separator: {query_str}",
                 actions=[
-                    v0.FuncAction("Submit separator", lambda c=query_str: submit_sep(c)),
+                    FuncAction("Submit separator", lambda c=query_str: submit_sep(c)),
                 ],
             )
         )
-        return results
+        return True
 
-    return results
+    return False
 
 
 def make_latest_dict(conts: list):
@@ -332,3 +194,161 @@ def hash_file(p: Path) -> str:
     with open(p) as f:
         h.update(f.read().encode("utf-8"))
         return h.hexdigest()
+
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "ab "
+
+    def synopsis(self):
+        return "abbreviation to look for"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        raise NotImplementedError
+
+    def handleQuery(self, query):
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        try:
+            results_setup = setup(query)
+            if results_setup:
+                return
+
+            query_str = query.string
+
+            if len(query_str.strip().split()) == 0:
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="[new] Add a new abbreviation",
+                        subtext="new <u>abbreviation</u> <u>description</u>",
+                        completion=f"{query.trigger} new ",
+                    )
+                )
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Write more to query the database",
+                        subtext="",
+                        completion=query.trigger,
+                    )
+                )
+
+                return
+
+            # new behavior
+            tokens = query_str.split()
+            if len(tokens) >= 1 and tokens[0] == "new":
+                if len(tokens) > 1:
+                    name = tokens[1]
+                else:
+                    name = ""
+                if len(tokens) > 2:
+                    desc = " ".join(tokens[2:])
+                else:
+                    desc = ""
+
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text=f"New abbreviation: {name}",
+                        subtext=f"Description: {desc}",
+                        actions=[
+                            FuncAction(
+                                "Save abbreviation to file",
+                                lambda name=name, desc=desc: save_abbr(name, desc),
+                            )
+                        ],
+                    )
+                )
+
+                return
+
+            curr_hash = hash_file(abbreviations_path)
+            global abbr_latest_hash, abbr_latest_d, abbr_latest_d_bi
+            if abbr_latest_hash != curr_hash:
+                abbr_latest_hash = curr_hash
+                with open(abbreviations_path) as f:
+                    conts = f.readlines()
+                    abbr_latest_d = make_latest_dict(conts)
+                    abbr_latest_d_bi = abbr_latest_d.copy()
+                    abbr_latest_d_bi.update({v: k for k, v in abbr_latest_d.items()})
+
+            if not abbr_latest_d:
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text=f'No lines split by "{split_at}" in the file provided',
+                        actions=[
+                            ClipAction(
+                                "Copy provided filename",
+                                str(abbreviations_path),
+                            )
+                        ],
+                    )
+                )
+
+                return
+
+            # do fuzzy search on both the abbreviations and their description
+            matched = process.extract(query_str, abbr_latest_d_bi.keys(), limit=10)
+            for m in [elem[0] for elem in matched]:
+                if m in abbr_latest_d.keys():
+                    query.add(get_abbr_as_item((m, abbr_latest_d[m])))
+                else:
+                    query.add(get_abbr_as_item((abbr_latest_d_bi[m], m)))
+
+        except Exception:  # user to report error
+            if dev_mode:  # let exceptions fly!
+                print(traceback.format_exc())
+                raise
+
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )

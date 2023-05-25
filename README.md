@@ -16,13 +16,15 @@ This is a collection of plugins and themes for the
 work in progress and we're in the process of migrating the plugins to abide to
 the new Albert API.
 
-Currently the following plugins have been migrated to the v0.5 API (6/34):
+Currently the following plugins have been migrated to the v0.5 API:
 
-- Remmina
-- Emoji Picker
+- Abbreviations
 - Bluetooth
-- Pulse Audio
+- Clock
+- Emoji Picker
 - IP Show
+- Pulse Audio
+- Remmina
 - `DuckDuckGo`-based autocompletion search (all search plugins)
 
 ## Demos
@@ -40,11 +42,13 @@ Currently the following plugins have been migrated to the v0.5 API (6/34):
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)               |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)            |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif)       |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr/abbr.png) | |
 
 ## Plugins
 
 Currently the list of plugins includes:
 
+- [Abbreviations](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - ❗Lookup words stored in a file along with their description
 - [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
 - [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Manage bluetooth devices
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers

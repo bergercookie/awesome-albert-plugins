@@ -213,7 +213,7 @@ class Plugin(v0.QueryHandler):
         return "{{ cookiecutter.trigger }} "
 
     def synopsis(self):
-        return "TODO"
+        return "query text."
 
     def initialize(self):
         # Called when the extension is loaded (ticked in the settings) - blocking

@@ -14,13 +14,15 @@ import gi  # isort:skip
 gi.require_version("Notify", "0.7")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
-__title__ = "Countdown/Stopwatch functionalities"
-__version__ = "0.4.0"
-__triggers__ = "cl "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock"
-)
+md_name = "Countdown/Stopwatch functionalities"
+md_description = "TODO"
+md_iid = "0.5"
+md_description = "TODO"
+md_iid = "0.5"
+md_version = "0.5"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock"
+md_bin_dependencies = ["cvlc"]
 
 countdown_path = str(Path(__file__).parent / "countdown.png")
 stopwatch_path = str(Path(__file__).parent / "stopwatch.png")
@@ -189,7 +191,10 @@ class Countdown(Watch):
         )
         self.timer.start()
         self.notify(
-            msg=f"Countdown [{self.name()}] starting, remaining: {format_time(self._total_time)}"
+            msg=(
+                f"Countdown [{self.name()}] starting, remaining:"
+                f" {format_time(self._total_time)}"
+            )
         )
 
     def pause(self):
@@ -198,7 +203,10 @@ class Countdown(Watch):
         if self.timer:
             self.timer.cancel()
             self.notify(
-                msg=f"Countdown [{self.name()}] paused, remaining: {format_time(self._total_time)}"
+                msg=(
+                    f"Countdown [{self.name()}] paused, remaining:"
+                    f" {format_time(self._total_time)}"
+                )
             )
 
     def time_elapsed(self):
@@ -231,7 +239,7 @@ def catch_n_notify(fn):
         try:
             fn(*args, **kargs)
         except Exception:
-            notify(app_name=__title__, msg=f"Operation failed.\n\n{traceback.format_exc()}")
+            notify(app_name=md_name, msg=f"Operation failed.\n\n{traceback.format_exc()}")
 
     return wrapper
 
@@ -260,119 +268,6 @@ def delete_item(item: Watch):
     all_watches.remove(item)
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (
-        cache_path,
-        config_path,
-        data_path,
-    ):
-        p.mkdir(
-            parents=False,
-            exist_ok=True,
-        )
-
-
-def finalize():
-    pass
-
-
-def handleQuery(
-    query,
-) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-
-    results = []
-    if not query.string.strip() or query.isTriggered:
-        results = [get_as_item(item) for item in all_watches]
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_parts = [s.strip() for s in query.string.split()]
-            name = ""
-            if query_parts:
-                name = query_parts[0]
-                subtext_name = f"Name: {name}"
-            else:
-                subtext_name = "<u>Please provide a name</u>"
-
-            # ask for duration - only applicable for countdowns
-            duration = None
-            if len(query_parts) > 1:
-                duration = query_parts[1]
-                subtext_dur = f"Duration: {duration} mins"
-            else:
-                subtext_dur = "<u>Please provide a duration [mins]</u>"
-
-            results.extend(
-                [
-                    v0.Item(
-                        id=__title__,
-                        icon=countdown_path,
-                        text="Create countdown",
-                        subtext=f"{subtext_name} | {subtext_dur}",
-                        completion=__triggers__,
-                        actions=[
-                            v0.FuncAction(
-                                "Create countdown",
-                                lambda name=name, duration=duration: create_countdown(
-                                    name=name, duration=duration
-                                ),
-                            )
-                        ],
-                    ),
-                    v0.Item(
-                        id=__title__,
-                        icon=stopwatch_path,
-                        text="Create stopwatch",
-                        subtext=subtext_name,
-                        completion=__triggers__,
-                        actions=[
-                            v0.FuncAction(
-                                "Create stopwatch",
-                                lambda name=name: create_stopwatch(name),
-                            )
-                        ],
-                    ),
-                ]
-            )
-
-            # cleanup watches that are done
-            to_remove = [watch for watch in all_watches if watch.to_remove()]
-            for watch in to_remove:
-                delete_item(watch)
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=__title__,
-                        icon=countdown_path,
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            v0.ClipAction(
-                                f"Copy error - report it to {__homepage__[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
@@ -381,60 +276,59 @@ def get_as_item(item: Watch) -> v0.Item:
     actions = []
     if item.started():
         actions.append(
-            v0.FuncAction(
+            FuncAction(
                 "Pause",
                 lambda: item.pause(),
             )
         )
     else:
         actions.append(
-            v0.FuncAction(
+            FuncAction(
                 "Resume",
                 lambda: item.start(),
             )
         )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Remove",
             lambda: delete_item(item),
         )
     )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Add 30 mins",
             lambda: item.plus(30),
         )
     )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Substract 30 mins",
             lambda: item.minus(30),
         )
     )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Add 5 mins",
             lambda: item.plus(5),
         )
     )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Substract 5 mins",
             lambda: item.minus(5),
         )
     )
 
     return v0.Item(
-        id=__title__,
-        icon=countdown_path if isinstance(item, Countdown) else stopwatch_path,
+        id=md_name,
+        icon=[countdown_path if isinstance(item, Countdown) else stopwatch_path],
         text=str(item),
         subtext="",
-        completion=__triggers__,
         actions=actions,
     )
 
@@ -475,11 +369,136 @@ def load_data(
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "cl "
+
+    def synopsis(self):
+        return "TODO"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (
+            cache_path,
+            config_path,
+            data_path,
+        ):
+            p.mkdir(
+                parents=False,
+                exist_ok=True,
+            )
+
+    def finalize(self):
+        raise NotImplementedError
+
+    def handleQuery(
+        self,
+        query,
+    ) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+
+        results = []
+        try:
+            query_parts = [s.strip() for s in query.string.split()]
+            name = ""
+            if query_parts:
+                name = query_parts[0]
+                subtext_name = f"Name: {name}"
+            else:
+                subtext_name = "Please provide a name"
+
+            # ask for duration - only applicable for countdowns
+            duration = None
+            if len(query_parts) > 1:
+                duration = query_parts[1]
+                subtext_dur = f"Duration: {duration} mins"
+            else:
+                subtext_dur = "Please provide a duration [mins]"
+
+            results.extend(
+                [
+                    v0.Item(
+                        id=md_name,
+                        icon=[countdown_path],
+                        text="Create countdown",
+                        subtext=f"{subtext_name} | {subtext_dur}",
+                        completion=query.trigger,
+                        actions=[
+                            FuncAction(
+                                "Create countdown",
+                                lambda name=name, duration=duration: create_countdown(
+                                    name=name, duration=duration
+                                ),
+                            )
+                        ],
+                    ),
+                    v0.Item(
+                        id=md_name,
+                        icon=[stopwatch_path],
+                        text="Create stopwatch",
+                        subtext=subtext_name,
+                        completion=query.trigger,
+                        actions=[
+                            FuncAction(
+                                "Create stopwatch",
+                                lambda name=name: create_stopwatch(name),
+                            )
+                        ],
+                    ),
+                ]
+            )
+
+            # cleanup watches that are done
+            to_remove = [watch for watch in all_watches if watch.to_remove()]
+            for watch in to_remove:
+                delete_item(watch)
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+            if dev_mode:  # let exceptions fly!
+                raise
+            else:
+                results.insert(
+                    0,
+                    v0.Item(
+                        id=md_name,
+                        icon=[countdown_path],
+                        text="Something went wrong! Press [ENTER] to copy error and report it",
+                        actions=[
+                            ClipAction(
+                                f"Copy error - report it to {md_url[8:]}",
+                                f"{traceback.format_exc()}",
+                            )
+                        ],
+                    ),
+                )
+
+        query.add(results)
