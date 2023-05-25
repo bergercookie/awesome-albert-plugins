@@ -1,11 +1,7 @@
 """Contact VCF Viewer."""
 
-import os
 import json
-import pickle
 import subprocess
-import sys
-import time
 import traceback
 from pathlib import Path
 from shutil import copyfile, which
@@ -19,15 +15,14 @@ gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
-__title__ = "Contact VCF Viewer"
-__version__ = "0.4.0"
-__triggers__ = "c "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
-)
-__exec_deps__ = []
-__py_deps__ = []
+md_name = "Contact VCF Viewer"
+md_description = "TODO"
+md_iid = "0.5"
+md_version = "0.5"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
+md_bin_dependencies = []
+md_lib_dependencies = []
 
 icon_path = str(Path(__file__).parent / "contacts")
 
@@ -47,7 +42,6 @@ class Contact:
         telephones: Optional[Sequence[str]],
         emails: Optional[Sequence[str]] = None,
     ):
-
         self._fullname = fullname
         self._telephones = telephones or []
         self._emails = emails or []
@@ -137,106 +131,7 @@ def do_notify(msg: str, image=None):
     n.show()
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-    if vcf_path.is_file():
-        reindex_contacts()
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-
-            # ---------------------------------------------------------------------------------
-            if not query_str:
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        completion=__triggers__,
-                        text="Add more characters to fuzzy-search",
-                        actions=[],
-                    )
-                )
-                results.append(get_reindex_item())
-            else:
-                matched = process.extract(query_str, fullnames_to_contacts.keys(), limit=10)
-                results.extend(
-                    [get_contact_as_item(fullnames_to_contacts[m[0]]) for m in matched]
-                )
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            v0.ClipAction(
-                                f"Copy error - report it to {__homepage__[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
-def get_reindex_item():
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text="Re-index contacts",
-        completion=__triggers__,
-        actions=[v0.FuncAction("Re-index contacts", reindex_contacts)],
-    )
-
-
-def get_contact_as_item(contact: Contact):
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    text = contact.fullname
-    phones_and_emails = set(contact.emails).union(contact.telephones)
-    subtext = " | ".join(phones_and_emails)
-    completion = f"{__triggers__}{contact.fullname}"
-
-    actions = []
-
-    for field in phones_and_emails:
-        actions.append(v0.ClipAction(f"Copy {field}", field))
-
-    actions.append(v0.ClipAction("Copy name", contact.fullname))
-
-    return v0.Item(
-        id=__title__,
-        icon=icon_path,
-        text=text,
-        subtext=subtext,
-        completion=completion,
-        actions=actions,
-    )
-
-
 def sanitize_string(s: str) -> str:
     return s.replace("<", "&lt;")
 
@@ -284,46 +179,174 @@ def save_vcf_file(query: str):
     do_notify(f"Copied VCF contacts file to -> {vcf_path}. You should be ready to go...")
 
 
-def setup(query):  # type: ignore
-    results = []
-
+def setup(query) -> bool:  # type: ignore
     if not which("vcfxplr"):
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f'"vcfxplr" is not installed.',
-                subtext="You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>",
-                completion=__triggers__,
+                id=md_name,
+                icon=[icon_path],
+                text='"vcfxplr" is not installed.',
+                subtext=(
+                    "You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>"
+                ),
                 actions=[
-                    v0.ClipAction(
+                    ClipAction(
                         "Copy install command", "pip3 install --user --upgrade vcfxplr"
                     ),
-                    v0.UrlAction(
+                    UrlAction(
                         'Open "vcfxplr" page', "https://github.com/bergercookie/vcfxplr"
                     ),
                 ],
             )
         )
-        return results
+        return True
 
     if vcf_path.exists() and not vcf_path.is_file():
         raise RuntimeError(f"vcf file exists but it's not a file -> {vcf_path}")
 
     if not vcf_path.exists():
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f"Please input the path to your VCF contacts file.",
+                id=md_name,
+                icon=[icon_path],
+                text="Please input the path to your VCF contacts file.",
                 subtext=f"{query.string}",
-                completion=__triggers__,
                 actions=[
-                    v0.FuncAction(
+                    FuncAction(
                         "Save VCF file", lambda query=query: save_vcf_file(query.string)
                     ),
                 ],
             )
         )
 
-    return results
+        return True
+
+    return False
+
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "c "
+
+    def synopsis(self):
+        return "TODO"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+        if vcf_path.is_file():
+            reindex_contacts()
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        try:
+            results_setup = setup(query)
+            if results_setup:
+                return
+
+            query_str = query.string
+
+            if not query_str:
+                results.append(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        completion=query.trigger,
+                        text="Add more characters to fuzzy-search",
+                        actions=[],
+                    )
+                )
+                results.append(self.get_reindex_item(query))
+            else:
+                matched = process.extract(query_str, fullnames_to_contacts.keys(), limit=10)
+                results.extend(
+                    [
+                        self.get_contact_as_item(query, fullnames_to_contacts[m[0]])
+                        for m in matched
+                    ]
+                )
+
+            query.add(results)
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+            if dev_mode:  # let exceptions fly!
+                raise
+            else:
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Something went wrong! Press [ENTER] to copy error and report it",
+                        actions=[
+                            ClipAction(
+                                f"Copy error - report it to {md_url[8:]}",
+                                f"{traceback.format_exc()}",
+                            )
+                        ],
+                    ),
+                )
+
+    def get_reindex_item(self, query):
+        return v0.Item(
+            id=md_name,
+            icon=[icon_path],
+            text="Re-index contacts",
+            completion=query.trigger,
+            actions=[FuncAction("Re-index contacts", reindex_contacts)],
+        )
+
+    def get_contact_as_item(self, query, contact: Contact):
+        """
+        Return an item - ready to be appended to the items list and be rendered by Albert.
+        """
+        text = contact.fullname
+        phones_and_emails = set(contact.emails).union(contact.telephones)
+        subtext = " | ".join(phones_and_emails)
+        completion = f"{query.trigger}{contact.fullname}"
+
+        actions = []
+
+        for field in phones_and_emails:
+            actions.append(ClipAction(f"Copy {field}", field))
+
+        actions.append(ClipAction("Copy name", contact.fullname))
+
+        return v0.Item(
+            id=md_name,
+            icon=[icon_path],
+            text=text,
+            subtext=subtext,
+            completion=completion,
+            actions=actions,
+        )

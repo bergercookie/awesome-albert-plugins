@@ -21,6 +21,7 @@ Currently the following plugins have been migrated to the v0.5 API:
 - Abbreviations
 - Bluetooth
 - Clock
+- Contacts
 - Emoji Picker
 - IP Show
 - Pulse Audio
