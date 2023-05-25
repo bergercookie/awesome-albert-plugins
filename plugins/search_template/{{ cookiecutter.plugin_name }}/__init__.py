@@ -6,15 +6,15 @@ instead.
 
 """{{ cookiecutter.plugin_short_description }}."""
 
-import albert as v0
 import json
 import shutil
 import subprocess
 import traceback
 from io import StringIO
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Sequence, Tuple
 
+import albert as v0
 
 md_iid = "0.5"
 md_version = "0.5"
@@ -44,7 +44,8 @@ if url_handler_check_cmd:
     p.communicate()
     if p.returncode != 0:
         print(
-            f'[W] Disabling the url handler "{url_handler}"... - Condition {url_handler_check_cmd} not met'
+            f'[W] Disabling the url handler "{url_handler}"... - Condition'
+            f" {url_handler_check_cmd} not met"
         )
         url_handler = None
 
@@ -66,9 +67,7 @@ else:
 
 
 # supplementary functions ---------------------------------------------------------------------
-
-
-def query_ddgr(query_str) -> Tuple[Dict[str, str], str]:
+def query_ddgr(query_str) -> Tuple[Sequence[Dict[str, str]], str]:
     """Make a query to ddgr and return the results in json."""
 
     li = ["ddgr", "--noprompt", "--unsafe", "--json", query_str]
@@ -81,7 +80,7 @@ def query_ddgr(query_str) -> Tuple[Dict[str, str], str]:
     if stdout:
         json_ret = json.load(StringIO(stdout.decode("utf-8")))
     else:
-        json_ret = {}
+        json_ret = [dict()]
 
     stderr = stderr.decode("utf-8")
     return json_ret, stderr
@@ -183,7 +182,7 @@ def setup(query) -> bool:
     return False
 
 
-# main class ----------------------------------------------------------------------------------
+# helpers for backwards compatibility ---------------------------------------------------------
 class UrlAction(v0.Action):
     def __init__(self, name: str, url: str):
         super().__init__(name, name, lambda: v0.openUrl(url))
@@ -195,10 +194,11 @@ class ClipAction(v0.Action):
 
 
 class FuncAction(v0.Action):
-    def __init__(self, name: str, command: str):
+    def __init__(self, name: str, command):
         super().__init__(name, name, command)
 
 
+# main plugin class ---------------------------------------------------------------------------
 class Plugin(v0.QueryHandler):
     def id(self) -> str:
         return __name__

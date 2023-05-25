@@ -1,0 +1,91 @@
+# isort ------------------------------------------------------------------------
+[tool.isort]
+include_trailing_comma = true
+line_length = 95
+multi_line_output = 3
+profile = "black"
+
+# black ------------------------------------------------------------------------
+[tool.black]
+preview = true
+line-length = 95
+target-version = ['py38', 'py39']
+include = '\.pyi?$'
+
+# mypy -------------------------------------------------------------------------
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+  "tqdm",
+  "pytest",
+  "pexpect",
+  "notion_client",
+  "taskw",
+  "taskw.warrior",
+  "google.auth.transport.requests",
+  "google_auth_oauthlib.flow",
+]
+ignore_missing_imports = true
+
+# pylint -----------------------------------------------------------------------
+[tool.pylint]
+[tool.pylint.master]
+persistent = "yes"
+suggestion-mode = "yes"
+unsafe-load-any-extension = "no"
+ignore = "VCS"
+
+[tool.pylint.messages_control]
+disable = "C0330,C0326,C0103,W0613,R0201,R1720,R1705,W0104,C0301"
+
+[tool.pylint.refactoring]
+max-nested-blocks = 5
+never-returning-functions = "sys.exit,argparse.parse_error"
+
+[tool.pylint.similarities]
+ignore-comments = "yes"
+ignore-docstrings = "no"
+ignore-imports = "yes"
+# ignore-signatures=no
+min-similarity-lines = 4
+
+[tool.pylint.format]
+max-line-length = 95
+ignore-invalid-name = true
+max-module-lines = 500
+
+[tool.pylint.string]
+check-quote-consistency = "yes"
+
+# pyright ----------------------------------------------------------------------
+[tool.pyright]
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.8"
+pythonPlatform = "Linux"
+
+# coverage.py ------------------------------------------------------------------
+[tool.coverage]
+[tool.coverage.run]
+omit = [
+  "quickstart.py",
+  "quickstart_gkeep.py",
+  "a.py",
+  "*/.pdbrc.py",
+  "tests/*",
+]
+
+# pytest -----------------------------------------------------------------------
+[tool.pytest.ini_options]
+addopts = ["--ignore-glob=quickstart*", "--doctest-modules"]
+
+# ruff -------------------------------------------------------------------------
+[tool.ruff]
+line-length = 95
+target-version = "py38"
+
+# vim: tw=80
+
