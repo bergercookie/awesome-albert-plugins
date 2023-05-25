@@ -14,10 +14,8 @@ import gi  # isort:skip
 gi.require_version("Notify", "0.7")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
-md_name = "Countdown/Stopwatch functionalities"
-md_description = "TODO"
-md_iid = "0.5"
-md_description = "TODO"
+md_name = "Countdown/Stopwatch"
+md_description = "Countdown/Stopwatch functionalities"
 md_iid = "0.5"
 md_version = "0.5"
 md_maintainers = "Nikos Koukis"

@@ -15,8 +15,8 @@ gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
-md_name = "Contact VCF Viewer"
-md_description = "TODO"
+md_name = "Contacts"
+md_description = "Contact VCF Viewer"
 md_iid = "0.5"
 md_version = "0.5"
 md_maintainers = "Nikos Koukis"

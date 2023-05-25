@@ -20,7 +20,7 @@ from fuzzywuzzy import process
 import albert as v0
 
 md_name = "Color codes visualisation"
-md_description = "TODO"
+md_description = "Color codes visualisation"
 md_iid = "0.5"
 md_version = "0.5"
 md_maintainers = "Nikos Koukis"

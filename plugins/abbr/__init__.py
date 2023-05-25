@@ -17,8 +17,6 @@ import albert as v0
 md_name = "User-defined abbreviations read/written a file"
 md_description = "TODO"
 md_iid = "0.5"
-md_description = "TODO"
-md_iid = "0.5"
 md_version = "0.5"
 md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr"
