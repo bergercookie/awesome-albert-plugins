@@ -417,7 +417,7 @@ class Plugin(v0.QueryHandler):
             )
 
     def finalize(self):
-        raise NotImplementedError
+        pass
 
     def handleQuery(
         self,

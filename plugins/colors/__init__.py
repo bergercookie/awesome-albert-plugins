@@ -7,10 +7,6 @@
 #   HSL
 #   Similar colors
 
-import os
-import shutil
-import subprocess
-import sys
 import traceback
 from pathlib import Path
 from typing import Optional
@@ -23,13 +19,12 @@ from colour import Color
 from fuzzywuzzy import process
 import albert as v0
 
-__title__ = "Color Codes visualisation"
-__version__ = "0.4.0"
-__triggers__ = "col "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors"
-)
+md_name = "Color codes visualisation"
+md_description = "TODO"
+md_iid = "0.5"
+md_version = "0.5"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors"
 
 icon_path = str(Path(__file__).parent / "colors")
 
@@ -44,83 +39,7 @@ color_names_and_hex = list(color_names) + h_values
 h_to_color_name = {h: c for h, c in zip(h_values, color_names)}
 
 
-# plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-
-            if not query_str:
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Give me color name, rgb triad or hex value",
-                        subtext="supports fuzzy-search...",
-                    )
-                )
-                return results
-
-            # see if the name matches a color exactly
-            color = get_as_color(query_str)
-            if color:
-                results.append(get_as_item(color))
-                return results
-
-            # no exact match
-            matched = process.extract(query_str, list(color_names_and_hex), limit=10)
-            for m in [elem[0] for elem in matched]:
-                results.append(get_as_item(Color(m)))
-
-        except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
-
-
 def get_color_thumbnail(color: Color) -> Path:
     """
     Retrieve the thumbnail of the given color. The output name will be the corresponding hex
@@ -128,6 +47,7 @@ def get_color_thumbnail(color: Color) -> Path:
     """
 
     fname = data_path / (str(color.get_hex_l()[1:]) + ".png")
+    print("fname: ", fname)
     if fname.exists():
         if fname.is_file():
             return fname
@@ -155,21 +75,20 @@ def get_as_item(color):
         name = ""
 
     actions = [
-        v0.ClipAction("Copy Hex (Long)", hl),
-        v0.ClipAction("Copy RGB", f"{rgb}"),
-        v0.ClipAction("Copy RGB [0, 1]", f"{color.get_rgb()}"),
+        ClipAction("Copy Hex (Long)", hl),
+        ClipAction("Copy RGB", f"{rgb}"),
+        ClipAction("Copy RGB [0, 1]", f"{color.get_rgb()}"),
     ]
 
     h = color.get_hex()
     if h != hl:
-        actions.insert(0, v0.ClipAction("Copy Hex (Short)", h))
+        actions.insert(0, ClipAction("Copy Hex (Short)", h))
 
     return v0.Item(
-        id=__title__,
-        icon=img_path,
+        id=md_name,
+        icon=[img_path],
         text=f'<p style="color:{hl}";>{hl}{name}</p>',
         subtext=f"{rgb}",
-        completion=" ".join([__triggers__, h]),
         actions=actions,
     )
 
@@ -214,11 +133,90 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "col "
+
+    def synopsis(self):
+        return "some color description ..."
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        try:
+            query_str = query.string.strip()
+
+            if not query_str:
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Give me color name, rgb triad or hex value",
+                        subtext="supports fuzzy-search...",
+                    )
+                )
+                return
+
+            # see if the name matches a color exactly
+            color = get_as_color(query_str)
+            if color:
+                query.add(get_as_item(color))
+                return
+
+            # no exact match
+            matched = process.extract(query_str, list(color_names_and_hex), limit=10)
+            query.add([get_as_item(Color(elem[0])) for elem in matched])
+
+        except Exception:  # user to report error
+            if dev_mode:  # let exceptions fly!
+                print(traceback.format_exc())
+                raise
+
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )

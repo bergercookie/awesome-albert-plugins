@@ -237,7 +237,7 @@ class Plugin(v0.QueryHandler):
             p.mkdir(parents=False, exist_ok=True)
 
     def finalize(self):
-        raise NotImplementedError
+        pass
 
     def handleQuery(self, query):
         """Hook that is called by albert with *every new keypress*."""  # noqa
