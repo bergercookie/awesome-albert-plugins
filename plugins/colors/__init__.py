@@ -1,6 +1,5 @@
 """Visualise color codes."""
 
-# TODO name autocomplete
 # TODO on color selection show
 #   RGB
 #   YCMK
@@ -55,7 +54,7 @@ def get_color_thumbnail(color: Color) -> Path:
             raise FileNotFoundError(f"Thumbnail file exists but it's not a file -> {fname}")
 
     # file not there - cache it
-    thumbnail_size = (5, 5)
+    thumbnail_size = (50, 50)
     rgb_triad = np.array([c * 255 for c in color.get_rgb()], dtype=np.uint8)
     mat = np.zeros((*thumbnail_size, 3), dtype=np.uint8) + rgb_triad
 
@@ -70,7 +69,7 @@ def get_as_item(color):
     rgb = [int(i * 255) for i in color.get_rgb()]
     hl = color.get_hex_l()
     if hl in h_to_color_name:
-        name = f"| {h_to_color_name[hl]}"
+        name = f" | {h_to_color_name[hl]}"
     else:
         name = ""
 
@@ -85,9 +84,9 @@ def get_as_item(color):
         actions.insert(0, ClipAction("Copy Hex (Short)", h))
 
     return v0.Item(
-        id=md_name,
+        id=f"{md_name}_{hl}",
         icon=[img_path],
-        text=f'<p style="color:{hl}";>{hl}{name}</p>',
+        text=f"{hl}{name}",
         subtext=f"{rgb}",
         actions=actions,
     )

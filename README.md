@@ -27,7 +27,7 @@ Currently the following plugins have been migrated to the v0.5 API:
 - Pulse Audio
 - Remmina
 - `DuckDuckGo`-based autocompletion search (all search plugins)
-- [migrated but broken] Colors
+- Colors
 
 ## Demos
 
