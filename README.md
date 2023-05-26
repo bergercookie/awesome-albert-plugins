@@ -31,6 +31,27 @@ Currently the following plugins have been migrated to the v0.5 API:
 - `DuckDuckGo`-based autocompletion search (all search plugins)
 - Colors
 
+Not updated yet
+
+- anki
+- harakiri
+- image_search
+- jira
+- killproc
+- meme_generator
+- pass_rlded
+- pass_totp_cli
+- pomodoro
+- saxophone
+- scratchpad
+- scrot
+- taskwarrior
+- timezones
+- tldr_pages
+- url_lookup
+- words
+- xkcd
+
 ## Demos
 
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png)               |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png)        |
