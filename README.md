@@ -23,6 +23,8 @@ Currently the following plugins have been migrated to the v0.5 API:
 - Clock
 - Contacts
 - Emoji Picker
+- Errno
+- Google Translate
 - IP Show
 - Pulse Audio
 - Remmina

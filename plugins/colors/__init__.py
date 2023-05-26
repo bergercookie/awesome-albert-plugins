@@ -46,7 +46,6 @@ def get_color_thumbnail(color: Color) -> Path:
     """
 
     fname = data_path / (str(color.get_hex_l()[1:]) + ".png")
-    print("fname: ", fname)
     if fname.exists():
         if fname.is_file():
             return fname

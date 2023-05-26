@@ -20,23 +20,24 @@ import urllib.parse
 import urllib.request
 from collections import deque
 from pathlib import Path
-from typing import Deque, Dict
+from typing import Deque, Dict, Optional
 
 import albert as v0
 
-__title__ = "Google Translate"
-__version__ = "0.4.0"
-__triggers__ = "tr "
-__authors__ = "Manuel Schneider"
-__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
-__simplename__ = "google_translate"
+md_name = "Google Translate"
+md_description = "Google Translate to from different languages."
+md_iid = "0.5"
+md_version = "0.5"
+md_maintainers = "Manuel Schneider"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
 
-__exec_deps__ = ["xclip"]
-__py_deps__ = []
+md_bin_dependencies = ["xclip"]
+md_lib_dependencies = []
 
-dev_mode = True
-
-ua = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36"
+ua = (
+    "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)"
+    " Chrome/62.0.3202.62 Safari/537.36"
+)
 url_template = (
     "https://translate.googleapis.com/translate_a/single?client=gtx&sl=%s&tl=%s&dt=t&q=%s"
 )
@@ -67,20 +68,6 @@ def flush_history():
 
 
 # plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    flush_history()
-
-
 class KeystrokeMonitor:
     def __init__(self):
         super(KeystrokeMonitor, self)
@@ -113,106 +100,6 @@ def select_item(lang_config: Dict[str, str], result: str):
     subprocess.Popen(f"echo {result}| xclip -selection clipboard", shell=True)
 
 
-def handleQuery(query):
-    results = []
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            fields = query.string.split()
-            item = v0.Item(
-                id=__title__,
-                text=__title__,
-                subtext='Enter a query in the form of "&lt;srclang&gt; &lt;dstlang&gt; &lt;text&gt;"',
-                icon=icon_path,
-                completion=query.rawString,
-            )
-
-            results.append(item)
-            if len(fields) < 3:
-                keys_monitor.reset()
-                return results
-
-            def completion():
-                return f"{__triggers__}{dst} {src} {txt}"
-
-            src = fields[0]
-            dst = fields[1]
-            txt = " ".join(fields[2:])
-            results[-1].completion = completion()
-
-            # determine if we can make the request --------------------------------------------
-            keys_monitor.report()
-            if keys_monitor.triggered():
-                url = url_template % (src, dst, urllib.parse.quote_plus(txt))
-                req = urllib.request.Request(url, headers={"User-Agent": ua})
-                with urllib.request.urlopen(req) as response:
-                    data = json.loads(response.read().decode("utf-8"))
-                    result = data[0][0][0]
-                    item.text = result
-                    item.subtext = "%s -> %s: %s" % (
-                        src.upper(),
-                        dst.upper(),
-                        txt,
-                    )
-                    item.addAction(
-                        v0.FuncAction(
-                            "Copy translation to clipboard",
-                            lambda lang_config={
-                                "src": src,
-                                "dst": dst,
-                                "src_txt": txt,
-                            }, result=result: select_item(
-                                lang_config=lang_config, result=result
-                            ),
-                        )
-                    )
-                    item.addAction(
-                        v0.UrlAction(
-                            "Open in browser",
-                            f"https://translate.google.com/#view=home&op=translate&sl={src.lower()}&tl={dst.lower()}&text={txt}",
-                        )
-                    )
-
-            # Show previous results
-            iterator = reversed(history_deque)
-            try:
-                next(iterator)
-                for di in iterator:  # last is the most recent
-                    results.append(
-                        get_history_item(
-                            src=di["src"],
-                            dst=di["dst"],
-                            src_txt=di["src_txt"],
-                            dst_txt=di["dst_txt"],
-                        )
-                    )
-            except StopIteration:
-                pass
-
-        except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 def save_search_result(*, src: str, dst: str, src_txt: str, dst_txt: str):
     # sanity checks
     if len(src_txt) <= 2 or len(dst_txt) <= 2:
@@ -231,11 +118,162 @@ def save_search_result(*, src: str, dst: str, src_txt: str, dst_txt: str):
     flush_history()
 
 
-def get_history_item(*, src: str, dst: str, src_txt: str, dst_txt) -> v0.Item:
-    return v0.Item(
-        id=__title__,
-        text=dst_txt,
-        subtext=src_txt,
-        icon=icon_path_hist,
-        completion=f"{__triggers__}{src} {dst} {src_txt}",
-    )
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "tr "
+
+    def synopsis(self):
+        return "<src> <dst> <text>"
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        flush_history()
+
+    def get_history_item(self, query, *, src: str, dst: str, src_txt: str, dst_txt) -> v0.Item:
+        return v0.Item(
+            id=f"{md_name}_prev_result",
+            text=dst_txt,
+            subtext=src_txt,
+            icon=[icon_path_hist],
+            completion=f"{query.trigger}{src} {dst} {src_txt}",
+        )
+
+    def get_sample_item(
+        self,
+        text: str = "",
+        subtext: str = "",
+        actions=[],
+        completion="",
+    ):
+        if text == "":
+            text = 'Enter a query in the form of "<src> <dst> <text>"'
+        if subtext == "":
+            subtext = "Use <TAB> to reverse the translation"
+        return v0.Item(
+            id=md_name,
+            text=text,
+            subtext=subtext,
+            icon=[icon_path],
+            completion=completion,
+            actions=actions,
+        )
+
+    def handleQuery(self, query) -> None:
+        try:
+            fields = query.string.split()
+            if len(fields) < 3:
+                keys_monitor.reset()
+                query.add(self.get_sample_item())
+                return
+
+            src = fields[0]
+            dst = fields[1]
+            txt = " ".join(fields[2:])
+            completion = f"{query.trigger}{dst} {src} {txt}"
+
+            # determine if we can make the request --------------------------------------------
+            text = ""
+            subtext = ""
+            actions = []
+
+            keys_monitor.report()
+            if keys_monitor.triggered():
+                url = url_template % (src, dst, urllib.parse.quote_plus(txt))
+                req = urllib.request.Request(url, headers={"User-Agent": ua})
+                with urllib.request.urlopen(req) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                    result = data[0][0][0]
+                    text = result
+                    subtext = "%s -> %s: %s" % (
+                        src.upper(),
+                        dst.upper(),
+                        txt,
+                    )
+                    actions = [
+                        FuncAction(
+                            "Copy translation to clipboard",
+                            lambda lang_config={
+                                "src": src,
+                                "dst": dst,
+                                "src_txt": txt,
+                            }, result=result: select_item(
+                                lang_config=lang_config, result=result
+                            ),
+                        ),
+                        UrlAction(
+                            "Open in browser",
+                            f"https://translate.google.com/#view=home&op=translate&sl={src.lower()}&tl={dst.lower()}&text={txt}",
+                        ),
+                    ]
+
+            query.add(
+                self.get_sample_item(
+                    text=text, subtext=subtext, actions=actions, completion=completion
+                )
+            )
+
+            # Show previous results
+            iterator = reversed(history_deque)
+            try:
+                next(iterator)
+                for di in iterator:  # last is the most recent
+                    query.add(
+                        self.get_history_item(
+                            query,
+                            src=di["src"],
+                            dst=di["dst"],
+                            src_txt=di["src_txt"],
+                            dst_txt=di["dst_txt"],
+                        )
+                    )
+            except StopIteration:
+                pass
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
