@@ -110,9 +110,7 @@ class Plugin(v0.QueryHandler):
                             break
 
         except Exception:  # user to report error
-            if dev_mode:
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             query.add(
                 v0.Item(

@@ -89,9 +89,7 @@ def handleQuery(query) -> list:
             results.append(get_as_item(query_str))
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             results.insert(
                 0,

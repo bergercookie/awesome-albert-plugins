@@ -192,9 +192,7 @@ def handleQuery(query) -> list:
                     results.append(title_to_templ[m].get_as_item())
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                v0.critical(traceback.format_exc())
-                raise
+            v0.critical(traceback.format_exc())
 
             results.insert(
                 0,

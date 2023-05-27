@@ -332,9 +332,7 @@ class Plugin(v0.QueryHandler):
                     query.add(get_abbr_as_item((abbr_latest_d_bi[m], m)))
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             query.add(
                 v0.Item(

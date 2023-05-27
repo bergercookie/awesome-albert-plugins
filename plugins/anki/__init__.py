@@ -1,19 +1,13 @@
 """Create new anki cards fast."""
 
 import json
-import os
 import re
-import shutil
-import subprocess
-import sys
-import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import albert as v0
 import httpx
-from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 from overrides import overrides
 
@@ -160,9 +154,7 @@ def handleQuery(query) -> list:
                     )
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                v0.critical(traceback.format_exc())
-                raise
+            v0.critical(traceback.format_exc())
 
             results.insert(
                 0,

@@ -200,9 +200,7 @@ class Plugin(v0.QueryHandler):
             query.add([get_as_item(Color(elem[0])) for elem in matched])
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             query.add(
                 v0.Item(

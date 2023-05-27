@@ -172,12 +172,9 @@ def handleQuery(query) -> list:
             results.extend([get_as_item(m) for m in matched2])
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
-            results.insert(
-                0,
+            query.add(
                 v0.Item(
                     id=__title__,
                     icon=icon_path,
@@ -218,7 +215,9 @@ def get_as_item(city: str):
         actions=[
             v0.UrlAction(
                 "Open in zeitverschiebung.net",
-                f'https://www.zeitverschiebung.net/en/timezone/{city.replace("/", "--").lower()}',
+                (
+                    f'https://www.zeitverschiebung.net/en/timezone/{city.replace("/", "--").lower()}'
+                ),
             ),
         ],
     )

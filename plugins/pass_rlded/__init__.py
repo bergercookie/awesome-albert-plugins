@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+import traceback
 from typing import Sequence
 
 import albert as v0
@@ -183,8 +184,7 @@ def handleQuery(query):
                 results.append(get_as_item(m))
 
         except Exception:  # user to report error
-            if dev_mode:
-                raise
+            print(traceback.format_exc())
 
             results.insert(
                 0,

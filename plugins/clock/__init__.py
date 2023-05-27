@@ -480,22 +480,16 @@ class Plugin(v0.QueryHandler):
 
         except Exception:  # user to report error
             v0.critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=md_name,
-                        icon=[countdown_path],
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            ClipAction(
-                                f"Copy error - report it to {md_url[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
-
-        query.add(results)
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[countdown_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )

@@ -123,9 +123,7 @@ def handleQuery(query) -> list:
                     )
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             results.insert(
                 0,

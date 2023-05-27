@@ -139,25 +139,18 @@ class Plugin(QueryHandler):
 
         except Exception:  # user to report error
             critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                results.insert(
-                    0,
-                    Item(
-                        id=self.name(),
-                        icon=icon_path,
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            ClipAction(
-                                f"Copy error - report it to {md_url[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
-
-        query.add(results)
+            query.add(Item(
+                    id=self.name(),
+                    icon=icon_path,
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
 
     def get_device_as_item(self, dev: BlDevice):
         text = dev.name

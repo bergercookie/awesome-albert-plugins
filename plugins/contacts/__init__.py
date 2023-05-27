@@ -299,22 +299,19 @@ class Plugin(v0.QueryHandler):
 
         except Exception:  # user to report error
             v0.critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                query.add(
-                    v0.Item(
-                        id=md_name,
-                        icon=[icon_path],
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            ClipAction(
-                                f"Copy error - report it to {md_url[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
 
     def get_reindex_item(self, query):
         return v0.Item(

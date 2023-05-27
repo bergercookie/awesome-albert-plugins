@@ -92,9 +92,7 @@ class Plugin(QueryHandler):
                 results.extend(self.render_search(sources_sinks, cards, query))
 
         except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
+            print(traceback.format_exc())
 
             results.insert(
                 0,

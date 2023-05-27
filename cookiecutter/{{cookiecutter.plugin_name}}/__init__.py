@@ -127,23 +127,20 @@ def handleQuery(query) -> list:
 
         except Exception:  # user to report error
             v0.critical(traceback.format_exc())
-            if dev_mode:  # let exceptions fly!
-                raise
-            else:
-                results.insert(
-                    0,
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Something went wrong! Press [ENTER] to copy error and report it",
-                        actions=[
-                            v0.ClipAction(
-                                f"Copy error - report it to {__homepage__[8:]}",
-                                f"{traceback.format_exc()}",
-                            )
-                        ],
-                    ),
-                )
+            results.insert(
+                0,
+                v0.Item(
+                    id=__title__,
+                    icon=icon_path,
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        v0.ClipAction(
+                            f"Copy error - report it to {__homepage__[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
 
     return results
 

@@ -107,9 +107,7 @@ class Plugin(v0.QueryHandler):
             query.add(get_as_item(query, query_str if query_str else randstr()))
 
         except Exception:  # user to report error
-            if dev_mode:
-                print(traceback.format_exc())
-
+            print(traceback.format_exc())
             query.add(
                 v0.Item(
                     id=md_name,

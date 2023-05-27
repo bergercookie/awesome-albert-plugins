@@ -234,9 +234,7 @@ def handleQuery(query):
                         results.append(get_tw_item(task))
 
         except Exception:  # user to report error
-            if dev_mode:
-                v0.critical(traceback.format_exc())
-                raise
+            v0.critical(traceback.format_exc())
 
             results.insert(
                 0,
