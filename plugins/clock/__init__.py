@@ -17,7 +17,7 @@ from gi.repository import GdkPixbuf, Notify  # isort:skip
 md_name = "Countdown/Stopwatch"
 md_description = "Countdown/Stopwatch functionalities"
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock"
 md_bin_dependencies = ["cvlc"]
@@ -29,7 +29,6 @@ sound_path = Path(__file__).parent.absolute() / "bing.wav"
 cache_path = Path(v0.cacheLocation()) / "clock"
 config_path = Path(v0.configLocation()) / "clock"
 data_path = Path(v0.dataLocation()) / "clock"
-dev_mode = True
 
 # plugin main functions -----------------------------------------------------------------------
 

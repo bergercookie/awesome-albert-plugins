@@ -11,7 +11,7 @@ from fuzzywuzzy import process
 import pickle
 
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_name = "Emoji picker"
 md_description = "Lookup and copy various emojis to your clipboard"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
@@ -20,7 +20,6 @@ md_bin_dependencies = ["xclip"]
 md_lib_dependencies = ["em", "fuzzywuzzy"]
 
 # Let Exceptions fly
-dev_mode = True
 
 if "parse_emojis" not in dir(em):
     raise RuntimeError(

@@ -29,7 +29,6 @@ icon_path_r = str(Path(__file__).parent / "words_r")
 cache_path = Path(v0.cacheLocation()) / "words"
 config_path = Path(v0.configLocation()) / "words"
 data_path = Path(v0.dataLocation()) / "words"
-dev_mode = True
 
 pd = PyDictionary()
 

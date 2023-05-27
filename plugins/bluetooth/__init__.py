@@ -15,7 +15,7 @@ from gi.repository import Notify
 from albert import *
 
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_name = "Bluetooth - Connect / Disconnect bluetooth devices"
 md_description = "Connect / Disconnect bluetooth devices"
 md_license = "BSD-2"
@@ -28,7 +28,6 @@ icon_error_path = str(Path(__file__).parent / "bluetooth1.svg")
 cache_path = Path(cacheLocation()) / "bluetooth"
 config_path = Path(configLocation()) / "bluetooth"
 data_path = Path(dataLocation()) / "bluetooth"
-dev_mode = False
 
 workers: List[threading.Thread] = []
 

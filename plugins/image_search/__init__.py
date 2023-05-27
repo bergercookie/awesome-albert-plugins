@@ -35,7 +35,6 @@ icon_path = str(Path(__file__).parent / "image_search")
 cache_path = Path(v0.cacheLocation()) / "image_search"
 config_path = Path(v0.configLocation()) / "image_search"
 data_path = Path(v0.dataLocation()) / "image_search"
-dev_mode = True
 
 # clean up cached images on every startup
 if cache_path.exists():

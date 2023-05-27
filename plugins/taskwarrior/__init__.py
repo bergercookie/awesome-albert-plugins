@@ -113,7 +113,6 @@ last_used_date = FileBackedVar(
     init_val=datetime.datetime.today().date(),
 )
 
-dev_mode = True
 
 # regular expression to match URLs
 # https://gist.github.com/gruber/8891611

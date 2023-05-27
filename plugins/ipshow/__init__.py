@@ -10,7 +10,7 @@ from fuzzywuzzy import process
 from albert import *
 
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_name = "IPs of the host machine"
 md_description = "Shows machine IPs"
 md_license = "BSD-2"
@@ -28,7 +28,6 @@ data_path = Path(dataLocation()) / "ipshow"
 # flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
 discard_bridge_ifaces = True
-dev_mode = True
 
 families = netifaces.address_families
 

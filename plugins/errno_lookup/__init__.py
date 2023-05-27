@@ -10,7 +10,7 @@ import albert as v0
 md_name = "Errno lookup operations"
 md_description = "Lookup error codes alongside their full name and description"
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_maintainers = "Nikos Koukis"
 md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//errno_lookup"
@@ -28,7 +28,6 @@ lines = [
     for li in subprocess.check_output(["errno", "--list"]).decode("utf-8").splitlines()
 ]
 codes_d: Dict[str, Tuple[str, str]] = {li[1]: (li[0], li[2]) for li in lines}
-dev_mode = False
 
 
 # supplementary functions ---------------------------------------------------------------------

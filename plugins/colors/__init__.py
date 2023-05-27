@@ -21,7 +21,7 @@ import albert as v0
 md_name = "Color codes visualisation"
 md_description = "Color codes visualisation"
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/colors"
 
@@ -30,7 +30,6 @@ icon_path = str(Path(__file__).parent / "colors")
 cache_path = Path(v0.cacheLocation()) / "colors"
 config_path = Path(v0.configLocation()) / "colors"
 data_path = Path(v0.dataLocation()) / "colors"
-dev_mode = True
 
 color_names = colour.COLOR_NAME_TO_RGB.keys()
 h_values = [Color(c).get_hex() for c in color_names]

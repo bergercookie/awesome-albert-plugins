@@ -27,7 +27,6 @@ icon_path = str(Path(__file__).parent / "meme-generator")
 cache_path = Path(v0.cacheLocation()) / "meme-generator"
 config_path = Path(v0.configLocation()) / "meme-generator"
 data_path = Path(v0.dataLocation()) / "meme-generator"
-dev_mode = True
 
 # plugin main functions -----------------------------------------------------------------------
 

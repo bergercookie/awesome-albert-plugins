@@ -1,15 +1,11 @@
 """Kill a process v2."""
 
 import fnmatch
-import os
 import re
-import shutil
 import signal
-import subprocess
-import sys
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import psutil
 from fuzzywuzzy import process
@@ -18,105 +14,26 @@ from psutil import Process
 
 import albert as v0
 
-__title__ = "Kill Process v2"
-__version__ = "0.4.0"
-__triggers__ = "kill "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc"
-)
+md_name = "Kill Process v2"
+md_description = "Terminate/Kill a process - find it using fuzzy expressions ..."
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc"
 
 icon_path = str(Path(__file__).parent / "logo.png")
 
 cache_path = Path(v0.cacheLocation()) / "killproc"
 config_path = Path(v0.configLocation()) / "killproc"
 data_path = Path(v0.dataLocation()) / "killproc"
-dev_mode = True
-
-# plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-
-            cmdline_to_procs = get_cmdline_to_procs()
-            matched = [
-                elem[0]
-                for elem in process.extract(query_str, cmdline_to_procs.keys(), limit=15)
-            ]
-
-            extra_actions = []
-            if any([symbol in query_str for symbol in "*?[]"]):
-                extra_actions = [
-                    v0.FuncAction(
-                        "Terminate by glob",
-                        lambda: list(
-                            map(lambda p: p.terminate(), globsearch_procs(query_str))
-                        ),
-                    ),
-                    v0.FuncAction(
-                        "Kill by glob",
-                        lambda: list(map(lambda p: p.kill(), globsearch_procs(query_str))),
-                    ),
-                ]
-            for m in matched:
-                for p in cmdline_to_procs[m]:
-                    results.append(get_as_item(p, *extra_actions))
-
-            # filtering step
-            results = [r for r in results if r is not None]
-
-        except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
 
 # supplementary functions ---------------------------------------------------------------------
 
 
 def notify(
-    msg: str, app_name: str=__title__, image=str(icon_path),
+    msg: str,
+    app_name: str = md_name,
+    image=str(icon_path),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -125,7 +42,7 @@ def notify(
 
 def cmdline(p: Process) -> str:
     """There must be a bug in psutil and sometimes `cmdline()` raises an exception. I don't
-        want that, so I'll override this behavior for now.
+    want that, so I'll override this behavior for now.
     """
     try:
         return " ".join(p.cmdline())
@@ -166,7 +83,7 @@ def kill_by_name(name: str, signal=signal.SIGTERM):
         p.send_signal(signal)
 
 
-def get_as_item(p: Process, *extra_actions):
+def get_as_item(query, p: Process, *extra_actions):
     """Return an item - ready to be appended to the items list and be rendered by Albert.
 
     if Process is not a valid object (.name or .cmdline raise an exception) then return None
@@ -177,24 +94,23 @@ def get_as_item(p: Process, *extra_actions):
         return None
 
     try:
-
         actions = [
-            v0.FuncAction("Terminate", lambda: p.terminate()),
-            v0.FuncAction("Kill", lambda: p.kill()),
-            v0.ClipAction("Get PID", f"{p.pid}"),
-            v0.FuncAction(
+            FuncAction("Terminate", lambda: p.terminate()),
+            FuncAction("Kill", lambda: p.kill()),
+            ClipAction("Get PID", f"{p.pid}"),
+            FuncAction(
                 "Terminate matching names",
                 lambda name=p.name(): kill_by_name(name, signal=signal.SIGTERM),
             ),
-            v0.FuncAction("Kill matching names", lambda name=p.name(): kill_by_name(name)),
+            FuncAction("Kill matching names", lambda name=p.name(): kill_by_name(name)),
         ]
         actions = [*extra_actions, *actions]
         return v0.Item(
-            id=__title__,
-            icon=icon_path,
+            id=md_name,
+            icon=[icon_path],
             text=name_field,
             subtext="",
-            completion=p.name(),
+            completion=f"{query.trigger}{p.name()}",
             actions=actions,
         )
     except psutil.NoSuchProcess:
@@ -233,11 +149,96 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "kill "
+
+    def synopsis(self):
+        return "process ID/name"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""
+        try:
+            query_str = query.string.strip()
+
+            cmdline_to_procs = get_cmdline_to_procs()
+            matched = [
+                elem[0]
+                for elem in process.extract(query_str, cmdline_to_procs.keys(), limit=15)
+            ]
+
+            extra_actions = []
+            if any([symbol in query_str for symbol in "*?[]"]):
+                extra_actions = [
+                    FuncAction(
+                        "Terminate by glob",
+                        lambda: list(
+                            map(lambda p: p.terminate(), globsearch_procs(query_str))
+                        ),
+                    ),
+                    FuncAction(
+                        "Kill by glob",
+                        lambda: list(map(lambda p: p.kill(), globsearch_procs(query_str))),
+                    ),
+                ]
+
+            query.add(
+                [
+                    res
+                    for m in matched
+                    for p in cmdline_to_procs[m]
+                    if (res := get_as_item(query, p, *extra_actions)) is not None
+                ]
+            )
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )

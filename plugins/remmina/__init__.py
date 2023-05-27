@@ -11,7 +11,7 @@ from typing import Tuple, Sequence
 from albert import *
 
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_name = "Remmina"
 md_description = "Start a Remmina VNC/SFTP connection"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/remmina"

@@ -30,7 +30,6 @@ cache_path = Path(v0.cacheLocation()) / "timezones"
 config_path = Path(v0.configLocation()) / "timezones"
 data_path = Path(v0.dataLocation()) / "timezones"
 country_logos_path = data_path / "logos"
-dev_mode = False
 
 # country code -> cities
 code_to_cities = dict({k: v for k, v in pytz.country_timezones.items()})

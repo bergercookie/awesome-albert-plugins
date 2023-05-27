@@ -68,7 +68,6 @@ sort_fn = sort_random
 
 vlc_socket = Path("/tmp/cvlc.unix")
 socket_timeout = 0.2
-dev_mode = False
 
 # Classes & supplementary functions -----------------------------------------------------------
 

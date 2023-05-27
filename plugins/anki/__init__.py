@@ -33,7 +33,6 @@ icon_path = str(Path(__file__).parent / "anki")
 cache_path = Path(v0.cacheLocation()) / "anki"
 config_path = Path(v0.configLocation()) / "anki"
 data_path = Path(v0.dataLocation()) / "anki"
-dev_mode = True
 
 # create plugin locations
 for p in (cache_path, config_path, data_path):

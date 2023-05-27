@@ -18,7 +18,7 @@ from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 md_name = "Contacts"
 md_description = "Contact VCF Viewer"
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
 md_bin_dependencies = []
@@ -29,7 +29,6 @@ icon_path = str(Path(__file__).parent / "contacts")
 cache_path = Path(v0.cacheLocation()) / "contacts"
 config_path = Path(v0.configLocation()) / "contacts"
 data_path = Path(v0.dataLocation()) / "contacts"
-dev_mode = True
 
 stats_path = config_path / "stats"
 vcf_path = Path(cache_path / "contacts.vcf")

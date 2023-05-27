@@ -26,7 +26,6 @@ icon_path = str(Path(__file__).parent / "scratchpad")
 cache_path = Path(v0.cacheLocation()) / "scratchpad"
 config_path = Path(v0.configLocation()) / "scratchpad"
 data_path = Path(v0.dataLocation()) / "scratchpad"
-dev_mode = True
 
 s_store_fname = config_path / "fname"
 

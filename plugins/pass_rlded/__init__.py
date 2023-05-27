@@ -46,7 +46,6 @@ pass_open_doc_exts = [
     ".png",
 ]
 
-dev_mode = True
 
 
 def pass_open_doc_compatible(path: Path) -> bool:

@@ -21,23 +21,23 @@ Currently the following plugins have been migrated to the v0.5 API:
 - Abbreviations
 - Bluetooth
 - Clock
+- Colors
 - Contacts
 - Emoji Picker
 - Errno
 - Google Translate
+- Harakiri
 - IP Show
+- Killproc
 - Pulse Audio
 - Remmina
 - `DuckDuckGo`-based autocompletion search (all search plugins)
-- Colors
 
 Not updated yet
 
 - anki
-- harakiri
 - image_search
 - jira
-- killproc
 - meme_generator
 - pass_rlded
 - pass_totp_cli

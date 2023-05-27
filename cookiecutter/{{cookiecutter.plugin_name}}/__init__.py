@@ -29,7 +29,6 @@ icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
-dev_mode = True
 
 # create plugin locations
 for p in (cache_path, config_path, data_path):

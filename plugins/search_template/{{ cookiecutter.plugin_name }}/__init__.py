@@ -17,7 +17,7 @@ from typing import Dict, Sequence, Tuple
 import albert as v0
 
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_name = "Search - {{ cookiecutter.plugin_name }}"
 md_description = "{{ cookiecutter.plugin_short_description }}"
 md_maintainers = "Nikos Koukis"
@@ -29,7 +29,6 @@ icon_path = str(Path(__file__).parent / "{{ cookiecutter.plugin_name }}")
 cache_path = Path(v0.cacheLocation()) / "{{ cookiecutter.plugin_name }}"
 config_path = Path(v0.configLocation()) / "{{ cookiecutter.plugin_name }}"
 data_path = Path(v0.dataLocation()) / "{{ cookiecutter.plugin_name }}"
-dev_mode = True
 
 # set it to the corresponding site for the search at hand
 # e.g.,: https://github.com/jarun/googler/blob/master/auto-completion/googler_at/googler_at

@@ -27,7 +27,7 @@ import albert as v0
 md_name = "Google Translate"
 md_description = "Google Translate to from different languages."
 md_iid = "0.5"
-md_version = "0.5"
+md_version = "0.2"
 md_maintainers = "Manuel Schneider"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins"
 

@@ -12,7 +12,7 @@ from pulsectl import Pulse, pulsectl
 from albert import *
 
 md_iid = "0.5"
-md_version = "1.2"
+md_version = "0.2"
 md_name = "PulseAudio - Set I/O Audio devices and profile"
 md_description = "Switch between PulseAudio sources and sinks"
 md_license = "BSD-2"
@@ -32,7 +32,6 @@ config_icon_path = str(Path(__file__).parent / "configuration")
 cache_path = Path(cacheLocation()) / "pulse_control"
 config_path = Path(configLocation()) / "pulse_control"
 data_path = Path(dataLocation()) / "pulse_control"
-dev_mode = True
 
 pulse = Pulse("albert-client")
 
