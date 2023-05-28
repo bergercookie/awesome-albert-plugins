@@ -4,25 +4,29 @@
 
 Make sure you have the following python packages installed:
 
-* `Pillow`
-* `pytz`
-* `requests`
-* `tzlocal`
-* `fuzzywuzzy`
-* `pycountry`
+- `Pillow`
+- `pytz`
+- `requests`
+- `tzlocal`
+- `thefuzz`
+- `pycountry`
 
 ## Description
 
-Lookup timezones based on either the city or the country name. The plugin will
+Lookup time zones based on either the city or the country name. The plugin will
 autocomplete all the appropriate city and country names based on fuzzy search
+and will always show your current country/city on top so that you can easily
+compare
 
 On top it will always show you your local timezone so that you can compare.
 
-Thanks to https://flagpedia.net/ for the country logos
+Thanks to <https://flagpedia.net/> for the country logos
 
 ## Demo
 
-| ![basic-usage](misc/demo0.png) | ![basic-usage](misc/demo1.png) |
+![basic-usage](misc/demo0.png)
+
+![basic-usage](misc/demo1.png)
 
 ## Installation instructions
 

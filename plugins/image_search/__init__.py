@@ -10,7 +10,6 @@ from typing import Iterator, List
 
 import albert as v0
 from gi.repository import GdkPixbuf, Notify
-from requests.exceptions import RequestException
 
 # load bing module - from the same directory as this file
 dir_ = Path(__file__).absolute().parent
@@ -22,11 +21,12 @@ spec.loader.exec_module(bing)  # type: ignore
 BingImage = bing.BingImage  # type: ignore
 bing_search = bing.bing_search  # type: ignore
 
-__title__ = "Image Search and Preview"
-__version__ = "0.4.0"
-__triggers__ = "img "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "Image Search and Preview"
+md_description = "TODO"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search"
 )
 
@@ -40,6 +40,7 @@ data_path = Path(v0.dataLocation()) / "image_search"
 if cache_path.exists():
     for img in cache_path.glob("*"):
         img.unlink()
+
 
 # Keystroke Monitor ---------------------------------------------------------------------------
 class KeystrokeMonitor:
@@ -69,82 +70,8 @@ class KeystrokeMonitor:
 # Do not flood the web server with queries, otherwise it may block your IP.
 keys_monitor = KeystrokeMonitor()
 
-# plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-
-            if len(query_str) < 2:
-                keys_monitor.reset()
-                return results
-
-            keys_monitor.report()
-            if keys_monitor.triggered():
-                bing_images = list(bing_search_set_download(query=query_str, limit=3))
-                if not bing_images:
-                    results.insert(
-                        0,
-                        v0.Item(
-                            id=__title__,
-                            icon=icon_path,
-                            text="No images found",
-                            subtext=f"Query: {query_str}",
-                        ),
-                    )
-                    return results
-
-                results.extend(get_bing_results_as_items(bing_images))
-
-        except Exception:  # user to report error
-            if dev_mode:  # let exceptions fly!
-                print(traceback.format_exc())
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
 
 # supplementary functions ---------------------------------------------------------------------
-
-
 def bing_search_set_download(query, limit) -> Iterator[BingImage]:
     for img in bing_search(query=query, limit=limit):
         img.download_dir = cache_path
@@ -153,7 +80,7 @@ def bing_search_set_download(query, limit) -> Iterator[BingImage]:
 
 def notify(
     msg: str,
-    app_name: str = __title__,
+    app_name: str = md_name,
     image=str(icon_path),
 ):
     Notify.init(app_name)
@@ -170,54 +97,6 @@ def copy_image(result: BingImage):
         subprocess.check_call(["convert", "-format", "png", fname_in, fname_out])
 
     subprocess.check_call(["xclip", "-selection", "clipboard", "-t", "image/png", fname_out])
-
-
-def get_bing_results_as_items(bing_results: List[BingImage]):
-    """Get bing results as Albert items ready to be rendered in the UI."""
-    # TODO Seems to only run in a single thread?!
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(get_as_item, result): "meanings" for result in bing_results}
-
-        items = []
-        for future in concurrent.futures.as_completed(futures):
-            future_res = future.result()
-            if future_res is not None:
-                items.append(future_res)
-
-        return items
-
-def get_as_item(result: BingImage):
-    """Return an item.
-
-    Will return None if the link to the image is not reachable (e.g., on 404)
-    """
-    try:
-        img = str(result.image.absolute())
-    except subprocess.CalledProcessError:
-        v0.debug(f"Could not fetch item -> {result.url}")
-        return None
-
-    actions = [
-        v0.ClipAction("Copy url", result.url),
-        v0.ClipAction("Copy local path to image", img),
-        v0.UrlAction("Open in browser", result.url),
-    ]
-
-    if result.type != "gif":
-        actions.insert(
-            0, v0.FuncAction("Copy image", lambda result=result: copy_image(result))
-        )
-
-    item = v0.Item(
-        id=__title__,
-        icon=str(result.thumbnail),
-        text=result.url[-20:],
-        subtext=result.type,
-        completion=f"{__triggers__}",
-        actions=actions,
-    )
-
-    return item
 
 
 def sanitize_string(s: str) -> str:
@@ -252,11 +131,137 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "img "
+
+    def synopsis(self):
+        return "search text"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def get_as_item(self, query, result: BingImage):
+        """Return an item.
+
+        Will return None if the link to the image is not reachable (e.g., on 404)
+        """
+        try:
+            img = str(result.image.absolute())
+        except subprocess.CalledProcessError:
+            v0.debug(f"Could not fetch item -> {result.url}")
+            return None
+
+        actions = [
+            ClipAction("Copy url", result.url),
+            ClipAction("Copy local path to image", img),
+            UrlAction("Open in browser", result.url),
+        ]
+
+        if result.type != "gif":
+            actions.insert(
+                0, FuncAction("Copy image", lambda result=result: copy_image(result))
+            )
+
+        item = v0.Item(
+            id=f"{md_name}_{hash(result)}",
+            icon=[str(result.thumbnail)],
+            text=result.url[-20:],
+            subtext=result.type,
+            completion=f"{query.trigger}",
+            actions=actions,
+        )
+
+        return item
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        try:
+            query_str = query.string
+
+            if len(query_str) < 2:
+                keys_monitor.reset()
+
+            keys_monitor.report()
+            if not keys_monitor.triggered():
+                return
+
+            bing_images = list(bing_search_set_download(query=query_str, limit=3))
+            if not bing_images:
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="No images found",
+                        subtext=f"Query: {query_str}",
+                    ),
+                )
+                return
+
+            query.add(self.get_bing_results_as_items(query, bing_images))
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+    def get_bing_results_as_items(self, query, bing_results: List[BingImage]):
+        """Get bing results as Albert items ready to be rendered in the UI."""
+        # TODO Seems to only run in a single thread?!
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(self.get_as_item, query, result): "meanings"
+                for result in bing_results
+            }
+
+            items = []
+            for future in concurrent.futures.as_completed(futures):
+                future_res = future.result()
+                if future_res is not None:
+                    items.append(future_res)
+
+            return items

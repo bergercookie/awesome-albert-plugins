@@ -32,25 +32,25 @@ Currently the following plugins have been migrated to the v0.5 API:
 - Pulse Audio
 - Remmina
 - `DuckDuckGo`-based autocompletion search (all search plugins)
+- image_search
+- jira
+- timezones
 
 Not updated yet
 
-- anki
-- image_search
-- jira
+- tldr_pages
 - meme_generator
 - pass_rlded
 - pass_totp_cli
-- pomodoro
-- saxophone
 - scratchpad
-- scrot
-- taskwarrior
-- timezones
-- tldr_pages
 - url_lookup
+- taskwarrior
+- saxophone
 - words
 - xkcd
+- anki
+- pomodoro
+- scrot
 
 ## Demos
 

@@ -1,6 +1,9 @@
 """Timezones lookup."""
 
 import concurrent.futures
+
+# TODO Remove this
+import pprint
 import time
 import traceback
 from datetime import datetime
@@ -11,17 +14,23 @@ import pycountry
 import pytz
 import requests
 import tzlocal
-from fuzzywuzzy import process
-from PIL import Image, ImageOps
+from thefuzz import process
+from PIL import Image
 
-__title__ = "Timezones lookup"
-__version__ = "0.4.0"
-__triggers__ = "tz "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones"
-)
-__py_deps__ = ["Pillow", "pycountry", "fuzzywuzzy", "tzlocal", "requests", "traceback", "pytz"]
+md_name = "Timezones"
+md_description = "Timezones lookup based on city/country"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones"
+md_lib_dependencies = [
+    "Pillow",
+    "pycountry",
+    "thefuzz[speedup]",
+    "tzlocal==2.1",
+    "requests",
+    "pytz",
+]
 
 
 icon_path = str(Path(__file__).parent / "timezones")
@@ -38,11 +47,21 @@ city_to_code = {vi: k for k, v in pytz.country_timezones.items() for vi in v}
 cities = list(city_to_code.keys())
 country_to_code = {c.name: c.alpha_2 for c in pycountry.countries if c.alpha_2 in codes}
 country_to_cities = {
-    country: [code_to_cities[code]] for country, code in country_to_code.items()
+    country: code_to_cities[code] for country, code in country_to_code.items()
 }
 countries = list(country_to_code.keys())
-
 local_tz_str = tzlocal.get_localzone().zone
+
+
+def get_pretty_city_name(city: str) -> str:
+    return "".join(city.split("/")[-1].split("_"))
+
+
+full_name_to_city = {
+    f"{city_to_code[city]}{country.replace(' ', '')}{get_pretty_city_name(city)}": city
+    for country in countries
+    for city in country_to_cities[country]
+}
 
 
 def download_logo_for_code(code: str) -> bytes:
@@ -107,26 +126,6 @@ def download_all_logos():
 # plugin main functions -----------------------------------------------------------------------
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-    # fetch all logos at startup
-    country_logos_path.mkdir(exist_ok=True)
-    if not list(country_logos_path.iterdir()):
-        print("Downloading country logos")
-        t = time.time()
-        download_all_logos()
-        print(f"Downloaded country logos - Took {time.time() - t} seconds")
-
-
-def finalize():
-    pass
-
-
 def get_uniq_elements(seq):
     """Return only the unique elements off the list - Preserve the order.
 
@@ -135,60 +134,6 @@ def get_uniq_elements(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-
-            matched = [
-                elem[0] for elem in process.extract(query_str, [*cities, *countries], limit=8)
-            ]
-
-            matched2 = []
-            # replace country names with its cities
-            for m in matched:
-                if m in countries:
-                    matched2.extend(*country_to_cities[m])
-                else:
-                    matched2.append(m)
-            matched2 = get_uniq_elements(matched2)
-
-            # add own timezone:
-            if local_tz_str in matched2:
-                matched2.remove(local_tz_str)
-
-            matched2.insert(0, local_tz_str)
-            results.extend([get_as_item(m) for m in matched2])
-
-        except Exception:  # user to report error
-            print(traceback.format_exc())
-
-            query.add(
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -207,13 +152,13 @@ def get_as_item(city: str):
     subtext = f"[{code}] | {city}"
 
     return v0.Item(
-        id=__title__,
-        icon=icon,
+        id=f"{md_name}_{code}",
+        icon=[icon],
         text=text,
         subtext=subtext,
         completion=city,
         actions=[
-            v0.UrlAction(
+            UrlAction(
                 "Open in zeitverschiebung.net",
                 (
                     f'https://www.zeitverschiebung.net/en/timezone/{city.replace("/", "--").lower()}'
@@ -255,11 +200,95 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "tz "
+
+    def synopsis(self):
+        return "city/country name"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+        # fetch all logos at startup
+        country_logos_path.mkdir(exist_ok=True)
+        if not list(country_logos_path.iterdir()):
+            print("Downloading country logos")
+            t = time.time()
+            download_all_logos()
+            print(f"Downloaded country logos - Took {time.time() - t} seconds")
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        try:
+            query_str = query.string.strip()
+
+            matched = [
+                elem for elem in process.extract(query_str, full_name_to_city.keys(), limit=8)
+            ]
+            v0.debug(matched)
+
+            unique_cities_matched = get_uniq_elements(
+                [full_name_to_city[m[0]] for m in matched]
+            )
+
+            # add own timezone:
+            if local_tz_str in unique_cities_matched:
+                unique_cities_matched.remove(local_tz_str)
+                unique_cities_matched.insert(0, local_tz_str)
+            results.extend([get_as_item(m) for m in unique_cities_matched])
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

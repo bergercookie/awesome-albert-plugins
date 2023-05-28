@@ -64,6 +64,9 @@ class BingImage:
     def url(self):
         return self._url
 
+    def __hash__(self):
+        return hash(self.url)
+
 
 def download_image(url, filepath: Path = Path()):
     v0.debug(f"Downloading image {url} -> {filepath}...")
@@ -72,7 +75,6 @@ def download_image(url, filepath: Path = Path()):
 
 
 def bing_search(query: str, limit: int, adult_filter=False) -> Iterator[BingImage]:
-
     bool_corrs = {
         True: "on",
         False: "off",
@@ -98,7 +100,11 @@ def bing_search(query: str, limit: int, adult_filter=False) -> Iterator[BingImag
                 break
 
             try:
-                iusc = json.loads(a.get("m").replace("\\", ""))
+                if (m := a.get("m")) is not None:
+                    iusc = json.loads(m.replace("\\", ""))
+                else:
+                    continue
+
                 url = iusc["murl"]
                 yield BingImage(url=url)
 
