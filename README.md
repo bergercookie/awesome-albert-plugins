@@ -12,45 +12,9 @@
 ## Description
 
 This is a collection of plugins and themes for the
-[Albert](https://albertlauncher.github.io/) launcher. This branch is still a
-work in progress and we're in the process of migrating the plugins to abide to
-the new Albert API.
-
-Currently the following plugins have been migrated to the v0.5 API:
-
-- Abbreviations
-- Bluetooth
-- Clock
-- Colors
-- Contacts
-- Emoji Picker
-- Errno
-- Google Translate
-- Harakiri
-- IP Show
-- Killproc
-- Pulse Audio
-- Remmina
-- `DuckDuckGo`-based autocompletion search (all search plugins)
-- image_search
-- jira
-- timezones
-
-Not updated yet
-
-- tldr_pages
-- meme_generator
-- pass_rlded
-- pass_totp_cli
-- scratchpad
-- url_lookup
-- taskwarrior
-- saxophone
-- words
-- xkcd
-- anki
-- pomodoro
-- scrot
+[Albert](https://albertlauncher.github.io/) launcher. It strives to be up to
+date with the latest state of the Albert launcher and its Python API. In case of
+an older albert version, see the branches of this repo.
 
 ## Demos
 
@@ -67,7 +31,6 @@ Not updated yet
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words/misc/demo0.png)               |          ![](https://raw.githubusercontent.com/bergercookie/awesome-albert-plugins/master/misc/tldr.gif)           |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/harakiri/misc/demo0.png)            |    ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search/misc/demo0.png)     |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme_generator/misc/demo.gif)       |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock/misc/clock.png)        |
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr/abbr.png) | |
 
 ## Plugins
 
@@ -122,8 +85,6 @@ Currently the list of plugins includes:
     - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
       mode" option
     - See the [`ddgr`-specific section](#ddgr-based-plugins) for more
-
-- Improved implementations of the original 🍅 `Pomodoro` plugin
 
 Plugins have been tested with the Albert python `v0.4` interface. If you're
 looking for a version that works with earlier versions of the plugin, see the

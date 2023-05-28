@@ -7,19 +7,20 @@ from pathlib import Path
 
 import albert as v0
 import gi
-from fuzzywuzzy import process
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
-__title__ = "Fetch OTP codes using otp-cli and pass"
-__version__ = "0.4.0"
-__triggers__ = "totp"
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "OTP/2FA Codes"
+md_description = "Fetch OTP codes using otp-cli and pass"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pass_totp_cli"
 )
+md_bin_dependencies = ["pass", "totp"]
 
 icon_path = str(Path(__file__).parent / "pass_totp_cli")
 
@@ -35,7 +36,6 @@ pass_dir = Path(
 
 pass_2fa_dir = pass_dir / "2fa"
 
-# plugin main functions -----------------------------------------------------------------------
 
 def do_notify(msg: str, image=None):
     app_name = "pass_topt_cli"
@@ -43,52 +43,6 @@ def do_notify(msg: str, image=None):
     image = image
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
-
-
-
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            for path in pass_2fa_dir.glob("**/*.gpg"):
-                results.append(get_as_item(path))
-
-        except Exception:  # user to report error
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -105,12 +59,12 @@ def totp_show(name: str) -> str:
 def get_as_item(path: Path):
     name = str(path.relative_to(pass_2fa_dir).parent)
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=name,
         completion="",
         actions=[
-            v0.FuncAction(
+            FuncAction(
                 "Copy 2FA code",
                 lambda name=name: totp_show(name=name).strip(),
             )
@@ -132,11 +86,70 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "totp "
+
+    def synopsis(self):
+        return ""
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        results = []
+
+        try:
+            for path in pass_2fa_dir.glob("**/*.gpg"):
+                results.append(get_as_item(path))
+
+        except Exception:  # user to report error
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

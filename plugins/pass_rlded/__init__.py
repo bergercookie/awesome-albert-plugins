@@ -4,24 +4,24 @@ import os
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 import traceback
+from pathlib import Path
 from typing import Sequence
 
 import albert as v0
-from fuzzywuzzy import process
-
 import gi
+from fuzzywuzzy import process
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
-__title__ = "Pass - UNIX Password Manager - fuzzy search"
-__version__ = "0.4.0"
-__triggers__ = "pass "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "Pass"
+md_description = "Pass - UNIX Password Manager - fuzzy search"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pass_rlded"
 )
 
@@ -48,7 +48,6 @@ pass_open_doc_exts = [
 ]
 
 
-
 def pass_open_doc_compatible(path: Path) -> bool:
     """Determine if the given path can be opened via pass_open_doc."""
     if not shutil.which("pass-open-doc"):
@@ -72,7 +71,7 @@ class PasswordsCacheManager:
     def get_all_gpg_files(self) -> Sequence[Path]:
         """Get a list of all the ggp-encrypted files under the given dir."""
         passwords: Sequence[Path]
-        if self.refresh == True or not data_exists("password_paths"):
+        if self.refresh is True or not data_exists("password_paths"):
             passwords = self._refresh_passwords()
             self.refresh = False
         else:
@@ -83,6 +82,7 @@ class PasswordsCacheManager:
 
 passwords_cache = PasswordsCacheManager(pass_dir=pass_dir)
 
+
 # plugin main functions -----------------------------------------------------------------------
 def do_notify(msg: str, image=None):
     app_name = "pass_rlded"
@@ -90,18 +90,6 @@ def do_notify(msg: str, image=None):
     image = image
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
-
-
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
 
 
 def generate_passwd_cmd(passwd_name: str) -> str:
@@ -112,135 +100,43 @@ def generate_passwd_cmd_li(passwd_name: str) -> Sequence[str]:
     return f"pass generate -c -f {passwd_name}".split()
 
 
-def handleQuery(query):
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-            if len(query_str) == 0:
-                passwords_cache.refresh = True
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Continue typing to fuzzy-search on passwords...",
-                        actions=[],
-                    )
-                )
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Generate a new password...",
-                        completion=f"{__triggers__}generate",
-                        actions=[],
-                    )
-                )
-
-            if query_str.startswith("generate"):
-                if len(query_str) > 1:
-                    passwd_name = " ".join(query_str.split()[1:])
-                    results.insert(
-                        0,
-                        v0.Item(
-                            id=__title__,
-                            icon=icon_path,
-                            text="Generate new password",
-                            subtext=generate_passwd_cmd(passwd_name),
-                            completion=f"{__triggers__}{query_str}",
-                            actions=[
-                                v0.ProcAction(
-                                    "Generate new password",
-                                    generate_passwd_cmd_li(passwd_name=passwd_name),
-                                )
-                            ],
-                        ),
-                    )
-                else:
-                    results.append(
-                        v0.Item(
-                            id=__title__,
-                            icon=icon_path,
-                            text="What's the path of this new password?",
-                            subtext="e.g., awesome-e-shop/johndoe@mail.com",
-                            completion=f"{__triggers__}generate",
-                            actions=[],
-                        )
-                    )
-
-            # get a list of all the paths under pass_dir
-            gpg_files = passwords_cache.get_all_gpg_files()
-
-            # fuzzy search on the paths list
-            matched = process.extract(query_str, gpg_files, limit=10)
-            for m in [elem[0] for elem in matched]:
-                results.append(get_as_item(m))
-
-        except Exception:  # user to report error
-            print(traceback.format_exc())
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{sys.exc_info()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_as_item(password_path: Path):
+def get_as_item(query, password_path: Path):
     full_path_no_suffix = Path(f"{password_path.parent}/{password_path.stem}")
     full_path_rel_root = full_path_no_suffix.relative_to(pass_dir)
 
     full_path_rel_root_str = str(full_path_rel_root)
 
     actions = [
-        v0.ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
-        v0.ClipAction("Copy Full Path", str(password_path)),
-        v0.ClipAction("Copy Password name", password_path.name),
-        v0.ClipAction("Copy pass-compatible path", full_path_rel_root_str),
+        ProcAction("Remove", ["pass", "rm", "--force", full_path_rel_root_str]),
+        ClipAction("Copy Full Path", str(password_path)),
+        ClipAction("Copy Password name", password_path.name),
+        ClipAction("Copy pass-compatible path", full_path_rel_root_str),
     ]
 
-    actions.insert(0, v0.ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
+    actions.insert(0, ProcAction("Edit", ["pass", "edit", full_path_rel_root_str]))
     actions.insert(
         0,
-        v0.ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
+        ProcAction("Copy", ["pass", "--clip", full_path_rel_root_str]),
     )
 
     if pass_open_doc_compatible(password_path):
         actions.insert(
             0,
-            v0.FuncAction(
+            FuncAction(
                 "Open document with pass-open-doc",
                 lambda p=str(password_path): subprocess.run(["pass-open-doc", p], check=True),
             ),
         )
 
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=f"{password_path.stem}",
         subtext=full_path_rel_root_str,
-        completion=f"{__triggers__}{full_path_rel_root_str}",
+        completion=f"{query.trigger}{full_path_rel_root_str}",
         actions=actions,
     )
 
@@ -275,11 +171,134 @@ def data_exists(data_name: str) -> bool:
     return (config_path / data_name).is_file()
 
 
-def setup(query):
-    """setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+class ProcAction(v0.Action):
+    def __init__(self, name, args):
+        super().__init__(name, name, lambda: v0.runDetachedProcess(args))
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "pass "
+
+    def synopsis(self):
+        return "pass name"
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        results = []
+
+        try:
+            query_str = query.string.strip()
+            if len(query_str) == 0:
+                passwords_cache.refresh = True
+                results.append(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Continue typing to fuzzy-search on passwords...",
+                        actions=[],
+                    )
+                )
+                results.append(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Generate a new password...",
+                        completion=f"{query.trigger}generate",
+                        actions=[],
+                    )
+                )
+
+            if query_str.startswith("generate"):
+                if len(query_str) > 1:
+                    passwd_name = " ".join(query_str.split()[1:])
+                    results.insert(
+                        0,
+                        v0.Item(
+                            id=md_name,
+                            icon=[icon_path],
+                            text="Generate new password",
+                            subtext=generate_passwd_cmd(passwd_name),
+                            completion=f"{query.trigger}{query_str}",
+                            actions=[
+                                ProcAction(
+                                    "Generate new password",
+                                    generate_passwd_cmd_li(passwd_name=passwd_name),
+                                )
+                            ],
+                        ),
+                    )
+                else:
+                    results.append(
+                        v0.Item(
+                            id=md_name,
+                            icon=[icon_path],
+                            text="What's the path of this new password?",
+                            subtext="e.g., awesome-e-shop/johndoe@mail.com",
+                            completion=f"{query.trigger} generate",
+                            actions=[],
+                        )
+                    )
+
+            # get a list of all the paths under pass_dir
+            gpg_files = passwords_cache.get_all_gpg_files()
+
+            # fuzzy search on the paths list
+            matched = process.extract(query_str, gpg_files, limit=10)
+            for m in [elem[0] for elem in matched]:
+                results.append(get_as_item(query, m))
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{sys.exc_info()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)
+

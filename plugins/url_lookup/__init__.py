@@ -9,11 +9,12 @@ import requests
 
 import albert as v0
 
-__title__ = "HTTP URL Lookup operations"
-__version__ = "0.4.0"
-__triggers__ = "url "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "HTTP URL Lookup codes"
+md_description = "HTTP URL Lookup codes and their description such as 404, 301, etc."
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//url_lookup"
 )
 
@@ -28,71 +29,18 @@ codes_d = {str(k): v for k, v in requests.status_codes._codes.items()}
 # plugin main functions -----------------------------------------------------------------------
 
 
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-            for item in codes_d.items():
-                if query_str in item[0]:
-                    results.append(get_as_item(item))
-                else:
-                    # multiple descriptions per code
-                    for v in item[1]:
-                        if query_str in v:
-                            results.append(get_as_item(item))
-                            break
-
-        except Exception:  # user to report error
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
 def get_as_item(t: Tuple[str, tuple]):
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=f"{t[0]} - {t[1][0]}",
         subtext="",
         completion="",
         actions=[
-            v0.UrlAction("More info", f"https://httpstatuses.com/{t[0]}"),
+            UrlAction("More info", f"https://httpstatuses.com/{t[0]}"),
         ],
     )
 
@@ -111,11 +59,79 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "url "
+
+    def synopsis(self):
+        return "some url code e.g., 404"
+
+    def finalize(self):
+        pass
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def handleQuery(self, query) -> None:
+        results = []
+
+        try:
+            query_str = query.string
+            for item in codes_d.items():
+                if query_str in item[0]:
+                    results.append(get_as_item(item))
+                else:
+                    # multiple descriptions per code
+                    for v in item[1]:
+                        if query_str in v:
+                            results.append(get_as_item(item))
+                            break
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

@@ -1,26 +1,20 @@
 """Words: meaning, synonyms, antonyms, examples."""
 
 import concurrent.futures
-import os
-import shutil
-import subprocess
-import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Dict, List
-
-from PyDictionary import PyDictionary
 
 import albert as v0
+from PyDictionary import PyDictionary
 
-__title__ = "Words: meaning, synonyms, antonyms, examples"
-__version__ = "0.4.0"
-__triggers__ = "word "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words"
-)
+md_name = "Words"
+md_description = "Words: meaning, synonyms, antonyms, examples"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words"
+md_lib_dependencies = "git+https://github.com/ctoth/PyDictionary@0acf69d"
 
 icon_path = str(Path(__file__).parent / "words")
 icon_path_g = str(Path(__file__).parent / "words_g")
@@ -39,7 +33,7 @@ pd = PyDictionary()
 class KeystrokeMonitor:
     def __init__(self):
         super(KeystrokeMonitor, self)
-        self.thres = 0.3  # s
+        self.thres = 0.5  # s
         self.prev_time = time.time()
         self.curr_time = time.time()
 
@@ -64,89 +58,10 @@ class KeystrokeMonitor:
 # blocks my IP.
 keys_monitor = KeystrokeMonitor()
 
-
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string.strip()
-
-            # too small request - don't even send it.
-            if len(query_str) < 2:
-                keys_monitor.reset()
-                return results
-
-            if len(query_str.split()) > 1:
-                # pydictionary or synonyms.com don't seem to support this
-                results.append(
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="A term must be only a single word",
-                        actions=[],
-                    )
-                )
-
-                return results
-
-            # determine if we can make the request --------------------------------------------
-            keys_monitor.report()
-            if keys_monitor.triggered():
-                results.extend(get_items_for_word(query_str))
-
-                if not results:
-                    results.insert(
-                        0,
-                        v0.Item(
-                            id=__title__, icon=icon_path, text="No results.", actions=[],
-                        ),
-                    )
-
-        except Exception:  # user to report error
-            print(traceback.format_exc())
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_items_for_word(word: str) -> list:
+def get_items_for_word(query, word: str) -> list:
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
     # TODO Do these in parallel
     outputs = {}
@@ -174,12 +89,14 @@ def get_items_for_word(word: str) -> list:
             for vi in v:
                 items.append(
                     v0.Item(
-                        id=__title__,
-                        icon=icon_path,
+                        id=md_name,
+                        icon=[icon_path],
                         text=vi,
                         subtext=k,
-                        completion=f"{__triggers__} {word}",
-                        actions=[v0.ClipAction("Copy", vi),],
+                        completion=f"{query.trigger} {word}",
+                        actions=[
+                            ClipAction("Copy", vi),
+                        ],
                     )
                 )
 
@@ -187,12 +104,12 @@ def get_items_for_word(word: str) -> list:
     if synonyms:
         items.append(
             v0.Item(
-                id=__title__,
-                icon=icon_path_g,
+                id="{md_name}_g",
+                icon=[icon_path_g],
                 text="Synonyms",
                 subtext="|".join(synonyms),
                 completion=synonyms[0],
-                actions=[v0.ClipAction(a, a) for a in synonyms],
+                actions=[ClipAction(a, a) for a in synonyms],
             )
         )
 
@@ -200,20 +117,16 @@ def get_items_for_word(word: str) -> list:
     if antonyms:
         items.append(
             v0.Item(
-                id=__title__,
-                icon=icon_path_r,
+                id="{md_name}_r",
+                icon=[icon_path_r],
                 text="Antonyms",
                 subtext="|".join(antonyms),
                 completion=antonyms[0],
-                actions=[v0.ClipAction(a, a) for a in antonyms],
+                actions=[ClipAction(a, a) for a in antonyms],
             )
         )
 
     return items
-
-
-def sanitize_string(s: str) -> str:
-    return s.replace("<", "&lt;")
 
 
 def get_as_subtext_field(field, field_title=None) -> str:
@@ -244,11 +157,105 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
 
-    results = []
-    return results
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "word "
+
+    def synopsis(self):
+        return "some word e.g., obnoxious"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        try:
+            query_str = query.string.strip()
+
+            # too small request - don't even send it.
+            if len(query_str) < 2:
+                keys_monitor.reset()
+                return
+
+            if len(query_str.split()) > 1:
+                # pydictionary or synonyms.com don't seem to support this
+                query.add(
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="A term must be only a single word",
+                        actions=[],
+                    )
+                )
+                return
+
+            # determine if we can make the request --------------------------------------------
+            keys_monitor.report()
+            if keys_monitor.triggered():
+                results.extend(get_items_for_word(query, query_str))
+
+                if not results:
+                    query.add(
+                        0,
+                        v0.Item(
+                            id=md_name,
+                            icon=[icon_path],
+                            text="No results.",
+                            actions=[],
+                        ),
+                    )
+
+                    return
+                else:
+                    query.add(results)
+
+        except Exception:  # user to report error
+            print(traceback.format_exc())
+            query.add(
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )

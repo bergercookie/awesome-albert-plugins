@@ -9,18 +9,17 @@ from typing import Any, Callable, Optional, Tuple
 import albert as v0
 import httpx
 from gi.repository import GdkPixbuf, Notify
-from overrides import overrides
 
-__title__ = "Anki Interaction - Create new anki cards fast"
-__title_short__ = "Anki Interaction"  # Custom
-__version__ = "0.4.0"
-__triggers__ = "anki "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki"
-)
-__exec_deps__ = []
-__py_deps__ = ["httpx", "fuzzywuzzy"]
+md_name = "Anki"
+md_description = "Anki Interaction - Create new anki cards fast"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki"
+md_bin_dependencies = ["anki"]
+md_lib_dependencies = ["httpx", "fuzzywuzzy"]
+
+notif_title = "Anki Interaction"  # Custom metadata
 
 icon_path = str(Path(__file__).parent / "anki")
 
@@ -39,6 +38,9 @@ AVAIL_NOTE_TYPES = {
 }
 
 
+curr_trigger: str = ""
+
+
 # FileBackedVar class -------------------------------------------------------------------------
 class FileBackedVar:
     def __init__(self, varname: str, convert_fn: Callable = str, init_val: Any = None):
@@ -49,7 +51,6 @@ class FileBackedVar:
         # initialisation function
 
         if init_val:
-
             with open(self._fpath, "w") as f:
                 f.write(str(init_val))
         else:
@@ -118,66 +119,10 @@ def add_anki_note(note_type: str, **kargs):
         notify(f"Unable to add new note, params:\n\n{params}")
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-    pass
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-            if len(query_str) < 2:
-                results.extend([s.get_as_albert_item() for s in subcommands])
-
-            else:
-                subcommand_query = get_subcommand_query(query_str)
-
-                if subcommand_query:
-                    results.extend(
-                        subcommand_query.command.get_as_albert_items_full(
-                            subcommand_query.query
-                        )
-                    )
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title_short__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 def notify(
     msg: str,
-    app_name: str = __title_short__,
+    app_name: str = notif_title,
     image=str(icon_path),
 ):
     Notify.init(app_name)
@@ -190,7 +135,7 @@ def get_as_item(**kargs) -> v0.Item:
         icon = kargs.pop("icon")
     else:
         icon = icon_path
-    return v0.Item(id=__title_short__, icon=icon, **kargs)
+    return v0.Item(id=notif_title, icon=[icon], **kargs)
 
 
 def sanitize_string(s: str) -> str:
@@ -225,24 +170,16 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """Setup is successful if an empty list is returned.
-
-    Use this function if you need the user to provide you data
-    """
-
-    results = []
-    return results
-
-
 # subcommands ---------------------------------------------------------------------------------
 class Subcommand:
     def __init__(self, *, name, desc):
         self.name = name
         self.desc = desc
 
-    def get_as_albert_item(self):
-        return get_as_item(text=self.desc, completion=f"{__triggers__}{self.name} ")
+    def get_as_albert_item(self, *args, **kargs):
+        return get_as_item(
+            text=self.desc, completion=f"{curr_trigger}{self.name} ", *args, **kargs
+        )
 
     def get_as_albert_items_full(self, query_str: str):
         return [self.get_as_albert_item()]
@@ -259,16 +196,15 @@ class ChangeDeck(Subcommand):
             name="change-deck", desc="Change the default deck to dump new notes to"
         )
 
-    @overrides  # type: ignore
     def get_as_albert_items_full(self, query_str: str):
-        item = self.get_as_albert_item()
-        item.subtext = ChangeDeck.usage_str if not query_str else f"Deck to use: {query_str}"
-
-        item.addAction(
-            v0.FuncAction(
-                "Change deck",
-                lambda new_deck_name=query_str: ChangeDeck.change_to(new_deck_name),
-            )
+        item = self.get_as_albert_item(
+            subtext=ChangeDeck.usage_str if not query_str else f"Deck to use: {query_str}",
+            actions=[
+                FuncAction(
+                    "Change deck",
+                    lambda new_deck_name=query_str: ChangeDeck.change_to(new_deck_name),
+                )
+            ],
         )
         return [item]
 
@@ -278,7 +214,8 @@ class ChangeDeck(Subcommand):
         avail_decks = anki_post("deckNames")
         if new_deck_name not in avail_decks:
             notify(
-                f"Given deck doesn't exist. Try again with one of the following names:\n\n{avail_decks}"
+                "Given deck doesn't exist. Try again with one of the following"
+                f" names:\n\n{avail_decks}"
             )
             return
 
@@ -296,22 +233,20 @@ class AddClozeNote(Subcommand):
             desc="Add a new cloze note. Use {{c1:: ... }}, {{c2:: ... }} and so forth",
         )
 
-    @overrides  # type: ignore
     def get_as_albert_items_full(self, query_str: str):
-        item = self.get_as_albert_item()
-
         if self.detect_cloze_note(query_str):
-            item.subtext = query_str
+            subtext = query_str
         else:
-            item.subtext = AddClozeNote.usage_str
+            subtext = AddClozeNote.usage_str
 
-        item.addAction(
-            v0.FuncAction(
+        actions = [
+            FuncAction(
                 "Add a new cloze note",
                 lambda cloze_text=query_str: self.add_cloze_note(cloze_text=cloze_text),
             )
-        )
+        ]
 
+        item = self.get_as_albert_item(subtext=subtext, actions=actions)
         return [item]
 
     def detect_cloze_note(self, cloze_text: str):
@@ -342,23 +277,22 @@ class AddBasicNote(Subcommand):
 
         super(AddBasicNote, self).__init__(name=self.name, desc=f"Add a new {self.name} note")
 
-    @overrides  # type: ignore
     def get_as_albert_items_full(self, query_str: str):
-        item = self.get_as_albert_item()
         query_parts = AddBasicNote.parse_query_str(query_str)
         if query_parts:
             front = query_parts[0]
             back = query_parts[1]
-            item.subtext = f'{front} <span style="color: red">|</span> {back}'
+            subtext = f'{front} | {back}'
         else:
-            item.subtext = AddBasicNote.usage_str
+            subtext = AddBasicNote.usage_str
 
-        item.addAction(
-            v0.FuncAction(
+        actions = [
+            FuncAction(
                 f"Add {self.name} Note",
                 lambda query_str=query_str: self.add_anki_note(query_str),
             )
-        )
+        ]
+        item = self.get_as_albert_item(subtext=subtext, actions=actions)
         return [item]
 
     @staticmethod
@@ -375,7 +309,6 @@ class AddBasicNote(Subcommand):
         return parts  # type: ignore
 
     def add_anki_note(self, query_str: str):
-
         parts = AddBasicNote.parse_query_str(query_str)
         if parts is None:
             notify(msg=AddBasicNote.usage_str)
@@ -440,3 +373,85 @@ def get_subcommand_query(query_str: str) -> Optional[SubcommandQuery]:
     subcommand = get_subcommand_for_name(query_parts[0])
     if subcommand:
         return SubcommandQuery(subcommand=subcommand, query=query_str)
+
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "anki "
+
+    def synopsis(self):
+        return "new card content"
+
+    def initialize(self):
+        pass
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        global curr_trigger
+        curr_trigger = query.trigger
+
+        try:
+            query_str = query.string
+            if len(query_str) < 2:
+                results.extend([s.get_as_albert_item() for s in subcommands])
+
+            else:
+                subcommand_query = get_subcommand_query(query_str)
+
+                if subcommand_query:
+                    results.extend(
+                        subcommand_query.command.get_as_albert_items_full(
+                            subcommand_query.query
+                        )
+                    )
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=notif_title,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

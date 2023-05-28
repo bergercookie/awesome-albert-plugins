@@ -1,25 +1,21 @@
 """Scratchpad - Dump all your thoughts into a single textfile."""
 
-import subprocess
-import sys
 import textwrap
-import time
 import traceback
 from pathlib import Path
-from typing import Dict, List
 
 import albert as v0
-from fuzzywuzzy import process
 
-__title__ = "Scratchpad - Dump all your thoughts into a single textfile"
-__version__ = "0.4.0"
-__triggers__ = "s "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "Scratchpad"
+md_description = "Scratchpad - Dump all your thoughts into a single textfile"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/scratchpad"
 )
-__exec_deps__ = []
-__py_deps__ = ["textwrap"]
+md_bin_dependencies = []
+md_lib_dependencies = ["textwrap"]
 
 icon_path = str(Path(__file__).parent / "scratchpad")
 
@@ -57,62 +53,10 @@ def save_to_scratchpad(line: str, sep=False):
         f.write(towrite)
 
 
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    """Hook that is called by albert with *every new keypress*."""  # noqa
-    results = []
-
-    # trigger if the user has either explicitly called the plugin or when we have detected many
-    # words in the query. The latter is just a heuristic; I haven't decided whether it's worth
-    # keeping
-    if query.isTriggered or len(query.rawString.split()) >= 4:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_str = query.string
-            # modify this...
-            results.append(get_as_item(query_str))
-
-        except Exception:  # user to report error
-            print(traceback.format_exc())
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 # supplementary functions ---------------------------------------------------------------------
 def notify(
     msg: str,
-    app_name: str = __title__,
+    app_name: str = md_name,
     image=str(icon_path),
 ):
     Notify.init(app_name)
@@ -120,21 +64,21 @@ def notify(
     n.show()
 
 
-def get_as_item(query_str: str):
+def get_as_item(query):
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    query_str = query_str.strip()
+    query_str = query.string.strip()
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text="Save to scratchpad",
         subtext=query_str,
-        completion=f"{__triggers__}{query_str}",
+        completion=f"{query.trigger}{query_str}",
         actions=[
-            v0.FuncAction(
+            FuncAction(
                 f"Save to scratchpad ➡️ {s_path}",
                 lambda line=query_str: save_to_scratchpad(line),
             ),
-            v0.FuncAction(
+            FuncAction(
                 f"Save to scratchpad - New Section ➡️ {s_path}",
                 lambda line=query_str: save_to_scratchpad(line, sep=True),
             ),
@@ -175,23 +119,102 @@ def submit_fname(p: Path):
 def setup(query):
     """Setup is successful if an empty list is returned."""
 
-    results = []
-
     query_str = query.string
 
     # abbreviations file
     if not s_path.is_file():
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f"Specify the location of the scratchpad file",
+                id=md_name,
+                icon=[icon_path],
+                text="Specify the location of the scratchpad file",
                 subtext="Paste the path to the file, then press ENTER",
                 actions=[
-                    v0.FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
+                    FuncAction("Submit path", lambda p=query_str: submit_fname(Path(p))),
                 ],
             )
         )
-        return results
+        return True
 
-    return results
+    return False
+
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "s "
+
+    def synopsis(self):
+        return "add text to scratchpad"
+
+    def initialize(self):
+        """Called when the extension is loaded (ticked in the settings) - blocking."""
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+    def finalize(self):
+        pass
+
+    def handleQuery(self, query) -> None:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        # trigger if the user has either explicitly called the plugin or when we have detected
+        # many words in the query. The latter is just a heuristic; I haven't decided whether
+        # it's worth keeping
+        if len(query.string.split()) < 4:
+            return
+
+        try:
+            results_setup = setup(query)
+            if results_setup:
+                return
+
+            results.append(get_as_item(query))
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

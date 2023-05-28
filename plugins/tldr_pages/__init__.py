@@ -10,11 +10,12 @@ from fuzzywuzzy import process
 
 import albert as v0
 
-__title__ = "TL;DR pages from albert."
-__version__ = "0.4.0"
-__triggers__ = "tldr "
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "TL;DR pages from albert."
+md_description = "View tldr pages from inside albert"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//tldr_pages"
 )
 
@@ -27,7 +28,7 @@ data_path = Path(v0.dataLocation()) / "tldr_pages"
 tldr_root = cache_path / "tldr"
 pages_root = tldr_root / "pages"
 
-page_paths: Optional[Dict[str, Path]] = None
+page_paths: Dict[str, Path] = {}
 
 # Is the plugin run in development mode?
 in_development = False
@@ -35,98 +36,9 @@ in_development = False
 # plugin main functions -----------------------------------------------------------------------
 
 
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-    global page_paths
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-    if not pages_root.is_dir():
-        subprocess.check_call(
-            f"git clone https://github.com/tldr-pages/tldr {tldr_root}".split()
-        )
-
-    reindex_tldr_pages()
-
-
 def reindex_tldr_pages():
     global page_paths
     page_paths = get_page_paths()
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query) -> list:
-    results = []
-
-    if query.isTriggered:
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
-            query_text = query.string.strip()
-
-            if not len(query_text):
-                results = [
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Update tldr database",
-                        actions=[v0.FuncAction("Update", lambda: update_tldr_db())],
-                    ),
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Reindex tldr pages",
-                        actions=[v0.FuncAction("Reindex", lambda: reindex_tldr_pages())],
-                    ),
-                    v0.Item(
-                        id=__title__,
-                        icon=icon_path,
-                        text="Need at least 1 letter to offer suggestions",
-                        actions=[],
-                    ),
-                ] + results
-                return results
-
-            if query_text in page_paths.keys():
-                # exact match - show examples
-                results.extend(get_cmd_items((query_text, page_paths[query_text])))
-            else:
-                # fuzzy search based on word
-                matched = process.extract(query_text, page_paths.keys(), limit=20)
-
-                for m in [elem[0] for elem in matched]:
-                    results.append(get_cmd_as_item((m, page_paths[m])))
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-            if in_development:
-                raise
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -144,7 +56,7 @@ def get_page_paths() -> Dict[str, Path]:
     return {p.stem: p for p in paths}
 
 
-def get_cmd_as_item(pair: Tuple[str, Path]):
+def get_cmd_as_item(query, pair: Tuple[str, Path]):
     with open(pair[-1], "r") as f:
         all_lines = f.readlines()
         description_lines = [
@@ -162,19 +74,19 @@ def get_cmd_as_item(pair: Tuple[str, Path]):
             pass
 
     actions = [
-        v0.ClipAction("Copy command", pair[0]),
-        v0.UrlAction(
+        ClipAction("Copy command", pair[0]),
+        UrlAction(
             "Do a google search", f'https://www.google.com/search?q="{pair[0]}" command'
         ),
     ]
     if more_info_url:
-        actions.append(v0.UrlAction("More information", more_info_url))
+        actions.append(UrlAction("More information", more_info_url))
 
     return v0.Item(
-        id=__title__,
-        icon=icon_path,
+        id=md_name,
+        icon=[icon_path],
         text=pair[0],
-        completion=" ".join([__triggers__, pair[0]]),
+        completion=" ".join([query.trigger, pair[0]]),
         subtext=" ".join(description_lines),
         actions=actions,
     )
@@ -221,16 +133,15 @@ def get_cmd_items(pair: Tuple[str, Path]):
         else:
             example_cmd = get_cmd_sanitized(lines[i])
 
-
         items.append(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
+                id=md_name,
+                icon=[icon_path],
                 text=example_cmd,
                 subtext=desc,
                 actions=[
-                    v0.ClipAction("Copy command", example_cmd),
-                    v0.UrlAction(
+                    ClipAction("Copy command", example_cmd),
+                    UrlAction(
                         "Do a google search",
                         f'https://www.google.com/search?q="{pair[0]}" command',
                     ),
@@ -261,10 +172,115 @@ def load_data(data_name) -> str:
     return data
 
 
-def setup(query):
-    """setup is successful if an empty list is returned.
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
 
-    Use this function if you need the user to provide you data
-    """
-    results = []
-    return results
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "tldr "
+
+    def synopsis(self):
+        return "some command"
+
+    def finalize(self):
+        pass
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+        global page_paths
+
+        # create plugin locations
+        for p in (cache_path, config_path, data_path):
+            p.mkdir(parents=False, exist_ok=True)
+
+        if not pages_root.is_dir():
+            subprocess.check_call(
+                f"git clone https://github.com/tldr-pages/tldr {tldr_root}".split()
+            )
+
+        reindex_tldr_pages()
+
+    def handleQuery(self, query) -> None:
+        results = []
+        try:
+            query_text = query.string.strip()
+
+            if not len(query_text):
+                results = [
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Update tldr database",
+                        actions=[FuncAction("Update", lambda: update_tldr_db())],
+                    ),
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Reindex tldr pages",
+                        actions=[FuncAction("Reindex", lambda: reindex_tldr_pages())],
+                    ),
+                    v0.Item(
+                        id=md_name,
+                        icon=[icon_path],
+                        text="Need at least 1 letter to offer suggestions",
+                        actions=[],
+                    ),
+                ]
+
+                query.add(results)
+                return
+
+            if query_text in page_paths.keys():
+                # exact match - show examples
+                results.extend(get_cmd_items((query_text, page_paths[query_text])))
+            else:
+                # fuzzy search based on word
+                matched = process.extract(query_text, page_paths.keys(), limit=20)
+
+                for m in [elem[0] for elem in matched]:
+                    results.append(get_cmd_as_item(query, (m, page_paths[m])))
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+            if in_development:
+                raise
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)

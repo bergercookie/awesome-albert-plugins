@@ -19,14 +19,15 @@ gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
-__title__ = "Saxophone - Play internet radio streams from albert"
-__version__ = "0.4.0"
-__triggers__ = "sax"
-__authors__ = "Nikos Koukis"
-__homepage__ = (
+md_name = "Saxophone"
+md_description = "Play internet radio streams from albert"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//saxophone"
 )
-__exec_deps__ = ["vlc"]
+md_bin_dependencies = ["vlc"]
 
 icons_path = Path(__file__).parent / "images"
 
@@ -184,51 +185,90 @@ init_streams()
 # launch VLC
 launch_vlc()
 
+# supplementary functions ---------------------------------------------------------------------
+def get_as_item(stream: Stream):
+    icon = stream.icon() or icon_path
+    actions = [FuncAction("Play", lambda stream=stream: start_stream(stream))]
+    if stream.homepage:
+        actions.append(UrlAction("Go to radio homepage", stream.homepage))
 
-# albert functions ----------------------------------------------------------------------------
-
-
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create plugin locations
-    for p in (cache_path, data_path, pids_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    issue_cmd("logout")
-
-
-def handleQuery(query) -> list:  # noqa
-    results = []
-
-    if len(query.rawString.strip()) <= 1 and is_radio_on():
-        results.insert(
-            0,
-            v0.Item(
-                id=__title__,
-                icon=stop_icon_path,
-                text="Stop Radio",
-                actions=[v0.FuncAction("Stop Radio", lambda: stop_radio())],
-            ),
-        )
-
-    reindex_item = v0.Item(
-        id=__title__,
-        icon=repeat_icon_path,
-        text="Reindex stations",
-        actions=[v0.FuncAction("Reindex", lambda: init_streams())],
+    return v0.Item(
+        id=f"{md_name}_{stream.name}",
+        icon=[icon],
+        text=stream.name,
+        subtext=stream.description if stream.description else "",
+        completion="",
+        actions=actions,
     )
 
-    if query.isTriggered:
+
+def get_as_subtext_field(field, field_title=None) -> str:
+    """Get a certain variable as part of the subtext, along with a title for that variable."""
+    s = ""
+    if field:
+        s = f"{field} | "
+    else:
+        return ""
+
+    if field_title:
+        s = f"{field_title} :" + s
+
+    return s
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "sax"
+
+    def synopsis(self):
+        return "some radio"
+
+    def handleQuery(self, query) -> None:  # noqa
+        results = []
+
+        if len(query.string.strip()) <= 1 and is_radio_on():
+            results.insert(
+                0,
+                v0.Item(
+                    id=f"{md_name}_stop",
+                    icon=[stop_icon_path],
+                    text="Stop Radio",
+                    actions=[FuncAction("Stop Radio", lambda: stop_radio())],
+                ),
+            )
+
+        reindex_item = v0.Item(
+            id=f"{md_name}_repeat",
+            icon=[repeat_icon_path],
+            text="Reindex stations",
+            actions=[FuncAction("Reindex", lambda: init_streams())],
+        )
+
         try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-
             query_str = query.string.strip().lower()
 
             if not query_str:
@@ -251,59 +291,29 @@ def handleQuery(query) -> list:  # noqa
             results.insert(
                 0,
                 v0.Item(
-                    id=__title__,
-                    icon=icon_path,
+                    id=md_name,
+                    icon=[icon_path],
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
                             f"{traceback.format_exc()}",
                         )
                     ],
                 ),
             )
 
-    return results
+        query.add(results)
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create plugin locations
+        for p in (cache_path, data_path, pids_path):
+            p.mkdir(parents=False, exist_ok=True)
 
 
-# supplementary functions ---------------------------------------------------------------------
+    def finalize(self):
+        issue_cmd("logout")
 
 
-def get_as_item(stream: Stream):
-    icon = stream.icon() or icon_path
-    actions = [v0.FuncAction("Play", lambda stream=stream: start_stream(stream))]
-    if stream.homepage:
-        actions.append(v0.UrlAction("Go to radio homepage", stream.homepage))
-
-    return v0.Item(
-        id=__title__,
-        icon=icon,
-        text=stream.name,
-        subtext=stream.description if stream.description else "",
-        completion="",
-        actions=actions,
-    )
-
-
-def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable."""
-    s = ""
-    if field:
-        s = f"{field} | "
-    else:
-        return ""
-
-    if field_title:
-        s = f"{field_title} :" + s
-
-    return s
-
-
-def setup(query):
-    """setup is successful if an empty list is returned.
-
-    Use this function if you need the user to provide you data
-    """
-
-    results = []
-    return results

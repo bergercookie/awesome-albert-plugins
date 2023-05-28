@@ -8,28 +8,31 @@ import traceback
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
-from typing import List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import albert as v0  # type: ignore
 import dateutil
 import gi
 import taskw
 from fuzzywuzzy import process
-from overrides import overrides
-from taskw_gcal_sync import TaskWarriorSide
+from syncall import TaskWarriorSide
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
+curr_trigger: str = ""
+
 
 # metadata ------------------------------------------------------------------------------------
-__title__ = "Taskwarrior interaction"
-__version__ = "0.4.0"
-__triggers__ = "t "
-__authors__ = "Nikos Koukis"
-__homepage__ = "https://github.com/bergercookie/awesome-albert-plugins"
-__simplename__ = "taskwarrior"
+md_name = "Taskwarrior"
+md_description = "Taskwarrior - Interaction with the Taskwarrior task manager"
+md_iid = "0.5"
+md_version = "0.2"
+md_maintainers = "Nikos Koukis"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_lib_dependencies = ["syncall"]
+md_bin_dependencies = []
 
 # initial checks ------------------------------------------------------------------------------
 
@@ -42,21 +45,20 @@ icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan.svg")
 icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
 
 # initial configuration -----------------------------------------------------------------------
-# should the plugin show relevant some info without the trigger?
-show_items_wo_trigger = True
-
 failure_tag = "fail"
 
-cache_path = Path(v0.cacheLocation()) / __simplename__
-config_path = Path(v0.configLocation()) / __simplename__
-data_path = Path(v0.dataLocation()) / __simplename__
+cache_path = Path(v0.cacheLocation()) / "taskwarrior"
+config_path = Path(v0.configLocation()) / "taskwarrior"
+data_path = Path(v0.dataLocation()) / "taskwarrior"
 
 reminders_tag_path = config_path / "reminders_tag"
 reminders_tag = "remindme"
 
+# monkey-patching to solve bug in syncall - don't look.
+TaskWarriorSide.get_task_id = lambda cls, item: str(item[cls.id_key()])
 
 class FileBackedVar:
-    def __init__(self, varname, convert_fn=str, init_val=None):
+    def __init__(self, varname, convert_fn=Callable[[str], Any], init_val=None):
         self._fpath = config_path / varname
         self._convert_fn = convert_fn
 
@@ -66,7 +68,7 @@ class FileBackedVar:
         else:
             self._fpath.touch()
 
-    def get(self):
+    def get(self) -> Any:
         with open(self._fpath, "r") as f:
             return self._convert_fn(f.read().strip())
 
@@ -146,120 +148,19 @@ def get_tasks_of_date(date: datetime.date):
     return tasks
 
 
-def initialize():
-    # Called when the extension is loaded (ticked in the settings) - blocking
-
-    # create cache location
-    config_path.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
-def handleQuery(query):
-    results = []
-
-    # we're into the new day, create and assign a fresh instance
-    last_used = last_used_date.get()
-    current_date = datetime.datetime.today().date()
-
-    global tw_side, subcommands
-    if last_used < current_date:
-        tw_side = TaskWarriorSideWLock()
-        subcommands = create_subcommands()
-        last_used_date.set(current_date)
-    elif last_used > current_date:
-        # maybe due to NTP?
-        v0.critical(
-            f"Current date {current_date} < last_used date {last_used} ?! Overriding current date, please report this if it persists"
-        )
-        tw_side = TaskWarriorSideWLock()
-        subcommands = create_subcommands()
-        last_used_date.set(current_date)
-
-    if not query.isTriggered:
-        if show_items_wo_trigger and len(query.string) < 2:
-            results = [
-                ActiveTasks().get_as_albert_item(),
-                TodayTasks().get_as_albert_item(),
-                *results,
-            ]
-    else:
-        # join any previously launched threads
-        for i in range(len(workers)):
-            workers.pop(i).join(2)
-
-        try:
-            query.disableSort()
-
-            results_setup = setup(query)
-            if results_setup:
-                return results_setup
-            tasks = tw_side.get_all_items(skip_completed=True)
-
-            query_str = query.string
-
-            if len(query_str) < 2:
-                results.extend([s.get_as_albert_item() for s in subcommands])
-                results.append(
-                    get_as_item(
-                        text="Reload list of tasks",
-                        actions=[v0.FuncAction("Reload", async_reload_items)],
-                    )
-                )
-
-                tasks.sort(key=lambda t: t["urgency"], reverse=True)
-                results.extend([get_tw_item(task) for task in tasks])
-
-            else:
-                subcommand_query = get_subcommand_query(query_str)
-
-                if subcommand_query:
-                    results.extend(
-                        subcommand_query.command.get_as_albert_items_full(
-                            subcommand_query.query
-                        )
-                    )
-
-                    if not results:
-                        results.append(get_as_item(text="No results"))
-
-                else:
-                    # find relevant results
-                    desc_to_task = {task["description"]: task for task in tasks}
-                    matched = process.extract(query_str, list(desc_to_task.keys()), limit=30)
-                    for m in [elem[0] for elem in matched]:
-                        task = desc_to_task[m]
-                        results.append(get_tw_item(task))
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-
-            results.insert(
-                0,
-                v0.Item(
-                    id=__title__,
-                    icon=icon_path,
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        v0.ClipAction(
-                            f"Copy error - report it to {__homepage__[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    return results
-
-
 def get_as_item(**kargs) -> v0.Item:
+    if (urgency := kargs.get("urgency")) is not None:
+        name = f"md_name_{urgency}"
+        kargs.pop("urgency")
+    else:
+        name = md_name
+
+
     if "icon" in kargs:
         icon = kargs.pop("icon")
     else:
-        icon = icon_path
-    return v0.Item(id=__title__, icon=icon, **kargs)
+        icon = [icon_path]
+    return v0.Item(id=name, icon=icon, **kargs)
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -279,26 +180,23 @@ def async_reload_items():
 
 
 def setup(query):  # type: ignore
-
-    results = []
-
     if not which("task"):
-        results.append(
+        query.add(
             v0.Item(
-                id=__title__,
-                icon=icon_path,
-                text=f'"taskwarrior" is not installed.',
+                id=md_name,
+                icon=[icon_path],
+                text='"taskwarrior" is not installed.',
                 subtext='Please install and configure "taskwarrior" accordingly.',
                 actions=[
-                    v0.UrlAction(
+                    UrlAction(
                         'Open "taskwarrior" website', "https://taskwarrior.org/download/"
                     )
                 ],
             )
         )
-        return results
+        return True
 
-    return results
+    return False
 
 
 def save_data(data: str, data_name: str):
@@ -375,31 +273,31 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     task_id = tw_side.get_task_id(task)
 
     actions = [
-        v0.FuncAction(
+        FuncAction(
             "Complete task",
             lambda args_list=["done", task_id]: run_tw_action(args_list),
         ),
-        v0.FuncAction(
+        FuncAction(
             "Delete task",
             lambda args_list=["delete", task_id]: run_tw_action(args_list),
         ),
-        v0.FuncAction(
+        FuncAction(
             "Start task",
             lambda args_list=["start", task_id]: run_tw_action(args_list),
         ),
-        v0.FuncAction(
+        FuncAction(
             "Stop task",
             lambda args_list=["stop", task_id]: run_tw_action(args_list),
         ),
-        v0.FuncAction(
+        FuncAction(
             "Edit task interactively",
             lambda args_list=["edit", task_id]: run_tw_action(args_list, need_pty=True),
         ),
-        v0.FuncAction(
+        FuncAction(
             "Fail task",
             lambda task_id=task_id: fail_task(task_id=task_id),
         ),
-        v0.ClipAction("Copy task UUID", f"{task_id}"),
+        ClipAction("Copy task UUID", f"{task_id}"),
     ]
 
     found_urls = url_re.findall(task["description"])
@@ -407,7 +305,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         found_urls.extend(url_re.findall(" ".join(task["annotations"])))
 
     for url in found_urls[-1::-1]:
-        actions.insert(0, v0.UrlAction(f"Open {url}", url))
+        actions.insert(0, UrlAction(f"Open {url}", url))
 
     if reminders_tag_path.is_file():
         global reminders_tag
@@ -416,7 +314,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         save_data("remindme", str(reminders_tag_path))
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             f"Add to Reminders (+{reminders_tag})",
             lambda args_list=[
                 "modify",
@@ -427,7 +325,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     )
 
     actions.append(
-        v0.FuncAction(
+        FuncAction(
             "Work on next (+next)",
             lambda args_list=[
                 "modify",
@@ -438,10 +336,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     )
 
     urgency_str, icon = urgency_to_visuals(task.get("urgency"))
-    text = f'{task["description"]}'
-    if "start" in task:
-        text = f'<p style="color:orange;">{text}</p>'
-
+    text = task["description"]
     due = None
     if "due" in task:
         due = task["due"].astimezone(dateutil.tz.tzlocal()).strftime("%Y-%m-%d %H:%M:%S")  # type: ignore
@@ -455,9 +350,10 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
             field(task.get("tags"), "tags"),
             field(due, "due"),
         )[:-2],
-        icon=str(icon),
-        completion=f'{__triggers__}{task["description"]}',
+        icon=[str(icon)],
+        completion=f'{curr_trigger}{task["description"]}',
         actions=actions,
+        urgency=task.get("urgency"),
     )
 
 
@@ -466,10 +362,12 @@ class Subcommand:
     def __init__(self, *, name, desc):
         self.name = name
         self.desc = desc
-        self.subcommand_prefix = f"{__triggers__}{self.name}"
+        self.subcommand_prefix = f"{curr_trigger}{self.name}"
 
-    def get_as_albert_item(self):
-        return get_as_item(text=self.desc, completion=f"{self.subcommand_prefix} ")
+    def get_as_albert_item(self, *args, **kargs):
+        return get_as_item(
+            text=self.desc, completion=f"{self.subcommand_prefix} ", *args, **kargs
+        )
 
     def get_as_albert_items_full(self, query_str):
         return [self.get_as_albert_item()]
@@ -482,27 +380,27 @@ class AddSubcommand(Subcommand):
     def __init__(self):
         super(AddSubcommand, self).__init__(name="add", desc="Add a new task")
 
-    @overrides
     def get_as_albert_items_full(self, query_str):
         items = []
 
-        add_item = self.get_as_albert_item()
-        add_item.subtext = query_str
-        add_item.completion = f"{self.subcommand_prefix} {query_str}"
-        add_item.addAction(
-            v0.FuncAction(
+        subtext = query_str
+        completion = f"{self.subcommand_prefix} {query_str}"
+        actions = [
+            FuncAction(
                 "Add task",
                 lambda args_list=["add", *query_str.split()]: run_tw_action(args_list),
             )
+        ]
+        add_item = self.get_as_albert_item(
+            subtext=subtext, complection=completion, actions=actions
         )
         items.append(add_item)
 
-        to_reminders = self.get_as_albert_item()
         to_reminders = v0.Item(
-            id=__title__,
+            id=f"{md_name}_y",
             text=f"Add +{reminders_tag} tag",
             subtext="Add +remindme on [TAB]",
-            icon=icon_path_y,
+            icon=[icon_path_y],
             completion=f"{self.subcommand_prefix} {query_str} +remindme",
         )
         items.append(to_reminders)
@@ -510,10 +408,10 @@ class AddSubcommand(Subcommand):
         def item_at_date(date: datetime.date, time_24h: int):
             dt_str = f'{date.strftime("%Y%m%d")}T{time_24h}0000'
             return v0.Item(
-                id=__title__,
+                id=f"{md_name}_c",
                 text=f"Due {date}, at {time_24h}:00",
                 subtext="Add due:dt_str on [TAB]",
-                icon=icon_path_c,
+                icon=[icon_path_c],
                 completion=f"{self.subcommand_prefix} {query_str} due:{dt_str}",
             )
 
@@ -536,16 +434,15 @@ class LogSubcommand(Subcommand):
     def __init__(self):
         super(LogSubcommand, self).__init__(name="log", desc="Log an already done task")
 
-    @overrides
     def get_as_albert_items_full(self, query_str):
-        item = self.get_as_albert_item()
-        item.subtext = query_str
-        item.addAction(
-            v0.FuncAction(
+        subtext = query_str
+        actions = [
+            FuncAction(
                 "Log task",
                 lambda args_list=["log", *query_str.split()]: run_tw_action(args_list),
             )
-        )
+        ]
+        item = self.get_as_albert_item(subtext=subtext, actions=actions)
         return [item]
 
 
@@ -553,7 +450,6 @@ class ActiveTasks(Subcommand):
     def __init__(self):
         super(ActiveTasks, self).__init__(name="active", desc="Active tasks")
 
-    @overrides
     def get_as_albert_items_full(self, query_str):
         return [
             get_tw_item(t) for t in tw_side.get_all_items(skip_completed=True) if "start" in t
@@ -574,19 +470,17 @@ class DateTasks(Subcommand):
         super(DateTasks, self).__init__(*args, **kargs)
         self.date = date
 
-    @overrides
     def get_as_albert_item(self):
-        item = super().get_as_albert_item()
-        item.addAction(
-            v0.FuncAction(
-                "Move tasks to the day after",
-                lambda date=self.date: move_tasks_of_date_to_next_day(date),
-            )
+        item = super().get_as_albert_item(
+            actions=[
+                FuncAction(
+                    "Move tasks to the day after",
+                    lambda date=self.date: move_tasks_of_date_to_next_day(date),
+                )
+            ]
         )
-
         return item
 
-    @overrides
     def get_as_albert_items_full(self, query_str):
         return [get_tw_item(t) for t in get_tasks_of_date(self.date)]
 
@@ -673,3 +567,139 @@ def get_subcommand_query(query_str: str) -> Optional[SubcommandQuery]:
     subcommand = get_subcommand_for_name(query_parts[0])
     if subcommand:
         return SubcommandQuery(subcommand=subcommand, query=query_str)
+
+
+# helpers for backwards compatibility ------------------------------------------
+class UrlAction(v0.Action):
+    def __init__(self, name: str, url: str):
+        super().__init__(name, name, lambda: v0.openUrl(url))
+
+
+class ClipAction(v0.Action):
+    def __init__(self, name, copy_text):
+        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
+
+
+class FuncAction(v0.Action):
+    def __init__(self, name, command):
+        super().__init__(name, name, command)
+
+
+# main plugin class ------------------------------------------------------------
+class Plugin(v0.QueryHandler):
+    def id(self) -> str:
+        return __name__
+
+    def name(self) -> str:
+        return md_name
+
+    def description(self):
+        return md_description
+
+    def defaultTrigger(self):
+        return "t "
+
+    def synopsis(self):
+        return "task description"
+
+    def finalize(self):
+        pass
+
+    def initialize(self):
+        # Called when the extension is loaded (ticked in the settings) - blocking
+
+        # create cache location
+        config_path.mkdir(parents=False, exist_ok=True)
+
+    def handleQuery(self, query) -> None:
+        global curr_trigger
+        curr_trigger = query.trigger
+
+        # we're into the new day, create and assign a fresh instance
+        last_used = last_used_date.get()
+        current_date = datetime.datetime.today().date()
+
+        global tw_side, subcommands
+        if last_used < current_date:
+            tw_side = TaskWarriorSideWLock()
+            subcommands = create_subcommands()
+            last_used_date.set(current_date)
+        elif last_used > current_date:
+            # maybe due to NTP?
+            v0.critical(
+                f"Current date {current_date} < last_used date {last_used} ?! Overriding"
+                " current date, please report this if it persists"
+            )
+            tw_side = TaskWarriorSideWLock()
+            subcommands = create_subcommands()
+            last_used_date.set(current_date)
+
+        results = [
+            ActiveTasks().get_as_albert_item(),
+            TodayTasks().get_as_albert_item(),
+        ]
+
+        # join any previously launched threads
+        for i in range(len(workers)):
+            workers.pop(i).join(2)
+
+        try:
+            results_setup = setup(query)
+            if results_setup:
+                return
+            tasks = tw_side.get_all_items(skip_completed=True)
+
+            query_str = query.string
+
+            if len(query_str) < 2:
+                results.extend([s.get_as_albert_item() for s in subcommands])
+                results.append(
+                    get_as_item(
+                        text="Reload list of tasks",
+                        actions=[FuncAction("Reload", async_reload_items)],
+                    )
+                )
+
+                tasks.sort(key=lambda t: t["urgency"], reverse=True)
+                results.extend([get_tw_item(task) for task in tasks])
+
+            else:
+                subcommand_query = get_subcommand_query(query_str)
+
+                if subcommand_query:
+                    results.extend(
+                        subcommand_query.command.get_as_albert_items_full(
+                            subcommand_query.query
+                        )
+                    )
+
+                    if not results:
+                        results.append(get_as_item(text="No results"))
+
+                else:
+                    # find relevant results
+                    desc_to_task = {task["description"]: task for task in tasks}
+                    matched = process.extract(query_str, list(desc_to_task.keys()), limit=30)
+                    for m in [elem[0] for elem in matched]:
+                        task = desc_to_task[m]
+                        results.append(get_tw_item(task))
+
+        except Exception:  # user to report error
+            v0.critical(traceback.format_exc())
+
+            results.insert(
+                0,
+                v0.Item(
+                    id=md_name,
+                    icon=[icon_path],
+                    text="Something went wrong! Press [ENTER] to copy error and report it",
+                    actions=[
+                        ClipAction(
+                            f"Copy error - report it to {md_url[8:]}",
+                            f"{traceback.format_exc()}",
+                        )
+                    ],
+                ),
+            )
+
+        query.add(results)
