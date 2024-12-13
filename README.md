@@ -1,5 +1,10 @@
 # Awesome Albert Plugins
 
+**DEPRECATED** Unfortunately the Albert python API is changing too fast and too
+much and I cannot keep up with maintaining this amount of plugins.
+
+---
+
 <a href="https://travis-ci.com/bergercookie/awesome-albert-plugins" alt="Build Status">
 <img src="https://travis-ci.com/bergercookie/awesome-albert-plugins.svg?branch=master"></a>
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
