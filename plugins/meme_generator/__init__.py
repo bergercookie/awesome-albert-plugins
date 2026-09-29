@@ -16,6 +16,7 @@ from albert import (
     Notification,
     PluginInstance,
     StandardItem,
+    critical,
     setClipboardText,
 )
 
