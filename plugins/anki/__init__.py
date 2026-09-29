@@ -6,30 +6,29 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Optional, Tuple
 
-import albert as v0
 import httpx
 from gi.repository import GdkPixbuf, Notify
 
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
+
 md_name = "Anki"
 md_description = "Anki Interaction - Create new anki cards fast"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/anki"
-md_bin_dependencies = ["anki"]
-md_lib_dependencies = ["httpx", "fuzzywuzzy"]
-
+md_iid = "5.0"
+md_version = "0.3"
+md_license = "MIT"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["httpx"]
 notif_title = "Anki Interaction"  # Custom metadata
 
-icon_path = str(Path(__file__).parent / "anki")
-
-cache_path = Path(v0.cacheLocation()) / "anki"
-config_path = Path(v0.configLocation()) / "anki"
-data_path = Path(v0.dataLocation()) / "anki"
-
-# create plugin locations
-for p in (cache_path, config_path, data_path):
-    p.mkdir(parents=False, exist_ok=True)
+ICON_PATH = Path(__file__).parent / "anki.png"
 
 AVAIL_NOTE_TYPES = {
     "basic": "Basic",
@@ -43,27 +42,53 @@ curr_trigger: str = ""
 
 # FileBackedVar class -------------------------------------------------------------------------
 class FileBackedVar:
-    def __init__(self, varname: str, convert_fn: Callable = str, init_val: Any = None):
-        self._fpath = config_path / varname
+    def __init__(
+        self,
+        varname: str,
+        convert_fn: Callable = str,
+        init_val: Any = None,
+        config_dir: Path = None,
+    ):
+        self._config_dir = config_dir
+        self._varname = varname
+        self._fpath = (config_dir / varname) if config_dir else None
         self._convert_fn = convert_fn
 
-        # if the config path doesn't exist, do create it. This may run before the albert
-        # initialisation function
+        self._init_val = init_val
 
-        if init_val:
+    def bind(self, config_dir: Path) -> "FileBackedVar":
+        """Point this var at the plugin's config dir and materialise the file."""
+        self._config_dir = config_dir
+        self._fpath = config_dir / self._varname
+        self._fpath.parent.mkdir(parents=True, exist_ok=True)
+
+        if self._init_val and not self._fpath.is_file():
             with open(self._fpath, "w") as f:
-                f.write(str(init_val))
-        else:
+                f.write(str(self._init_val))
+        elif not self._fpath.is_file():
             self._fpath.touch()
 
+        return self
+
+    def _path(self) -> Path:
+        if self._fpath is None:
+            self.bind(DEFAULT_CONFIG_DIR)
+        return self._fpath
+
     def get(self):
-        with open(self._fpath, "r") as f:
-            return self._convert_fn(f.read().strip())
+        with open(self._path(), "r") as f:
+            return self._convert_fn(f.read().strip() or (self._init_val or ""))
 
     def set(self, val):
-        with open(self._fpath, "w") as f:
+        with open(self._path(), "w") as f:
             return f.write(str(val))
 
+
+# The config dir is only known once a PluginInstance exists, so this is a lazy
+# proxy: the backing file is created on first use.
+# Albert's config location is only available on a PluginInstance; this is
+# replaced with the real path in Plugin.__init__.
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "albert" / "anki"
 
 deck_name = FileBackedVar(varname="deck_name", init_val="scratchpad")
 
@@ -123,19 +148,21 @@ def add_anki_note(note_type: str, **kargs):
 def notify(
     msg: str,
     app_name: str = notif_title,
-    image=str(icon_path),
+    image=str(ICON_PATH),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
     n.show()
 
 
-def get_as_item(**kargs) -> v0.Item:
+def get_as_item(**kargs) -> StandardItem:
     if "icon" in kargs:
         icon = kargs.pop("icon")
     else:
-        icon = icon_path
-    return v0.Item(id=notif_title, icon=[icon], **kargs)
+        icon = str(ICON_PATH)
+    # item ids drive de-duplication, so derive a stable one from the text
+    kargs.setdefault("id", f"anki-{kargs.get('text', '')}")
+    return StandardItem(icon_factory=lambda: Icon.image(icon), **kargs)
 
 
 def sanitize_string(s: str) -> str:
@@ -156,18 +183,6 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
 
 
 # subcommands ---------------------------------------------------------------------------------
@@ -178,7 +193,7 @@ class Subcommand:
 
     def get_as_albert_item(self, *args, **kargs):
         return get_as_item(
-            text=self.desc, completion=f"{curr_trigger}{self.name} ", *args, **kargs
+            text=self.desc, input_action_text=f"{curr_trigger}{self.name} ", *args, **kargs
         )
 
     def get_as_albert_items_full(self, query_str: str):
@@ -200,7 +215,8 @@ class ChangeDeck(Subcommand):
         item = self.get_as_albert_item(
             subtext=ChangeDeck.usage_str if not query_str else f"Deck to use: {query_str}",
             actions=[
-                FuncAction(
+                Action(
+                    "change-deck",
                     "Change deck",
                     lambda new_deck_name=query_str: ChangeDeck.change_to(new_deck_name),
                 )
@@ -240,7 +256,8 @@ class AddClozeNote(Subcommand):
             subtext = AddClozeNote.usage_str
 
         actions = [
-            FuncAction(
+            Action(
+                "add-note",
                 "Add a new cloze note",
                 lambda cloze_text=query_str: self.add_cloze_note(cloze_text=cloze_text),
             )
@@ -287,7 +304,8 @@ class AddBasicNote(Subcommand):
             subtext = AddBasicNote.usage_str
 
         actions = [
-            FuncAction(
+            Action(
+                "add-note",
                 f"Add {self.name} Note",
                 lambda query_str=query_str: self.add_anki_note(query_str),
             )
@@ -375,54 +393,40 @@ def get_subcommand_query(query_str: str) -> Optional[SubcommandQuery]:
         return SubcommandQuery(subcommand=subcommand, query=query_str)
 
 
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+        deck_name.bind(self.config_path)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "anki "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "new card content"
 
-    def initialize(self):
-        pass
-
-    def finalize(self):
-        pass
-
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Yield the subcommand items for the current query."""
         results = []
 
         global curr_trigger
-        curr_trigger = query.trigger
+        curr_trigger = ctx.trigger
 
         try:
-            query_str = query.string
+            query_str = ctx.query
             if len(query_str) < 2:
                 results.extend([s.get_as_albert_item() for s in subcommands])
 
@@ -437,21 +441,23 @@ class Plugin(v0.QueryHandler):
                     )
 
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            critical(trace)
 
             results.insert(
                 0,
-                v0.Item(
-                    id=notif_title,
-                    icon=[icon_path],
+                StandardItem(
+                    id="anki-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

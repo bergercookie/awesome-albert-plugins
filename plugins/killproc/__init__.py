@@ -5,27 +5,30 @@ import re
 import signal
 import traceback
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterator, List
 
 import psutil
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
 from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 from psutil import Process
 
-import albert as v0
-
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Kill Process v2"
 md_description = "Terminate/Kill a process - find it using fuzzy expressions ..."
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/killproc"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["fuzzywuzzy", "psutil"]
 
-icon_path = str(Path(__file__).parent / "logo.png")
-
-cache_path = Path(v0.cacheLocation()) / "killproc"
-config_path = Path(v0.configLocation()) / "killproc"
-data_path = Path(v0.dataLocation()) / "killproc"
+ICON_PATH = Path(__file__).parent / "logo.png"
 
 # supplementary functions ---------------------------------------------------------------------
 
@@ -33,7 +36,7 @@ data_path = Path(v0.dataLocation()) / "killproc"
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(icon_path),
+    image=str(ICON_PATH),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -83,40 +86,6 @@ def kill_by_name(name: str, signal=signal.SIGTERM):
         p.send_signal(signal)
 
 
-def get_as_item(query, p: Process, *extra_actions):
-    """Return an item - ready to be appended to the items list and be rendered by Albert.
-
-    if Process is not a valid object (.name or .cmdline raise an exception) then return None
-    """
-    name_field = cmdline(p)
-
-    if not name_field:
-        return None
-
-    try:
-        actions = [
-            FuncAction("Terminate", lambda: p.terminate()),
-            FuncAction("Kill", lambda: p.kill()),
-            ClipAction("Get PID", f"{p.pid}"),
-            FuncAction(
-                "Terminate matching names",
-                lambda name=p.name(): kill_by_name(name, signal=signal.SIGTERM),
-            ),
-            FuncAction("Kill matching names", lambda name=p.name(): kill_by_name(name)),
-        ]
-        actions = [*extra_actions, *actions]
-        return v0.Item(
-            id=md_name,
-            icon=[icon_path],
-            text=name_field,
-            subtext="",
-            completion=f"{query.trigger}{p.name()}",
-            actions=actions,
-        )
-    except psutil.NoSuchProcess:
-        return None
-
-
 def sanitize_string(s: str) -> str:
     return s.replace("<", "&lt;")
 
@@ -135,67 +104,84 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        # create plugin locations
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "kill "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "process ID/name"
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
+    def get_as_item(self, ctx, p: Process, *extra_actions) -> StandardItem:
+        """Return an item - ready to be appended to the items list and be rendered by Albert.
 
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
+        if Process is not a valid object (.name or .cmdline raise an exception) then return None
+        """
+        name_field = cmdline(p)
 
-    def finalize(self):
-        pass
+        if not name_field:
+            return None
 
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""
         try:
-            query_str = query.string.strip()
+            actions = [
+                Action("terminate", "Terminate", lambda p=p: p.terminate()),
+                Action("kill", "Kill", lambda p=p: p.kill()),
+                Action("copy", "Get PID", lambda t=f"{p.pid}": setClipboardText(t)),
+                Action(
+                    "terminate-matching",
+                    "Terminate matching names",
+                    lambda name=p.name(): kill_by_name(name, signal=signal.SIGTERM),
+                ),
+                Action(
+                    "kill-matching",
+                    "Kill matching names",
+                    lambda name=p.name(): kill_by_name(name),
+                ),
+            ]
+            actions = [*extra_actions, *actions]
+            return StandardItem(
+                id=f"killproc-{p.pid}",
+                icon_factory=self.makeIcon,
+                text=name_field,
+                subtext="",
+                input_action_text=f"{ctx.trigger}{p.name()}",
+                actions=actions,
+            )
+        except psutil.NoSuchProcess:
+            return None
+
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
+
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
+
+        return data
+
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Called by albert with *every new keypress*."""
+        try:
+            query_str = ctx.query.strip()
 
             cmdline_to_procs = get_cmdline_to_procs()
             matched = [
@@ -206,39 +192,42 @@ class Plugin(v0.QueryHandler):
             extra_actions = []
             if any([symbol in query_str for symbol in "*?[]"]):
                 extra_actions = [
-                    FuncAction(
+                    Action(
+                        "terminate-glob",
                         "Terminate by glob",
-                        lambda: list(
-                            map(lambda p: p.terminate(), globsearch_procs(query_str))
+                        lambda q=query_str: list(
+                            map(lambda p: p.terminate(), globsearch_procs(q))
                         ),
                     ),
-                    FuncAction(
+                    Action(
+                        "kill-glob",
                         "Kill by glob",
-                        lambda: list(map(lambda p: p.kill(), globsearch_procs(query_str))),
+                        lambda q=query_str: list(map(lambda p: p.kill(), globsearch_procs(q))),
                     ),
                 ]
 
-            query.add(
-                [
-                    res
-                    for m in matched
-                    for p in cmdline_to_procs[m]
-                    if (res := get_as_item(query, p, *extra_actions)) is not None
-                ]
-            )
+            yield [
+                res
+                for m in matched
+                for p in cmdline_to_procs[m]
+                if (res := self.get_as_item(ctx, p, *extra_actions)) is not None
+            ]
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
-            query.add(
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+            trace = traceback.format_exc()
+            print(trace)
+
+            yield [
+                StandardItem(
+                    id="killproc-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda t=trace: setClipboardText(t),
                         )
                     ],
-                ),
-            )
+                )
+            ]

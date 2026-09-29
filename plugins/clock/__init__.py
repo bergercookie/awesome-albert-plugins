@@ -5,30 +5,34 @@ import time
 import traceback
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional, Union
-
-import albert as v0
+from typing import Iterator, List, Optional, Union
 
 import gi  # isort:skip
 
 gi.require_version("Notify", "0.7")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip
 
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
+
 md_name = "Countdown/Stopwatch"
 md_description = "Countdown/Stopwatch functionalities"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/clock"
+md_iid = "5.0"
+md_version = "0.3"
+md_license = "MIT"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
 md_bin_dependencies = ["cvlc"]
 
-countdown_path = str(Path(__file__).parent / "countdown.png")
-stopwatch_path = str(Path(__file__).parent / "stopwatch.png")
-sound_path = Path(__file__).parent.absolute() / "bing.wav"
-
-cache_path = Path(v0.cacheLocation()) / "clock"
-config_path = Path(v0.configLocation()) / "clock"
-data_path = Path(v0.dataLocation()) / "clock"
+COUNTDOWN_PATH = Path(__file__).parent / "countdown.png"
+STOPWATCH_PATH = Path(__file__).parent / "stopwatch.png"
+SOUND_PATH = Path(__file__).parent.absolute() / "bing.wav"
 
 # plugin main functions -----------------------------------------------------------------------
 
@@ -40,7 +44,7 @@ def play_sound(num):
             lambda: subprocess.Popen(
                 [
                     "cvlc",
-                    sound_path,
+                    SOUND_PATH,
                 ]
             ),
         )
@@ -121,7 +125,7 @@ class Watch(ABC):
 class Stopwatch(Watch):
     def __init__(self, name=None):
         super(Stopwatch, self).__init__(
-            name=name, app_name="Stopwatch", image_path=stopwatch_path, total_time=0
+            name=name, app_name="Stopwatch", image_path=STOPWATCH_PATH, total_time=0
         )
         self.latest_stop_time = 0
         self.latest_interval = 0
@@ -174,7 +178,7 @@ class Countdown(Watch):
         count_from: float,
     ):
         super(Countdown, self).__init__(
-            app_name="Countdown", image_path=countdown_path, name=name, total_time=count_from
+            app_name="Countdown", image_path=COUNTDOWN_PATH, name=name, total_time=count_from
         )
         self.latest_start = 0
         self.start()
@@ -268,62 +272,70 @@ def delete_item(item: Watch):
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_as_item(item: Watch) -> v0.Item:
+def get_as_item(item: Watch) -> StandardItem:
     """Return an item - ready to be appended to the items list and be rendered by Albert."""
     actions = []
     if item.started():
         actions.append(
-            FuncAction(
+            Action(
+                "pause",
                 "Pause",
                 lambda: item.pause(),
             )
         )
     else:
         actions.append(
-            FuncAction(
+            Action(
+                "resume",
                 "Resume",
                 lambda: item.start(),
             )
         )
 
     actions.append(
-        FuncAction(
+        Action(
+            "remove",
             "Remove",
             lambda: delete_item(item),
         )
     )
 
     actions.append(
-        FuncAction(
+        Action(
+            "plus",
             "Add 30 mins",
             lambda: item.plus(30),
         )
     )
 
     actions.append(
-        FuncAction(
+        Action(
+            "minus",
             "Substract 30 mins",
             lambda: item.minus(30),
         )
     )
 
     actions.append(
-        FuncAction(
+        Action(
+            "plus",
             "Add 5 mins",
             lambda: item.plus(5),
         )
     )
 
     actions.append(
-        FuncAction(
+        Action(
+            "minus",
             "Substract 5 mins",
             lambda: item.minus(5),
         )
     )
 
-    return v0.Item(
-        id=md_name,
-        icon=[countdown_path if isinstance(item, Countdown) else stopwatch_path],
+    icon = COUNTDOWN_PATH if isinstance(item, Countdown) else STOPWATCH_PATH
+    return StandardItem(
+        id=f"clock-{item}",
+        icon_factory=lambda: Icon.image(icon),
         text=str(item),
         subtext="",
         actions=actions,
@@ -344,87 +356,35 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(
-        config_path / data_name,
-        "w",
-    ) as f:
-        f.write(data)
-
-
-def load_data(
-    data_name,
-) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(
-        config_path / data_name,
-        "r",
-    ) as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(COUNTDOWN_PATH)
 
     def defaultTrigger(self):
         return "cl "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "TODO"
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-        # create plugin locations
-        for p in (
-            cache_path,
-            config_path,
-            data_path,
-        ):
-            p.mkdir(
-                parents=False,
-                exist_ok=True,
-            )
-
-    def finalize(self):
-        pass
-
-    def handleQuery(
-        self,
-        query,
-    ) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Yield the countdown/stopwatch items for the current query."""
 
         results = []
         try:
-            query_parts = [s.strip() for s in query.string.split()]
+            query_parts = [s.strip() for s in ctx.query.split()]
             name = ""
             if query_parts:
                 name = query_parts[0]
@@ -442,14 +402,15 @@ class Plugin(v0.QueryHandler):
 
             results.extend(
                 [
-                    v0.Item(
-                        id=md_name,
-                        icon=[countdown_path],
+                    StandardItem(
+                        id="clock-countdown",
+                        icon_factory=lambda: Icon.image(COUNTDOWN_PATH),
                         text="Create countdown",
                         subtext=f"{subtext_name} | {subtext_dur}",
-                        completion=query.trigger,
+                        input_action_text=ctx.trigger,
                         actions=[
-                            FuncAction(
+                            Action(
+                                "create-countdown",
                                 "Create countdown",
                                 lambda name=name, duration=duration: create_countdown(
                                     name=name, duration=duration
@@ -457,14 +418,15 @@ class Plugin(v0.QueryHandler):
                             )
                         ],
                     ),
-                    v0.Item(
-                        id=md_name,
-                        icon=[stopwatch_path],
+                    StandardItem(
+                        id="clock-stopwatch",
+                        icon_factory=lambda: Icon.image(STOPWATCH_PATH),
                         text="Create stopwatch",
                         subtext=subtext_name,
-                        completion=query.trigger,
+                        input_action_text=ctx.trigger,
                         actions=[
-                            FuncAction(
+                            Action(
+                                "create-stopwatch",
                                 "Create stopwatch",
                                 lambda name=name: create_stopwatch(name),
                             )
@@ -478,18 +440,22 @@ class Plugin(v0.QueryHandler):
             for watch in to_remove:
                 delete_item(watch)
 
+            yield results
+
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-            query.add(
-                v0.Item(
-                    id=md_name,
-                    icon=[countdown_path],
+            trace = traceback.format_exc()
+            critical(trace)
+            yield [
+                StandardItem(
+                    id="clock-error",
+                    icon_factory=lambda: Icon.image(COUNTDOWN_PATH),
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
-                ),
-            )
+                )
+            ]

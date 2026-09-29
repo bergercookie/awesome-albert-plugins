@@ -5,33 +5,33 @@ import subprocess
 import traceback
 from pathlib import Path
 from shutil import copyfile, which
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, Iterator, List, Optional, Sequence
 
-import albert as v0
 import gi
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
 from fuzzywuzzy import process
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Contacts"
 md_description = "Contact VCF Viewer"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
-md_bin_dependencies = []
-md_lib_dependencies = []
-
-icon_path = str(Path(__file__).parent / "contacts")
-
-cache_path = Path(v0.cacheLocation()) / "contacts"
-config_path = Path(v0.configLocation()) / "contacts"
-data_path = Path(v0.dataLocation()) / "contacts"
-
-stats_path = config_path / "stats"
-vcf_path = Path(cache_path / "contacts.vcf")
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["fuzzywuzzy"]
+md_bin_dependencies = ["vcfxplr"]
+ICON_PATH = Path(__file__).parent / "contacts.png"
 
 
 class Contact:
@@ -73,34 +73,9 @@ class Contact:
         )
 
 
-contacts: List[Contact]
-fullnames_to_contacts: Dict[str, Contact]
-
-# create plugin locations
-for p in (cache_path, config_path, data_path):
-    p.mkdir(parents=False, exist_ok=True)
-
-
-def reindex_contacts() -> None:
-    global contacts, fullnames_to_contacts
-    contacts = get_new_contacts()
-    fullnames_to_contacts = {c.fullname: c for c in contacts}
-
-
-def get_new_contacts() -> List[Contact]:
-    proc = subprocess.run(
-        ["vcfxplr", "-c", str(vcf_path), "json", "-g", "fn"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    contacts_json = json.loads(proc.stdout)
-    return [Contact.parse(k, v) for k, v in contacts_json.items()]
-
-
 # FileBackedVar class -------------------------------------------------------------------------
 class FileBackedVar:
-    def __init__(self, varname, convert_fn=str, init_val=None):
+    def __init__(self, config_path, varname, convert_fn=str, init_val=None):
         self._fpath = config_path / varname
         self._convert_fn = convert_fn
 
@@ -149,200 +124,215 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name: str) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-def data_exists(data_name: str) -> bool:
-    """Check whwether a piece of data exists in the configuration directory."""
-    return (config_path / data_name).is_file()
-
-
-def save_vcf_file(query: str):
-    p = Path(query).expanduser().absolute()
-    if not p.is_file():
-        do_notify(f'Given path "{p}" is not valid - please input it again.')
-
-    copyfile(p, vcf_path)
-    reindex_contacts()
-    do_notify(f"Copied VCF contacts file to -> {vcf_path}. You should be ready to go...")
-
-
-def setup(query) -> bool:  # type: ignore
-    if not which("vcfxplr"):
-        query.add(
-            v0.Item(
-                id=md_name,
-                icon=[icon_path],
-                text='"vcfxplr" is not installed.',
-                subtext=(
-                    "You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>"
-                ),
-                actions=[
-                    ClipAction(
-                        "Copy install command", "pip3 install --user --upgrade vcfxplr"
-                    ),
-                    UrlAction(
-                        'Open "vcfxplr" page', "https://github.com/bergercookie/vcfxplr"
-                    ),
-                ],
-            )
-        )
-        return True
-
-    if vcf_path.exists() and not vcf_path.is_file():
-        raise RuntimeError(f"vcf file exists but it's not a file -> {vcf_path}")
-
-    if not vcf_path.exists():
-        query.add(
-            v0.Item(
-                id=md_name,
-                icon=[icon_path],
-                text="Please input the path to your VCF contacts file.",
-                subtext=f"{query.string}",
-                actions=[
-                    FuncAction(
-                        "Save VCF file", lambda query=query: save_vcf_file(query.string)
-                    ),
-                ],
-            )
-        )
-
-        return True
-
-    return False
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation()) / "contacts"
+        self.config_path = Path(self.configLocation()) / "contacts"
+        self.data_path = Path(self.dataLocation()) / "contacts"
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+        self.stats_path = self.config_path / "stats"
+        self.vcf_path = self.cache_path / "contacts.vcf"
+
+        self.contacts: List[Contact] = []
+        self.fullnames_to_contacts: Dict[str, Contact] = {}
+
+        if self.vcf_path.is_file():
+            self.reindex_contacts()
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "c "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "TODO"
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
-        if vcf_path.is_file():
-            reindex_contacts()
+    # -- contacts index ------------------------------------------------------------------------
 
-    def finalize(self):
-        pass
+    def reindex_contacts(self) -> None:
+        self.contacts = self.get_new_contacts()
+        self.fullnames_to_contacts = {c.fullname: c for c in self.contacts}
 
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
-        results = []
-
-        try:
-            results_setup = setup(query)
-            if results_setup:
-                return
-
-            query_str = query.string
-
-            if not query_str:
-                results.append(
-                    v0.Item(
-                        id=md_name,
-                        icon=[icon_path],
-                        completion=query.trigger,
-                        text="Add more characters to fuzzy-search",
-                        actions=[],
-                    )
-                )
-                results.append(self.get_reindex_item(query))
-            else:
-                matched = process.extract(query_str, fullnames_to_contacts.keys(), limit=10)
-                results.extend(
-                    [
-                        self.get_contact_as_item(query, fullnames_to_contacts[m[0]])
-                        for m in matched
-                    ]
-                )
-
-            query.add(results)
-
-        except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
-            query.add(
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        ClipAction(
-                            f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
-
-    def get_reindex_item(self, query):
-        return v0.Item(
-            id=md_name,
-            icon=[icon_path],
-            text="Re-index contacts",
-            completion=query.trigger,
-            actions=[FuncAction("Re-index contacts", reindex_contacts)],
+    def get_new_contacts(self) -> List[Contact]:
+        proc = subprocess.run(
+            ["vcfxplr", "-c", str(self.vcf_path), "json", "-g", "fn"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
-    def get_contact_as_item(self, query, contact: Contact):
+        contacts_json = json.loads(proc.stdout)
+        return [Contact.parse(k, v) for k, v in contacts_json.items()]
+
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
+
+    def load_data(self, data_name: str) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
+
+        return data
+
+    def data_exists(self, data_name: str) -> bool:
+        """Check whwether a piece of data exists in the configuration directory."""
+        return (self.config_path / data_name).is_file()
+
+    def save_vcf_file(self, query: str):
+        p = Path(query).expanduser().absolute()
+        if not p.is_file():
+            do_notify(f'Given path "{p}" is not valid - please input it again.')
+
+        copyfile(p, self.vcf_path)
+        self.reindex_contacts()
+        do_notify(f"Copied VCF contacts file to -> {self.vcf_path}. You should be ready to go...")
+
+    def setup(self, ctx) -> Optional[List[StandardItem]]:
+        """Return the setup items the user has to deal with first - None if there's nothing
+        to set up.
+        """
+        if not which("vcfxplr"):
+            return [
+                StandardItem(
+                    id=f"{self.id()}.vcfxplr-missing",
+                    icon_factory=self.makeIcon,
+                    text='"vcfxplr" is not installed.',
+                    subtext=(
+                        "You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>"
+                    ),
+                    actions=[
+                        Action(
+                            "copy",
+                            "Copy install command",
+                            lambda: setClipboardText(
+                                "pip3 install --user --upgrade vcfxplr"
+                            ),
+                        ),
+                        Action(
+                            "open",
+                            'Open "vcfxplr" page',
+                            lambda: openUrl("https://github.com/bergercookie/vcfxplr"),
+                        ),
+                    ],
+                )
+            ]
+
+        if self.vcf_path.exists() and not self.vcf_path.is_file():
+            raise RuntimeError(f"vcf file exists but it's not a file -> {self.vcf_path}")
+
+        if not self.vcf_path.exists():
+            return [
+                StandardItem(
+                    id=f"{self.id()}.vcf-setup",
+                    icon_factory=self.makeIcon,
+                    text="Please input the path to your VCF contacts file.",
+                    subtext=f"{ctx.query}",
+                    actions=[
+                        Action(
+                            "save", "Save VCF file", lambda q=ctx.query: self.save_vcf_file(q)
+                        ),
+                    ],
+                )
+            ]
+
+        return None
+
+    # -- items --------------------------------------------------------------------------------
+
+    def get_error_item(self, trace: str) -> StandardItem:
+        return StandardItem(
+            id=f"{self.id()}.error",
+            icon_factory=self.makeIcon,
+            text="Something went wrong! Press [ENTER] to copy error and report it",
+            actions=[
+                Action(
+                    "copy",
+                    f"Copy error - report it to {md_url[8:]}",
+                    lambda: setClipboardText(trace),
+                )
+            ],
+        )
+
+    def get_reindex_item(self, ctx) -> StandardItem:
+        return StandardItem(
+            id=f"{self.id()}.reindex",
+            icon_factory=self.makeIcon,
+            text="Re-index contacts",
+            input_action_text=ctx.trigger,
+            actions=[Action("reindex", "Re-index contacts", self.reindex_contacts)],
+        )
+
+    def get_contact_as_item(self, ctx, contact: Contact) -> StandardItem:
         """
         Return an item - ready to be appended to the items list and be rendered by Albert.
         """
         text = contact.fullname
         phones_and_emails = set(contact.emails).union(contact.telephones)
         subtext = " | ".join(phones_and_emails)
-        completion = f"{query.trigger}{contact.fullname}"
+        completion = f"{ctx.trigger}{contact.fullname}"
 
         actions = []
 
         for field in phones_and_emails:
-            actions.append(ClipAction(f"Copy {field}", field))
+            actions.append(Action("copy", f"Copy {field}", lambda f=field: setClipboardText(f)))
 
-        actions.append(ClipAction("Copy name", contact.fullname))
+        actions.append(Action("copy", "Copy name", lambda: setClipboardText(contact.fullname)))
 
-        return v0.Item(
-            id=md_name,
-            icon=[icon_path],
+        return StandardItem(
+            id=f"{self.id()}.contact-{contact.fullname}",
+            icon_factory=self.makeIcon,
             text=text,
             subtext=subtext,
-            completion=completion,
+            input_action_text=completion,
             actions=actions,
         )
+
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Hook that is called by albert with *every new keypress*."""  # noqa
+        results = []
+
+        try:
+            results_setup = self.setup(ctx)
+            if results_setup is not None:
+                yield results_setup
+                return
+
+            query_str = ctx.query
+
+            if not query_str:
+                results.append(
+                    StandardItem(
+                        id=f"{self.id()}.hint",
+                        icon_factory=self.makeIcon,
+                        input_action_text=ctx.trigger,
+                        text="Add more characters to fuzzy-search",
+                        actions=[],
+                    )
+                )
+                results.append(self.get_reindex_item(ctx))
+            else:
+                matched = process.extract(query_str, self.fullnames_to_contacts.keys(), limit=10)
+                results.extend(
+                    [
+                        self.get_contact_as_item(ctx, self.fullnames_to_contacts[m[0]])
+                        for m in matched
+                    ]
+                )
+
+            yield results
+
+        except Exception:  # user to report error
+            trace = traceback.format_exc()
+            print(trace)
+
+            yield [self.get_error_item(trace)]

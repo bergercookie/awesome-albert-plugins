@@ -8,8 +8,17 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List
 
-import albert as v0
 from gi.repository import GdkPixbuf, Notify
+
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
 
 # load bing module - from the same directory as this file
 dir_ = Path(__file__).absolute().parent
@@ -22,24 +31,16 @@ BingImage = bing.BingImage  # type: ignore
 bing_search = bing.bing_search  # type: ignore
 
 md_name = "Image Search and Preview"
-md_description = "TODO"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/image_search"
-)
+md_description = "Search the web for images, download them and copy them to the clipboard"
+md_license = "MIT"
+md_iid = "5.0"
+md_version = "0.3"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["beautifulsoup4", "requests"]
 
-icon_path = str(Path(__file__).parent / "image_search")
-
-cache_path = Path(v0.cacheLocation()) / "image_search"
-config_path = Path(v0.configLocation()) / "image_search"
-data_path = Path(v0.dataLocation()) / "image_search"
-
-# clean up cached images on every startup
-if cache_path.exists():
-    for img in cache_path.glob("*"):
-        img.unlink()
+md_bin_dependencies = ["convert", "wget", "xclip"]
+ICON_PATH = Path(__file__).parent / "image_search"
 
 
 # Keystroke Monitor ---------------------------------------------------------------------------
@@ -72,16 +73,16 @@ keys_monitor = KeystrokeMonitor()
 
 
 # supplementary functions ---------------------------------------------------------------------
-def bing_search_set_download(query, limit) -> Iterator[BingImage]:
+def bing_search_set_download(query, limit, download_dir: Path) -> Iterator[BingImage]:
     for img in bing_search(query=query, limit=limit):
-        img.download_dir = cache_path
+        img.download_dir = download_dir
         yield img
 
 
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(icon_path),
+    image=str(ICON_PATH),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -132,47 +133,33 @@ def load_data(data_name) -> str:
 
 
 # helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+        # clean up cached images on every startup
+        for img in self.cache_path.glob("*"):
+            if img.is_file():
+                img.unlink()
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "img "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "search text"
-
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
-
-    def finalize(self):
-        pass
 
     def get_as_item(self, query, result: BingImage):
         """Return an item.
@@ -182,35 +169,35 @@ class Plugin(v0.QueryHandler):
         try:
             img = str(result.image.absolute())
         except subprocess.CalledProcessError:
-            v0.debug(f"Could not fetch item -> {result.url}")
+            debug(f"Could not fetch item -> {result.url}")
             return None
 
         actions = [
-            ClipAction("Copy url", result.url),
-            ClipAction("Copy local path to image", img),
-            UrlAction("Open in browser", result.url),
+            Action("copy", "Copy url", lambda: setClipboardText(result.url)),
+            Action("copy", "Copy local path to image", lambda: setClipboardText(img)),
+            Action("open", "Open in browser", lambda: openUrl(result.url)),
         ]
 
         if result.type != "gif":
             actions.insert(
-                0, FuncAction("Copy image", lambda result=result: copy_image(result))
+                0, Action("copy", "Copy image", lambda result=result: copy_image(result))
             )
 
-        item = v0.Item(
-            id=f"{md_name}_{hash(result)}",
-            icon=[str(result.thumbnail)],
+        item = StandardItem(
+            id=f"image-search-{hash(result)}",
+            icon_factory=lambda: Icon.image(str(result.thumbnail)),
             text=result.url[-20:],
             subtext=result.type,
-            completion=f"{query.trigger}",
+            input_action_text=f"{query.trigger}",
             actions=actions,
         )
 
         return item
 
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Yield the images matching the current query."""
         try:
-            query_str = query.string
+            query_str = ctx.query
 
             if len(query_str) < 2:
                 keys_monitor.reset()
@@ -219,35 +206,41 @@ class Plugin(v0.QueryHandler):
             if not keys_monitor.triggered():
                 return
 
-            bing_images = list(bing_search_set_download(query=query_str, limit=3))
+            bing_images = list(
+                bing_search_set_download(
+                    query=query_str, limit=3, download_dir=self.cache_path
+                )
+            )
             if not bing_images:
-                query.add(
-                    v0.Item(
-                        id=md_name,
-                        icon=[icon_path],
+                yield [
+                    StandardItem(
+                        id="image-search-empty",
+                        icon_factory=self.makeIcon,
                         text="No images found",
                         subtext=f"Query: {query_str}",
-                    ),
-                )
+                    )
+                ]
                 return
 
-            query.add(self.get_bing_results_as_items(query, bing_images))
+            yield self.get_bing_results_as_items(ctx, bing_images)
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
-            query.add(
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+            trace = traceback.format_exc()
+            print(trace)
+            yield [
+                StandardItem(
+                    id="image-search-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
-                ),
-            )
+                )
+            ]
 
     def get_bing_results_as_items(self, query, bing_results: List[BingImage]):
         """Get bing results as Albert items ready to be rendered in the UI."""

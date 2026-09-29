@@ -1,51 +1,38 @@
 """Meme Generator - Generate memes with custom quotes - ready to be copied / uploaded / shared at an instant."""
 
-from pathlib import Path
-from typing import List
 import shutil
 import subprocess
 import traceback
+from pathlib import Path
+from typing import Iterator, List
 
 from fuzzywuzzy import process
 from gi.repository import GdkPixbuf, Notify
 
-import albert as v0
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
 
 md_name = "Meme"
 md_description = (
     "Meme Generator - Generate memes with custom quotes - ready to be copied / uploaded /"
     " shared at an instant"
 )
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/meme-generator"
-)
-md_bin_dependencies = ["meme", "xclip"]
-md_lib_dependencies = ["shutil", "fuzzywuzzy"]
-
-icon_path = str(Path(__file__).parent / "meme-generator")
-
-cache_path = Path(v0.cacheLocation()) / "meme-generator"
-config_path = Path(v0.configLocation()) / "meme-generator"
-data_path = Path(v0.dataLocation()) / "meme-generator"
+md_iid = "5.0"
+md_version = "0.3"
+md_license = "MIT"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["fuzzywuzzy"]
+md_bin_dependencies = ["convert", "meme", "xclip"]
+ICON_PATH = Path(__file__).parent / "meme-generator"
 
 # plugin main functions -----------------------------------------------------------------------
-
-
-def initialize():
-    """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-    # create plugin locations
-    for p in (cache_path, config_path, data_path):
-        p.mkdir(parents=False, exist_ok=True)
-
-
-def finalize():
-    pass
-
-
 def import_template_ids() -> List[str]:
     """Return a list of all the supported template IDs."""
     if not shutil.which("meme"):
@@ -86,15 +73,15 @@ class Template:
         """Return it as item - ready to be appended to the items list and be rendered by
         Albert.
         """
-        return v0.Item(
+        return StandardItem(
             id=self.albert_id,
-            icon=[str(self.img)],
+            icon_factory=lambda: Icon.image(str(self.img)),
             text=self.title(),
             subtext="",
-            completion=f"{query.trigger} {self.id} ",
+            input_action_text=f"{query.trigger} {self.id} ",
             actions=[
-                FuncAction("Copy vanilla image", lambda: self.copy_vanilla_img()),
-                ClipAction("Copy vanilla image path", str(self.img)),
+                Action("copy", "Copy vanilla image", lambda: self.copy_vanilla_img()),
+                Action("copy", "Copy vanilla image path", lambda: setClipboardText(str(self.img))),
             ],
         )
 
@@ -119,31 +106,27 @@ class Template:
             subtext = f"UP: {caption1} | DOWN: {caption2}"
         else:
             subtext = f"USAGE: {self.id} [upper-text] | [lower-text]"
-        return v0.Item(
-            id=md_name,
-            icon=[str(self.img)],
+        return StandardItem(
+            id=f"{md_name}-{self.id}",
+            icon_factory=lambda: Icon.image(str(self.img)),
             text=self.title(),
             subtext=subtext,
-            completion=f"{query.trigger} {self.id} ",
+            input_action_text=f"{query.trigger} {self.id} ",
             actions=[
-                FuncAction(
+                Action(
+                    "copy",
                     "Copy generated custom meme to clipboard",
                     lambda caption1=caption1, caption2=caption2: self._create_n_copy_to_clipboard(
                         caption1=caption1, caption2=caption2
                     ),
                 ),
-                FuncAction(
+                Action(
+                    "copy",
                     "Copy generated custom meme path",
                     lambda caption1=caption1, caption2=caption2: str(
                         self._create_n_copy_path_to_clipboard(
                             caption1=caption1, caption2=caption2
                         )
-                    ),
-                ),
-                FuncAction(
-                    "Copy generated custom meme to clipboard",
-                    lambda caption1=caption1, caption2=caption2: self._create_n_copy_to_clipboard(
-                        caption1=caption1, caption2=caption2
                     ),
                 ),
             ],
@@ -157,15 +140,22 @@ class Template:
         )
 
 
-all_templates = [Template(id=id) for id in import_template_ids()]
-id_to_template = {template.id: template for template in all_templates}
+_templates_cache: List["Template"] = []
+
+
+def get_all_templates() -> List["Template"]:
+    """Return all the supported templates, loading them on first use."""
+    global _templates_cache
+    if not _templates_cache:
+        _templates_cache = [Template(id=id) for id in import_template_ids()]
+    return _templates_cache
 
 
 # supplementary functions ---------------------------------------------------------------------
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(icon_path),
+    image=str(ICON_PATH),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -204,57 +194,53 @@ def load_data(data_name) -> str:
     return data
 
 
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "meme "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "some meme"
 
-    def initialize(self):
-        pass
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
 
-    def finalize(self):
-        pass
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            return f.readline().strip().split()[0]
 
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Yield the memes matching the current query."""
         results = []
 
         try:
-            query_str = query.string
+            all_templates = get_all_templates()
+            query_str = ctx.query
             query_parts = query_str.split()
 
             if not query_parts:
-                query.add([template.get_as_item(query) for template in all_templates])
+                yield [template.get_as_item(ctx) for template in all_templates]
                 return
 
+            id_to_template = {template.id: template for template in all_templates}
             meme_id = query_parts[0]
             if meme_id in id_to_template:
                 captions = [c.strip() for c in " ".join(query_parts[1:]).split("|")]
@@ -263,33 +249,35 @@ class Plugin(v0.QueryHandler):
                 results.insert(
                     0,
                     id_to_template[meme_id].get_as_item_custom(
-                        query, caption1=c1, caption2=c2
+                        ctx, caption1=c1, caption2=c2
                     ),
                 )
             else:
                 title_to_templ = {template.title(): template for template in all_templates}
                 # do fuzzy search - show relevant issues
                 matched = process.extract(
-                    query.string.strip(), list(title_to_templ.keys()), limit=5
+                    query_str.strip(), list(title_to_templ.keys()), limit=5
                 )
                 for m in [elem[0] for elem in matched]:
-                    results.append(title_to_templ[m].get_as_item(query))
+                    results.append(title_to_templ[m].get_as_item(ctx))
 
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            critical(trace)
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="meme-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

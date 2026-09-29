@@ -1,15 +1,39 @@
-import imghdr
 import json
 import subprocess
 from functools import cached_property
 from pathlib import Path
 from typing import Iterator, Optional
 
-import albert as v0
 import requests
 from bs4 import BeautifulSoup
 
 """Search and potentially download images using Bing."""
+
+# This module is loaded standalone via importlib, so the albert loader does not
+# inject the logging helpers into it.
+debug = lambda msg: print(f"bing: {msg}")
+
+
+def _image_type(p: Path) -> Optional[str]:
+    """Sniff an image type from its magic bytes (imghdr was removed in 3.13)."""
+    try:
+        with open(p, "rb") as f:
+            head = f.read(32)
+    except OSError:
+        return None
+
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if head[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if head[:2] == b"\xff\xd8":
+        return "jpeg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "webp"
+    if head[:2] == b"BM":
+        return "bmp"
+    return None
+
 
 user_agent = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:72.0) Gecko/20100101 Firefox/72.0"
@@ -25,7 +49,7 @@ class BingImage:
     @property
     def type(self) -> str:
         if self._type is "":
-            self._type = imghdr.what(str(self.image))
+            self._type = _image_type(self.image)
 
             if self._type is None:
                 self._type = ""
@@ -69,9 +93,9 @@ class BingImage:
 
 
 def download_image(url, filepath: Path = Path()):
-    v0.debug(f"Downloading image {url} -> {filepath}...")
+    debug(f"Downloading image {url} -> {filepath}...")
     subprocess.check_output(["wget", "-O", str(filepath), url], stderr=subprocess.STDOUT)
-    v0.debug(f"Downloaded image {url} -> {filepath}")
+    debug(f"Downloaded image {url} -> {filepath}")
 
 
 def bing_search(query: str, limit: int, adult_filter=False) -> Iterator[BingImage]:

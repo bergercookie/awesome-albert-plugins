@@ -8,37 +8,32 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator, List
 
-import albert as v0  # type: ignore
 import pycountry
 import pytz
 import requests
 import tzlocal
-from thefuzz import process
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
 from PIL import Image
+from thefuzz import process
 
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Timezones"
 md_description = "Timezones lookup based on city/country"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/timezones"
-md_lib_dependencies = [
-    "Pillow",
-    "pycountry",
-    "thefuzz[speedup]",
-    "tzlocal==2.1",
-    "requests",
-    "pytz",
-]
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["Pillow", "pycountry", "pytz", "requests", "thefuzz", "tzlocal"]
 
-
-icon_path = str(Path(__file__).parent / "timezones")
-
-cache_path = Path(v0.cacheLocation()) / "timezones"
-config_path = Path(v0.configLocation()) / "timezones"
-data_path = Path(v0.dataLocation()) / "timezones"
-country_logos_path = data_path / "logos"
 
 # country code -> cities
 code_to_cities = dict({k: v for k, v in pytz.country_timezones.items()})
@@ -76,53 +71,6 @@ def download_logo_for_code(code: str) -> bytes:
     return ret.content
 
 
-def get_logo_path_for_code_orig(code: str) -> Path:
-    """Return the path to the cached country logo"""
-    return country_logos_path / f"{code}-orig.png"
-
-
-def get_logo_path_for_code(code: str) -> Path:
-    """Return the path to the cached country logo"""
-    return country_logos_path / f"{code}.png"
-
-
-def save_logo_for_code(code: str, data: bytes):
-    fname_orig = get_logo_path_for_code_orig(code)
-    fname = get_logo_path_for_code(code)
-
-    with open(fname_orig, "wb") as f:
-        f.write(data)
-
-    old_img = Image.open(fname_orig)
-    old_size = old_img.size
-    new_size = (80, 80)
-    new_img = Image.new("RGBA", new_size)
-    new_img.paste((255, 255, 255, 0), (0, 0, *new_size))
-    new_img.paste(
-        old_img, ((new_size[0] - old_size[0]) // 2, (new_size[1] - old_size[1]) // 2)
-    )
-
-    new_img.save(fname)
-
-
-def download_and_save_logo_for_code(code):
-    save_logo_for_code(code, download_logo_for_code(code))
-
-
-def download_all_logos():
-    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-        future_to_code = {
-            executor.submit(download_and_save_logo_for_code, code): code for code in codes
-        }
-        for future in concurrent.futures.as_completed(future_to_code):
-            code = future_to_code[future]
-            try:
-                future.result()
-                print(f"Fetched logo for country {code}")
-            except Exception as exc:
-                print(f"[W] Fetching logo for {code} generated an exception: {exc}")
-
-
 # plugin main functions -----------------------------------------------------------------------
 
 
@@ -137,35 +85,6 @@ def get_uniq_elements(seq):
 
 
 # supplementary functions ---------------------------------------------------------------------
-
-
-def get_as_item(city: str):
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    code = city_to_code[city]
-
-    icon = str(get_logo_path_for_code(code))
-    utc_dt = pytz.utc.localize(datetime.utcnow())
-    dst_tz = pytz.timezone(city)
-    dst_dt = utc_dt.astimezone(dst_tz)
-
-    text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
-    subtext = f"[{code}] | {city}"
-
-    return v0.Item(
-        id=f"{md_name}_{code}",
-        icon=[icon],
-        text=text,
-        subtext=subtext,
-        completion=city,
-        actions=[
-            UrlAction(
-                "Open in zeitverschiebung.net",
-                (
-                    f'https://www.zeitverschiebung.net/en/timezone/{city.replace("/", "--").lower()}'
-                ),
-            ),
-        ],
-    )
 
 
 def sanitize_string(s: str) -> str:
@@ -186,82 +105,140 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
+        self.country_logos_path = self.data_path / "logos"
 
-    def description(self):
-        return md_description
+        # create plugin locations
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+        # the country logos are fetched on demand - see fetch_logos()
+        self.logos_fetched = False
+
+    @staticmethod
+    def makeIcon():
+        # this plugin ships no icon of its own - the per-item icons are the country flags
+        return Icon.standard(Icon.StandardIconType.World)
 
     def defaultTrigger(self):
         return "tz "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "city/country name"
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
+    def get_logo_path_for_code_orig(self, code: str) -> Path:
+        """Return the path to the cached country logo"""
+        return self.country_logos_path / f"{code}-orig.png"
 
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
+    def get_logo_path_for_code(self, code: str) -> Path:
+        """Return the path to the cached country logo"""
+        return self.country_logos_path / f"{code}.png"
 
-        # fetch all logos at startup
-        country_logos_path.mkdir(exist_ok=True)
-        if not list(country_logos_path.iterdir()):
+    def save_logo_for_code(self, code: str, data: bytes):
+        fname_orig = self.get_logo_path_for_code_orig(code)
+        fname = self.get_logo_path_for_code(code)
+
+        with open(fname_orig, "wb") as f:
+            f.write(data)
+
+        old_img = Image.open(fname_orig)
+        old_size = old_img.size
+        new_size = (80, 80)
+        new_img = Image.new("RGBA", new_size)
+        new_img.paste((255, 255, 255, 0), (0, 0, *new_size))
+        new_img.paste(
+            old_img, ((new_size[0] - old_size[0]) // 2, (new_size[1] - old_size[1]) // 2)
+        )
+
+        new_img.save(fname)
+
+    def download_and_save_logo_for_code(self, code):
+        self.save_logo_for_code(code, download_logo_for_code(code))
+
+    def download_all_logos(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+            future_to_code = {
+                executor.submit(self.download_and_save_logo_for_code, code): code
+                for code in codes
+            }
+            for future in concurrent.futures.as_completed(future_to_code):
+                code = future_to_code[future]
+                try:
+                    future.result()
+                    print(f"Fetched logo for country {code}")
+                except Exception as exc:
+                    print(f"[W] Fetching logo for {code} generated an exception: {exc}")
+
+    def fetch_logos(self):
+        """Fetch all the country logos - only once, and only when the plugin is actually used."""
+        if self.logos_fetched:
+            return
+
+        self.logos_fetched = True
+
+        self.country_logos_path.mkdir(exist_ok=True)
+        if not list(self.country_logos_path.iterdir()):
             print("Downloading country logos")
             t = time.time()
-            download_all_logos()
+            self.download_all_logos()
             print(f"Downloaded country logos - Took {time.time() - t} seconds")
 
-    def finalize(self):
-        pass
+    def get_as_item(self, city: str) -> StandardItem:
+        """Return an item - ready to be appended to the items list and be rendered by Albert."""
+        code = city_to_code[city]
 
-    def handleQuery(self, query) -> None:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+        utc_dt = pytz.utc.localize(datetime.utcnow())
+        dst_tz = pytz.timezone(city)
+        dst_dt = utc_dt.astimezone(dst_tz)
+
+        text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
+        subtext = f"[{code}] | {city}"
+        url = f"https://www.zeitverschiebung.net/en/timezone/{city.replace('/', '--').lower()}"
+
+        return StandardItem(
+            id=f"timezones-{city}",
+            icon_factory=lambda c=code: Icon.image(self.get_logo_path_for_code(c)),
+            text=text,
+            subtext=subtext,
+            input_action_text=city,
+            actions=[
+                Action("open", "Open in zeitverschiebung.net", lambda u=url: openUrl(u)),
+            ],
+        )
+
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
+
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
+
+        return data
+
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Called by albert with *every new keypress*."""
         results = []
 
         try:
-            query_str = query.string.strip()
+            self.fetch_logos()
+
+            query_str = ctx.query.strip()
 
             matched = [
                 elem for elem in process.extract(query_str, full_name_to_city.keys(), limit=8)
             ]
-            v0.debug(matched)
+            print(matched)
 
             unique_cities_matched = get_uniq_elements(
                 [full_name_to_city[m[0]] for m in matched]
@@ -271,24 +248,26 @@ class Plugin(v0.QueryHandler):
             if local_tz_str in unique_cities_matched:
                 unique_cities_matched.remove(local_tz_str)
                 unique_cities_matched.insert(0, local_tz_str)
-            results.extend([get_as_item(m) for m in unique_cities_matched])
+            results.extend([self.get_as_item(m) for m in unique_cities_matched])
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
 
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="timezones-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda t=trace: setClipboardText(t),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

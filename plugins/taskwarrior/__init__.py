@@ -8,14 +8,23 @@ import traceback
 from pathlib import Path
 from shutil import which
 from subprocess import PIPE, Popen
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
-import albert as v0  # type: ignore
 import dateutil
 import gi
 import taskw
 from fuzzywuzzy import process
 from syncall import TaskWarriorSide
+
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
@@ -27,31 +36,28 @@ curr_trigger: str = ""
 # metadata ------------------------------------------------------------------------------------
 md_name = "Taskwarrior"
 md_description = "Taskwarrior - Interaction with the Taskwarrior task manager"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
+md_iid = "5.0"
+md_version = "0.3"
+md_license = "MIT"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins"
-md_lib_dependencies = ["syncall"]
-md_bin_dependencies = []
-
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["python-dateutil", "fuzzywuzzy", "syncall", "taskw"]
+md_bin_dependencies = ["task", "x-terminal-emulator"]
 # initial checks ------------------------------------------------------------------------------
 
 # icon ----------------------------------------------------------------------------------------
-icon_path = os.path.join(os.path.dirname(__file__), "taskwarrior.svg")
-icon_path_b = os.path.join(os.path.dirname(__file__), "taskwarrior_blue.svg")
-icon_path_r = os.path.join(os.path.dirname(__file__), "taskwarrior_red.svg")
-icon_path_y = os.path.join(os.path.dirname(__file__), "taskwarrior_yellow.svg")
-icon_path_c = os.path.join(os.path.dirname(__file__), "taskwarrior_cyan.svg")
-icon_path_g = os.path.join(os.path.dirname(__file__), "taskwarrior_green.svg")
+ICON_PATH = Path(__file__).parent / "taskwarrior.svg"
+ICON_PATH_B = Path(__file__).parent / "taskwarrior_blue.svg"
+ICON_PATH_R = Path(__file__).parent / "taskwarrior_red.svg"
+ICON_PATH_Y = Path(__file__).parent / "taskwarrior_yellow.svg"
+ICON_PATH_C = Path(__file__).parent / "taskwarrior_cyan.svg"
+ICON_PATH_G = Path(__file__).parent / "taskwarrior_green.svg"
 
 # initial configuration -----------------------------------------------------------------------
 failure_tag = "fail"
 
-cache_path = Path(v0.cacheLocation()) / "taskwarrior"
-config_path = Path(v0.configLocation()) / "taskwarrior"
-data_path = Path(v0.dataLocation()) / "taskwarrior"
-
-reminders_tag_path = config_path / "reminders_tag"
+# The config location is only known on a PluginInstance; rebound in __init__.
+reminders_tag_path: Path = None
 reminders_tag = "remindme"
 
 # monkey-patching to solve bug in syncall - don't look.
@@ -59,14 +65,20 @@ TaskWarriorSide.get_task_id = lambda cls, item: str(item[cls.id_key()])
 
 class FileBackedVar:
     def __init__(self, varname, convert_fn=Callable[[str], Any], init_val=None):
-        self._fpath = config_path / varname
+        self._varname = varname
+        self._fpath: Path = None
         self._convert_fn = convert_fn
+        self._init_val = init_val
 
-        if init_val:
+    def bind(self, config_dir: Path) -> "FileBackedVar":
+        self._fpath = config_dir / self._varname
+        self._fpath.parent.mkdir(parents=True, exist_ok=True)
+        if self._init_val and not self._fpath.is_file():
             with open(self._fpath, "w") as f:
-                f.write(str(init_val))
-        else:
+                f.write(str(self._init_val))
+        elif not self._fpath.is_file():
             self._fpath.touch()
+        return self
 
     def get(self) -> Any:
         with open(self._fpath, "r") as f:
@@ -148,19 +160,24 @@ def get_tasks_of_date(date: datetime.date):
     return tasks
 
 
-def get_as_item(**kargs) -> v0.Item:
+def get_as_item(**kargs) -> StandardItem:
     if (urgency := kargs.get("urgency")) is not None:
-        name = f"md_name_{urgency}"
         kargs.pop("urgency")
+        name = f"{md_name}_{urgency}"
     else:
         name = md_name
 
-
     if "icon" in kargs:
         icon = kargs.pop("icon")
+        if isinstance(icon, (list, tuple)):
+            icon = icon[0]
     else:
-        icon = [icon_path]
-    return v0.Item(id=name, icon=icon, **kargs)
+        icon = ICON_PATH
+    if "completion" in kargs:
+        kargs["input_action_text"] = kargs.pop("completion")
+    # item ids drive de-duplication - derive a stable one when not given
+    kargs.setdefault("id", f"{name}-{kargs.get('text', '')}")
+    return StandardItem(icon_factory=lambda: Icon.image(icon), **kargs)
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -170,7 +187,7 @@ workers: List[threading.Thread] = []
 
 def async_reload_items():
     def do_reload():
-        v0.info("TaskWarrior: Updating list of tasks...")
+        info("TaskWarrior: Updating list of tasks...")
         tw_side.reload_items = True
         tw_side.get_all_items(skip_completed=True)
 
@@ -179,38 +196,26 @@ def async_reload_items():
     workers.append(t)
 
 
-def setup(query):  # type: ignore
+def setup() -> Optional[List[StandardItem]]:
+    """Return a list of items if setup is required, else None."""
     if not which("task"):
-        query.add(
-            v0.Item(
-                id=md_name,
-                icon=[icon_path],
+        return [
+            StandardItem(
+                id=f"{md_name}-not-installed",
+                icon_factory=lambda: Icon.image(ICON_PATH),
                 text='"taskwarrior" is not installed.',
                 subtext='Please install and configure "taskwarrior" accordingly.',
                 actions=[
-                    UrlAction(
-                        'Open "taskwarrior" website', "https://taskwarrior.org/download/"
+                    Action(
+                        "open",
+                        'Open "taskwarrior" website',
+                        lambda: openUrl("https://taskwarrior.org/download/"),
                     )
                 ],
             )
-        )
-        return True
+        ]
 
-    return False
-
-
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
+    return None
 
 
 def get_as_subtext_field(field, field_title=None):
@@ -228,17 +233,17 @@ def get_as_subtext_field(field, field_title=None):
 
 def urgency_to_visuals(prio: Union[float, None]) -> Tuple[Union[str, None], Path]:
     if prio is None:
-        return None, Path(icon_path)
+        return None, ICON_PATH
     elif prio < 4:
-        return "↓", Path(icon_path_b)
+        return "↓", ICON_PATH_B
     elif prio < 8:
-        return "↘", Path(icon_path_c)
+        return "↘", ICON_PATH_C
     elif prio < 11:
-        return "-", Path(icon_path_g)
+        return "-", ICON_PATH_G
     elif prio < 15:
-        return "↗", Path(icon_path_y)
+        return "↗", ICON_PATH_Y
     else:
-        return "↑", Path(icon_path_r)
+        return "↑", ICON_PATH_R
 
 
 def fail_task(task_id: list):
@@ -257,47 +262,53 @@ def run_tw_action(args_list: list, need_pty=False):
     stdout, stderr = proc.communicate()
 
     if proc.returncode != 0:
-        image = icon_path_r
+        image = str(ICON_PATH_R)
         msg = f'stdout: {stdout.decode("utf-8")} | stderr: {stderr.decode("utf-8")}'
     else:
-        image = icon_path
+        image = str(ICON_PATH)
         msg = stdout.decode("utf-8")
 
     do_notify(msg=msg, image=image)
     async_reload_items()
 
 
-def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
+def get_tw_item(task: taskw.task.Task) -> StandardItem:  # type: ignore
     """Get a single TW task as an Albert Item."""
     field = get_as_subtext_field
     task_id = tw_side.get_task_id(task)
 
     actions = [
-        FuncAction(
+        Action(
+            "complete",
             "Complete task",
             lambda args_list=["done", task_id]: run_tw_action(args_list),
         ),
-        FuncAction(
+        Action(
+            "delete",
             "Delete task",
             lambda args_list=["delete", task_id]: run_tw_action(args_list),
         ),
-        FuncAction(
+        Action(
+            "start",
             "Start task",
             lambda args_list=["start", task_id]: run_tw_action(args_list),
         ),
-        FuncAction(
+        Action(
+            "stop",
             "Stop task",
             lambda args_list=["stop", task_id]: run_tw_action(args_list),
         ),
-        FuncAction(
+        Action(
+            "edit",
             "Edit task interactively",
             lambda args_list=["edit", task_id]: run_tw_action(args_list, need_pty=True),
         ),
-        FuncAction(
+        Action(
+            "fail",
             "Fail task",
             lambda task_id=task_id: fail_task(task_id=task_id),
         ),
-        ClipAction("Copy task UUID", f"{task_id}"),
+        Action("copy", "Copy task UUID", lambda: setClipboardText(f"{task_id}")),
     ]
 
     found_urls = url_re.findall(task["description"])
@@ -305,16 +316,19 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
         found_urls.extend(url_re.findall(" ".join(task["annotations"])))
 
     for url in found_urls[-1::-1]:
-        actions.insert(0, UrlAction(f"Open {url}", url))
+        actions.insert(0, Action("open", f"Open {url}", lambda u=url: openUrl(u)))
 
     if reminders_tag_path.is_file():
         global reminders_tag
-        reminders_tag = load_data(reminders_tag_path)
+        with open(reminders_tag_path, "r") as f:
+            reminders_tag = f.readline().strip().split()[0]
     else:
-        save_data("remindme", str(reminders_tag_path))
+        with open(reminders_tag_path, "w") as f:
+            f.write(reminders_tag)
 
     actions.append(
-        FuncAction(
+        Action(
+            "remind",
             f"Add to Reminders (+{reminders_tag})",
             lambda args_list=[
                 "modify",
@@ -325,7 +339,8 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
     )
 
     actions.append(
-        FuncAction(
+        Action(
+            "next",
             "Work on next (+next)",
             lambda args_list=[
                 "modify",
@@ -351,7 +366,7 @@ def get_tw_item(task: taskw.task.Task) -> v0.Item:  # type: ignore
             field(due, "due"),
         )[:-2],
         icon=[str(icon)],
-        completion=f'{curr_trigger}{task["description"]}',
+        input_action_text=f'{curr_trigger}{task["description"]}',
         actions=actions,
         urgency=task.get("urgency"),
     )
@@ -366,7 +381,7 @@ class Subcommand:
 
     def get_as_albert_item(self, *args, **kargs):
         return get_as_item(
-            text=self.desc, completion=f"{self.subcommand_prefix} ", *args, **kargs
+            text=self.desc, input_action_text=f"{self.subcommand_prefix} ", *args, **kargs
         )
 
     def get_as_albert_items_full(self, query_str):
@@ -384,35 +399,37 @@ class AddSubcommand(Subcommand):
         items = []
 
         subtext = query_str
-        completion = f"{self.subcommand_prefix} {query_str}"
         actions = [
-            FuncAction(
+            Action(
+                "add",
                 "Add task",
                 lambda args_list=["add", *query_str.split()]: run_tw_action(args_list),
             )
         ]
         add_item = self.get_as_albert_item(
-            subtext=subtext, complection=completion, actions=actions
+            subtext=subtext,
+            input_action_text=f"{self.subcommand_prefix} {query_str}",
+            actions=actions,
         )
         items.append(add_item)
 
-        to_reminders = v0.Item(
-            id=f"{md_name}_y",
+        to_reminders = StandardItem(
+            id=f"{md_name}-reminders",
             text=f"Add +{reminders_tag} tag",
             subtext="Add +remindme on [TAB]",
-            icon=[icon_path_y],
-            completion=f"{self.subcommand_prefix} {query_str} +remindme",
+            icon_factory=lambda: Icon.image(ICON_PATH_Y),
+            input_action_text=f"{self.subcommand_prefix} {query_str} +remindme",
         )
         items.append(to_reminders)
 
         def item_at_date(date: datetime.date, time_24h: int):
             dt_str = f'{date.strftime("%Y%m%d")}T{time_24h}0000'
-            return v0.Item(
-                id=f"{md_name}_c",
+            return StandardItem(
+                id=f"{md_name}-due-{dt_str}",
                 text=f"Due {date}, at {time_24h}:00",
                 subtext="Add due:dt_str on [TAB]",
-                icon=[icon_path_c],
-                completion=f"{self.subcommand_prefix} {query_str} due:{dt_str}",
+                icon_factory=lambda: Icon.image(ICON_PATH_C),
+                input_action_text=f"{self.subcommand_prefix} {query_str} due:{dt_str}",
             )
 
         items.append(item_at_date(datetime.date.today(), time_24h=15))
@@ -437,7 +454,8 @@ class LogSubcommand(Subcommand):
     def get_as_albert_items_full(self, query_str):
         subtext = query_str
         actions = [
-            FuncAction(
+            Action(
+                "log",
                 "Log task",
                 lambda args_list=["log", *query_str.split()]: run_tw_action(args_list),
             )
@@ -473,7 +491,8 @@ class DateTasks(Subcommand):
     def get_as_albert_item(self):
         item = super().get_as_albert_item(
             actions=[
-                FuncAction(
+                Action(
+                    "move",
                     "Move tasks to the day after",
                     lambda date=self.date: move_tasks_of_date_to_next_day(date),
                 )
@@ -569,51 +588,37 @@ def get_subcommand_query(query_str: str) -> Optional[SubcommandQuery]:
         return SubcommandQuery(subcommand=subcommand, query=query_str)
 
 
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+        global reminders_tag_path
+        reminders_tag_path = self.config_path / "reminders_tag"
+        last_used_date.bind(self.config_path)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "t "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "task description"
 
-    def finalize(self):
-        pass
-
-    def initialize(self):
-        # Called when the extension is loaded (ticked in the settings) - blocking
-
-        # create cache location
-        config_path.mkdir(parents=False, exist_ok=True)
-
-    def handleQuery(self, query) -> None:
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Yield the task items for the current query."""
         global curr_trigger
-        curr_trigger = query.trigger
+        curr_trigger = ctx.trigger
 
         # we're into the new day, create and assign a fresh instance
         last_used = last_used_date.get()
@@ -626,7 +631,7 @@ class Plugin(v0.QueryHandler):
             last_used_date.set(current_date)
         elif last_used > current_date:
             # maybe due to NTP?
-            v0.critical(
+            critical(
                 f"Current date {current_date} < last_used date {last_used} ?! Overriding"
                 " current date, please report this if it persists"
             )
@@ -644,19 +649,20 @@ class Plugin(v0.QueryHandler):
             workers.pop(i).join(2)
 
         try:
-            results_setup = setup(query)
+            results_setup = setup()
             if results_setup:
+                yield results_setup
                 return
             tasks = tw_side.get_all_items(skip_completed=True)
 
-            query_str = query.string
+            query_str = ctx.query
 
             if len(query_str) < 2:
                 results.extend([s.get_as_albert_item() for s in subcommands])
                 results.append(
                     get_as_item(
                         text="Reload list of tasks",
-                        actions=[FuncAction("Reload", async_reload_items)],
+                        actions=[Action("reload", "Reload", async_reload_items)],
                     )
                 )
 
@@ -685,21 +691,23 @@ class Plugin(v0.QueryHandler):
                         results.append(get_tw_item(task))
 
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            critical(trace)
 
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id=f"{md_name}-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

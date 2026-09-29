@@ -3,120 +3,111 @@
 import traceback
 from pathlib import Path
 from threading import Lock
-from typing import Dict, List, Union
+from typing import Dict, Iterator, List, Union
 
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
 from fuzzywuzzy import process
 from pulsectl import Pulse, pulsectl
 
-
-from albert import *
-
-md_iid = "0.5"
-md_version = "0.2"
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "PulseAudio - Set I/O Audio devices and profile"
 md_description = "Switch between PulseAudio sources and sinks"
 md_license = "BSD-2"
 md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//pulse_control"
 )
-md_maintainers = "Nikos Koukis"
-md_lib_dependencies = ["pulsectl"]
-
-
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["fuzzywuzzy", "pulsectl"]
 pulse_lock = Lock()
 
-src_icon_path = str(Path(__file__).parent / "source")
-sink_icon_path = str(Path(__file__).parent / "sink")
-config_icon_path = str(Path(__file__).parent / "configuration")
-
-cache_path = Path(cacheLocation()) / "pulse_control"
-config_path = Path(configLocation()) / "pulse_control"
-data_path = Path(dataLocation()) / "pulse_control"
-
-pulse = Pulse("albert-client")
+src_icon_path = Path(__file__).parent / "source.svg"
+sink_icon_path = Path(__file__).parent / "sink.svg"
+config_icon_path = Path(__file__).parent / "configuration.svg"
 
 
-class ClipAction(Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: setClipboardText(copy_text))
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
+        # create plugin locations
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
 
-class FuncAction(Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
+        self.pulse = Pulse("albert-client")
 
-
-class Plugin(QueryHandler):
-    def id(self):
-        return __name__
-
-    def name(self):
-        return md_name
-
-    def description(self):
-        return md_description
+    @staticmethod
+    def makeIcon():
+        return Icon.image(config_icon_path)
 
     def defaultTrigger(self):
         return "p "
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
-
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
-
-    def finalize(self):
-        pass
-
-    def handleQuery(self, query) -> list:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Handler called by albert with *every new keypress*."""
         results = []
 
         try:
-            query_str = query.string.strip()
+            query_str = ctx.query.strip()
 
             # avoid racing conditions when multiple queries are running simultaneously (i.e,
             # current and previous query due to successive keystrokes)
             pulse_lock.acquire()
-            sources_sinks: List[Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]] = [
-                *pulse.sink_list(),
-                *pulse.source_list(),
-            ]
-            cards: List[pulsectl.PulseCardInfo] = pulse.card_list()
-            pulse_lock.release()
+            try:
+                sources_sinks: List[
+                    Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]
+                ] = [
+                    *self.pulse.sink_list(),
+                    *self.pulse.source_list(),
+                ]
+                cards: List[pulsectl.PulseCardInfo] = self.pulse.card_list()
+            finally:
+                pulse_lock.release()
 
             if not query_str:
-                results.extend(self.render_noargs(query, sources_sinks, cards))
+                results.extend(self.render_noargs(ctx, sources_sinks, cards))
             else:
-                results.extend(self.render_search(sources_sinks, cards, query))
+                results.extend(self.render_search(sources_sinks, cards, ctx))
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
 
             results.insert(
                 0,
-                Item(
-                    id=self.name(),
-                    icon=[],
+                StandardItem(
+                    id=f"{self.id()}-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda trace=trace: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results
 
     def render_noargs(
         self,
-        query,
+        ctx,
         sources_sinks: List[Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]],
         cards: List[pulsectl.PulseCardInfo],
-    ) -> List[Item]:
+    ) -> List[StandardItem]:
         """Display current source, sink and card profiles."""
         results = []
 
@@ -130,17 +121,21 @@ class Plugin(QueryHandler):
 
             # fill actions
             actions = [
-                FuncAction(p.description, lambda s=s, p=p: pulse.port_set(s, p))
+                Action(
+                    "set-port",
+                    p.description,
+                    lambda s=s, p=p: self.pulse.port_set(s, p),
+                )
                 for p in s.port_list
             ]
 
             results.append(
-                Item(
-                    id=self.name(),
-                    icon=[icon],
+                StandardItem(
+                    id=f"{self.id()}-port-{s.name}-{s.port_active.name}",
+                    icon_factory=self._makeIcon(icon),
                     text=s.port_active.description,
                     subtext=s.description,
-                    completion=query.trigger,
+                    input_action_text=ctx.trigger,
                     actions=actions,
                 )
             )
@@ -148,19 +143,21 @@ class Plugin(QueryHandler):
         # active profile for each sound card ------------------------------------------------------
         for c in cards:
             actions = [
-                FuncAction(
-                    prof.description, lambda c=c, prof=prof: pulse.card_profile_set(c, prof)
+                Action(
+                    "set-profile",
+                    prof.description,
+                    lambda c=c, prof=prof: self.pulse.card_profile_set(c, prof),
                 )
                 for prof in c.profile_list
             ]
 
             results.append(
-                Item(
-                    id=self.name(),
-                    icon=[config_icon_path],
+                StandardItem(
+                    id=f"{self.id()}-profile-{c.name}-{c.profile_active.name}",
+                    icon_factory=self._makeIcon(config_icon_path),
                     text=c.profile_active.description,
                     subtext=c.name,
-                    completion=query.trigger,
+                    input_action_text=ctx.trigger,
                     actions=actions,
                 )
             )
@@ -171,8 +168,8 @@ class Plugin(QueryHandler):
         self,
         sources_sinks: List[Union[pulsectl.PulseSourceInfo, pulsectl.PulseSinkInfo]],
         cards: List[pulsectl.PulseCardInfo],
-        query,
-    ) -> List[Item]:
+        ctx,
+    ) -> List[StandardItem]:
         results = []
 
         # sinks, sources
@@ -180,7 +177,7 @@ class Plugin(QueryHandler):
             p.description: [
                 sink_icon_path if is_sink(s) else src_icon_path,
                 s.description,
-                lambda s=s, p=p: pulse.port_set(s, p),
+                lambda s=s, p=p: self.pulse.port_set(s, p),
             ]
             for s in sources_sinks
             for p in s.port_list
@@ -192,7 +189,7 @@ class Plugin(QueryHandler):
                 prof.description: [
                     config_icon_path,
                     f"Profile | {c.name}",
-                    lambda c=c, prof=prof: pulse.card_profile_set(c, prof),
+                    lambda c=c, prof=prof: self.pulse.card_profile_set(c, prof),
                 ]
                 for c in cards
                 for prof in c.profile_list
@@ -200,24 +197,29 @@ class Plugin(QueryHandler):
         )
 
         # add albert items
-        matched = process.extract(query.string, list(search_str_to_props.keys()), limit=10)
+        matched = process.extract(ctx.query, list(search_str_to_props.keys()), limit=10)
         for m in [elem[0] for elem in matched]:
             icon = search_str_to_props[m][0]
             subtext = search_str_to_props[m][1]
-            action = FuncAction(m, search_str_to_props[m][2])
+            action = Action("set", m, search_str_to_props[m][2])
 
             results.append(
-                Item(
-                    id=self.name(),
-                    icon=[icon],
+                StandardItem(
+                    id=f"{self.id()}-search-{m}",
+                    icon_factory=self._makeIcon(icon),
                     text=m,
                     subtext=subtext,
-                    completion=" ".join([query.trigger, query.string]),
+                    input_action_text=" ".join([ctx.trigger, ctx.query]),
                     actions=[action],
                 )
             )
 
         return results
+
+    @staticmethod
+    def _makeIcon(path):
+        """Return a zero-arg icon factory for the given image path."""
+        return lambda: Icon.image(path)
 
 
 def get_as_subtext_field(field, field_title=None) -> str:

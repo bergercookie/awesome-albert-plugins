@@ -105,8 +105,6 @@ ENV/
 Session.vim
 .bash_history
 
-/plugins/search_*/
-!plugins/search_template/
 /.viminfo
 /.local/
 /.cookiecutter_replay/
@@ -114,3 +112,4 @@ Session.vim
 
 # external plugins I use but don't develop myself
 /plugins/ext-*
+albert-plugin-python-vikunja/

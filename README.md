@@ -49,7 +49,6 @@ Currently the list of plugins includes:
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
 - [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
 - [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
-- [Google Translate](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/google_translate) - 🉑 Reimplementation of [this](https://github.com/dshoreman/albert-translate) plugin with persistent storage of previous searches, no need for API key and smart HTTP querying to avoid blocking from Google.
 - [Harakiri](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/harakiri) - 📫 Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
 - [IP show](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/ipshow) - 🌐 Display information about your network interfaces and public IPs
 - [Image Search](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/image_search) - 📷 Search the web for images, download them and/or copy them to clipboard
@@ -69,31 +68,11 @@ Currently the list of plugins includes:
 - [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
 - [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
 - [Xkcd](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/xkcd) - 📓 List and fuzzy-search the latest [xkcd](https://fr.wikipedia.org/wiki/Xkcd) comics
-- [`DuckDuckGo`-based autocompletion search](https://github.com/bergercookie/awesome-albert-plugins#ddgr-based-plugins) - 🦆 for searching on duckduckgo.com, github.com,
-  stackoverflow, amazon, and a variety of other websites using [ddgr](https://github.com/jarun/ddgr)
 
-  - Suggestions-enabled search using [ddgr](https://github.com/jarun/ddgr) on
-    a variety of websites. For example:
-
-    - DuckDuckGo
-    - Amazon
-    - Youtube
-    - Github
-    - Ebay
-    - Imdb
-    - Urban dictionary: Word/Slang definitions lookup
-    - Python, OpenCV, Dlib, C++ documentation lookup
-    - ...
-    - :warning: To avoid getting blocked, a search request is only sent when the
-      text ends with a dot `"."`.
-
-    - Install `google-chrome` or `chromium-browser` to add an "Open in incognito
-      mode" option
-    - See the [`ddgr`-specific section](#ddgr-based-plugins) for more
-
-Plugins have been tested with the Albert python `v0.4` interface. If you're
+Plugins have been migrated to the Albert python `5.0` interface. If you're
 looking for a version that works with earlier versions of the plugin, see the
-`prior-to-v0.4` branch. I'm using Python `3.6.8`.
+`prior-to-v0.4` branch. See [MIGRATION.md](MIGRATION.md) for the steps used to
+port a plugin from the legacy `v0` API.
 
 ### Themes
 
@@ -112,7 +91,7 @@ Requirements:
 
 - Linux (tested on Ubuntu)
 - Albert - [Installation instructions](https://albertlauncher.github.io/docs/installing/)
-  - Albert Python Interface: `v0.4`
+  - Albert Python Interface: `5.0`
 
 Clone this repository under your local Albert python plugins directory. By
 default the that is: `~/.local/share/albert/org.albert.extension.python/modules`.
@@ -122,31 +101,6 @@ using. Beware that you may need to install some more dependencies depending on
 the plugins you use. These dependencies will probably be pointed out either when
 you enable, or when you run the plugin for the first time. Refer to the
 directory of the corresponding plugin for more details.
-
-### `ddgr`-based plugins
-
-The search plugins that use `ddgr` have not been committed to this repo. You
-can generate them offline using the `create_ddgr_plugins.py` script provided.
-Make sure you have Python >= 3.6 installed:
-
-```
-pip3 install --user --upgrade secrets requests ddgr cookiecutter
-./create_ddgr_plugins.py
-```
-
-This will generate an Albert plugin for each one of the search engines specified
-in `create_ddgr_plugins.py`. Adjust the latter as required if you want to
-add more or remove plugins.
-
-```py
-generate_plugins_only_for = [
-    "alternativeto",
-    "amazon",
-    "askubuntu",
-    "aur.archlinux",
-    ...
-    ]
-```
 
 ### I don't want to setup all the plugins, just a few
 

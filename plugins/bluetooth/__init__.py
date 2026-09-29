@@ -4,30 +4,35 @@ import subprocess
 import threading
 import traceback
 from pathlib import Path
-from typing import List, Mapping, MutableMapping, Optional, Sequence
+from typing import Iterator, List, Mapping, MutableMapping, Optional, Sequence
 
 import gi
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 
-from gi.repository import Notify
-from albert import *
+from gi.repository import Notify  # isort:skip
 
-md_iid = "0.5"
-md_version = "0.2"
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
+
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Bluetooth - Connect / Disconnect bluetooth devices"
 md_description = "Connect / Disconnect bluetooth devices"
 md_license = "BSD-2"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth"
-md_maintainers = "Nikos Koukis"
+md_maintainers = ["Nikos Koukis"]
 md_bin_dependencies = ["rfkill", "bluetoothctl"]
-icon_path = str(Path(__file__).parent / "bluetooth-orig.png")
-icon_error_path = str(Path(__file__).parent / "bluetooth1.svg")
 
-cache_path = Path(cacheLocation()) / "bluetooth"
-config_path = Path(configLocation()) / "bluetooth"
-data_path = Path(dataLocation()) / "bluetooth"
+ICON_PATH = Path(__file__).parent / "bluetooth-orig.png"
+ICON_ERROR_PATH = Path(__file__).parent / "bluetooth1.svg"
 
 workers: List[threading.Thread] = []
 
@@ -44,7 +49,7 @@ class BlDevice:
         self.is_trusted = d["Trusted"] == "yes"
         self.is_blocked = d["Blocked"] == "yes"
         self.is_connected = d["Connected"] == "yes"
-        self.icon = d.get("Icon", icon_path)
+        self.icon = d.get("Icon", str(ICON_PATH))
 
     def _parse_info(self) -> Mapping[str, str]:
         proc = bl_cmd(["info", self.mac_address])
@@ -78,48 +83,36 @@ class BlDevice:
         async_bl_cmd(["disconnect", self.mac_address])
 
 
-class ClipAction(Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: setClipboardText(copy_text))
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-
-class FuncAction(Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
-class Plugin(QueryHandler):
-    def id(self):
-        return __name__
-
-    def name(self):
-        return md_name
-
-    def description(self):
-        return md_description
-
-    def initialize(self):
         # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
 
-    def finalize(self):
-        pass
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "bl "
 
-    def handleQuery(self, query):
-        if not query.isValid:
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        if not ctx.isValid:
             return
-
-        results = []
 
         # join any previously launched threads
         for i in range(len(workers)):
             workers.pop(i).join(2)
 
         try:
+            results = []
+
             # List all available device
             results.extend(self.get_device_as_item(dev) for dev in list_avail_devices())
 
@@ -138,21 +131,27 @@ class Plugin(QueryHandler):
             )
 
         except Exception:  # user to report error
-            critical(traceback.format_exc())
-            query.add(Item(
-                    id=self.name(),
-                    icon=icon_path,
+            trace = traceback.format_exc()
+            critical(trace)
+            yield [
+                StandardItem(
+                    id=f"{self.id()}-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda trace=trace: setClipboardText(trace),
                         )
                     ],
-                ),
-            )
+                )
+            ]
+            return
 
-    def get_device_as_item(self, dev: BlDevice):
+        yield results
+
+    def get_device_as_item(self, dev: BlDevice) -> StandardItem:
         text = dev.name
         subtext = (
             f"pair: {dev.is_paired} | "
@@ -163,26 +162,34 @@ class Plugin(QueryHandler):
 
         actions = []
         if dev.is_connected:
-            actions.append(FuncAction("Disconnect device", lambda dev=dev: dev.disconnect()))
+            actions.append(
+                Action("disconnect", "Disconnect device", lambda dev=dev: dev.disconnect())
+            )
         else:
-            actions.append(FuncAction("Connect device", lambda dev=dev: dev.connect()))
+            actions.append(Action("connect", "Connect device", lambda dev=dev: dev.connect()))
         if not dev.is_trusted:
-            actions.append(FuncAction("Trust device", lambda dev=dev: dev.trust()))
+            actions.append(Action("trust", "Trust device", lambda dev=dev: dev.trust()))
         if not dev.is_paired:
-            actions.append(FuncAction("Pair device", lambda dev=dev: dev.pair()))
-        actions.append(ClipAction("Copy device's MAC address", dev.mac_address))
+            actions.append(Action("pair", "Pair device", lambda dev=dev: dev.pair()))
+        actions.append(
+            Action(
+                "copy",
+                "Copy device's MAC address",
+                lambda mac=dev.mac_address: setClipboardText(mac),
+            )
+        )
 
-        icon = lookup_icon(dev.icon) or icon_path
-        return Item(
-            id=self.name(),
-            icon=[icon],
+        icon = lookup_icon(dev.icon) or ICON_PATH
+        return StandardItem(
+            id=f"{self.id()}-device-{dev.mac_address}",
+            icon_factory=lambda icon=icon: Icon.image(icon),
             text=text,
             subtext=subtext,
-            completion=self.defaultTrigger(),
+            input_action_text=self.defaultTrigger(),
             actions=actions,
         )
 
-    def get_shell_cmd_as_item(self, *, text: str, command: str):
+    def get_shell_cmd_as_item(self, *, text: str, command: str) -> StandardItem:
         """Return shell command as an item - ready to be appended to the items list and be rendered by Albert."""
 
         subtext = ""
@@ -195,25 +202,37 @@ class Plugin(QueryHandler):
                 stderr = proc.stderr.decode("utf-8").strip()
                 notify(
                     msg=f"Error when executing {command}\n\nstdout: {stdout}\n\nstderr: {stderr}",
-                    image=icon_error_path,
+                    image=str(ICON_ERROR_PATH),
                 )
 
-        return Item(
-            id=self.name(),
-            icon=[icon_path],
+        return StandardItem(
+            id=f"{self.id()}-cmd-{command}",
+            icon_factory=self.makeIcon,
             text=text,
             subtext=subtext,
-            completion=completion,
+            input_action_text=completion,
             actions=[
-                FuncAction(text, lambda command=command: run(command=command)),
+                Action("run", text, lambda command=command: run(command=command)),
             ],
         )
+
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
+
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
+
+        return data
 
 
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(icon_path),
+    image=str(ICON_PATH),
 ):
     Notify.init(app_name)
     n = Notify.Notification.new(app_name, msg, image)
@@ -242,7 +261,7 @@ def async_bl_cmd(cmd: Sequence[str]):
                 msg += f"\n\nSTDOUT:\n\n{proc.stdout}"
             if stderr:
                 msg += f"\n\nSTDERR:\n\n{proc.stderr}"
-            notify(msg=msg, image=icon_error_path)
+            notify(msg=msg, image=str(ICON_ERROR_PATH))
 
     t = threading.Thread(target=_async_bl_cmd)
     t.start()
@@ -296,25 +315,11 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-def lookup_icon(icon_name: str) -> Optional[str]:
+def lookup_icon(icon_name: str) -> Optional[Path]:
     icons = list(Path(__file__).parent.glob("*.png"))
 
     matching = [icon for icon in icons if icon_name in icon.name]
     if matching:
-        return str(matching[0])
+        return matching[0]
     else:
         return None

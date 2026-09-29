@@ -1,112 +1,87 @@
 """HTTP URL Lookup operations."""
 
-import sys
 import traceback
-from typing import Tuple
 from pathlib import Path
+from typing import Iterator, List, Tuple
 
 import requests
 
-import albert as v0
-
-md_name = "HTTP URL Lookup codes"
-md_description = "HTTP URL Lookup codes and their description such as 404, 301, etc."
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//url_lookup"
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
 )
 
-icon_path = str(Path(__file__).parent / "url_lookup")
+md_iid = "5.0"
+md_version = "0.3"
+md_name = "HTTP URL Lookup codes"
+md_description = "HTTP URL Lookup codes and their description such as 404, 301, etc."
+md_license = "MIT"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["requests"]
 
-cache_path = Path(v0.cacheLocation()) / "url_lookup"
-config_path = Path(v0.configLocation()) / "url_lookup"
-data_path = Path(v0.dataLocation()) / "url_lookup"
+ICON_PATH = Path(__file__).parent / "url_lookup.png"
 
 codes_d = {str(k): v for k, v in requests.status_codes._codes.items()}
 
-# plugin main functions -----------------------------------------------------------------------
-
 
 # supplementary functions ---------------------------------------------------------------------
-
-
-def get_as_item(t: Tuple[str, tuple]):
-    return v0.Item(
-        id=md_name,
-        icon=[icon_path],
+def get_as_item(t: Tuple[str, tuple]) -> StandardItem:
+    return StandardItem(
+        id=f"url-lookup-{t[0]}",
+        icon_factory=Plugin.makeIcon,
         text=f"{t[0]} - {t[1][0]}",
         subtext="",
-        completion="",
+        input_action_text="",
         actions=[
-            UrlAction("More info", f"https://httpstatuses.com/{t[0]}"),
+            Action("open", "More info", lambda: openUrl(f"https://httpstatuses.com/{t[0]}")),
         ],
     )
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "url "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "some url code e.g., 404"
 
-    def finalize(self):
-        pass
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
 
-    def initialize(self):
-        # Called when the extension is loaded (ticked in the settings) - blocking
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            return f.readline().strip().split()[0]
 
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
-
-    def handleQuery(self, query) -> None:
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
         results = []
 
         try:
-            query_str = query.string
+            query_str = ctx.query
             for item in codes_d.items():
                 if query_str in item[0]:
                     results.append(get_as_item(item))
@@ -118,20 +93,22 @@ class Plugin(v0.QueryHandler):
                             break
 
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="url-lookup-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

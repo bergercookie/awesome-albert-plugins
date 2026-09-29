@@ -4,25 +4,28 @@ import concurrent.futures
 import time
 import traceback
 from pathlib import Path
+from typing import Iterator, List
 
-import albert as v0
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
 from PyDictionary import PyDictionary
 
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Words"
 md_description = "Words: meaning, synonyms, antonyms, examples"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/words"
-md_lib_dependencies = "git+https://github.com/ctoth/PyDictionary@0acf69d"
-
-icon_path = str(Path(__file__).parent / "words")
-icon_path_g = str(Path(__file__).parent / "words_g")
-icon_path_r = str(Path(__file__).parent / "words_r")
-
-cache_path = Path(v0.cacheLocation()) / "words"
-config_path = Path(v0.configLocation()) / "words"
-data_path = Path(v0.dataLocation()) / "words"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["PyDictionary"]
+ICON_PATH = Path(__file__).parent / "words.png"
+ICON_PATH_G = Path(__file__).parent / "words_g.png"
+ICON_PATH_R = Path(__file__).parent / "words_r.png"
 
 pd = PyDictionary()
 
@@ -61,74 +64,6 @@ keys_monitor = KeystrokeMonitor()
 # supplementary functions ---------------------------------------------------------------------
 
 
-def get_items_for_word(query, word: str) -> list:
-    """Return an item - ready to be appended to the items list and be rendered by Albert."""
-    # TODO Do these in parallel
-    outputs = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {
-            executor.submit(pd.meaning, word): "meanings",
-            executor.submit(pd.synonym, word): "synonyms",
-            executor.submit(pd.antonym, word): "antonyms",
-        }
-        for future in concurrent.futures.as_completed(futures):
-            key = futures[future]
-            try:
-                outputs[key] = future.result()
-            except Exception as exc:
-                print(f"[W] Getting the word {key} generated an exception: {exc}")
-
-    meanings = outputs["meanings"]
-    synonyms = outputs["synonyms"]
-    antonyms = outputs["antonyms"]
-
-    # meaning
-    items = []
-    if meanings:
-        for k, v in meanings.items():
-            for vi in v:
-                items.append(
-                    v0.Item(
-                        id=md_name,
-                        icon=[icon_path],
-                        text=vi,
-                        subtext=k,
-                        completion=f"{query.trigger} {word}",
-                        actions=[
-                            ClipAction("Copy", vi),
-                        ],
-                    )
-                )
-
-    # synonyms
-    if synonyms:
-        items.append(
-            v0.Item(
-                id="{md_name}_g",
-                icon=[icon_path_g],
-                text="Synonyms",
-                subtext="|".join(synonyms),
-                completion=synonyms[0],
-                actions=[ClipAction(a, a) for a in synonyms],
-            )
-        )
-
-    # antonym
-    if antonyms:
-        items.append(
-            v0.Item(
-                id="{md_name}_r",
-                icon=[icon_path_r],
-                text="Antonyms",
-                subtext="|".join(antonyms),
-                completion=antonyms[0],
-                actions=[ClipAction(a, a) for a in antonyms],
-            )
-        )
-
-    return items
-
-
 def get_as_subtext_field(field, field_title=None) -> str:
     """Get a certain variable as part of the subtext, along with a title for that variable."""
     s = ""
@@ -143,69 +78,134 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation()) / "words"
+        self.config_path = Path(self.configLocation()) / "words"
+        self.data_path = Path(self.dataLocation()) / "words"
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
 
     def defaultTrigger(self):
         return "word "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "some word e.g., obnoxious"
 
-    def initialize(self):
-        """Called when the extension is loaded (ticked in the settings) - blocking."""
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
 
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            data = f.readline().strip().split()[0]
 
-    def finalize(self):
-        pass
+        return data
 
-    def handleQuery(self, query) -> None:
+    # -- items --------------------------------------------------------------------------------
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
+
+    def get_items_for_word(self, ctx, word: str) -> List[StandardItem]:
+        """Return an item - ready to be appended to the items list and be rendered by Albert."""
+        # TODO Do these in parallel
+        outputs = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(pd.meaning, word): "meanings",
+                executor.submit(pd.synonym, word): "synonyms",
+                executor.submit(pd.antonym, word): "antonyms",
+            }
+            for future in concurrent.futures.as_completed(futures):
+                key = futures[future]
+                try:
+                    outputs[key] = future.result()
+                except Exception as exc:
+                    print(f"[W] Getting the word {key} generated an exception: {exc}")
+
+        meanings = outputs["meanings"]
+        synonyms = outputs["synonyms"]
+        antonyms = outputs["antonyms"]
+
+        # meaning
+        items: List[StandardItem] = []
+        if meanings:
+            for k, v in meanings.items():
+                for idx, vi in enumerate(v):
+                    items.append(
+                        StandardItem(
+                            id=f"{self.id()}.meaning-{word}-{k}-{idx}",
+                            icon_factory=self.makeIcon,
+                            text=vi,
+                            subtext=k,
+                            input_action_text=f"{ctx.trigger} {word}",
+                            actions=[
+                                Action("copy", "Copy", lambda vi=vi: setClipboardText(vi)),
+                            ],
+                        )
+                    )
+
+        # synonyms
+        if synonyms:
+            items.append(
+                StandardItem(
+                    id=f"{self.id()}.synonyms-{word}",
+                    icon_factory=lambda: Icon.image(ICON_PATH_G),
+                    text="Synonyms",
+                    subtext="|".join(synonyms),
+                    input_action_text=synonyms[0],
+                    actions=[
+                        Action("copy", a, lambda a=a: setClipboardText(a)) for a in synonyms
+                    ],
+                )
+            )
+
+        # antonym
+        if antonyms:
+            items.append(
+                StandardItem(
+                    id=f"{self.id()}.antonyms-{word}",
+                    icon_factory=lambda: Icon.image(ICON_PATH_R),
+                    text="Antonyms",
+                    subtext="|".join(antonyms),
+                    input_action_text=antonyms[0],
+                    actions=[
+                        Action("copy", a, lambda a=a: setClipboardText(a)) for a in antonyms
+                    ],
+                )
+            )
+
+        return items
+
+    def get_error_item(self, trace: str) -> StandardItem:
+        return StandardItem(
+            id=f"{self.id()}.error",
+            icon_factory=self.makeIcon,
+            text="Something went wrong! Press [ENTER] to copy error and report it",
+            actions=[
+                Action(
+                    "copy",
+                    f"Copy error - report it to {md_url[8:]}",
+                    lambda: setClipboardText(trace),
+                )
+            ],
+        )
+
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
         """Hook that is called by albert with *every new keypress*."""  # noqa
         results = []
 
         try:
-            query_str = query.string.strip()
+            query_str = ctx.query.strip()
 
             # too small request - don't even send it.
             if len(query_str) < 2:
@@ -214,48 +214,37 @@ class Plugin(v0.QueryHandler):
 
             if len(query_str.split()) > 1:
                 # pydictionary or synonyms.com don't seem to support this
-                query.add(
-                    v0.Item(
-                        id=md_name,
-                        icon=[icon_path],
+                yield [
+                    StandardItem(
+                        id=f"{self.id()}.single-word",
+                        icon_factory=self.makeIcon,
                         text="A term must be only a single word",
                         actions=[],
                     )
-                )
+                ]
                 return
 
             # determine if we can make the request --------------------------------------------
             keys_monitor.report()
             if keys_monitor.triggered():
-                results.extend(get_items_for_word(query, query_str))
+                results.extend(self.get_items_for_word(ctx, query_str))
 
                 if not results:
-                    query.add(
-                        0,
-                        v0.Item(
-                            id=md_name,
-                            icon=[icon_path],
+                    yield [
+                        StandardItem(
+                            id=f"{self.id()}.no-results",
+                            icon_factory=self.makeIcon,
                             text="No results.",
                             actions=[],
                         ),
-                    )
+                    ]
 
                     return
                 else:
-                    query.add(results)
+                    yield results
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
-            query.add(
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
-                    text="Something went wrong! Press [ENTER] to copy error and report it",
-                    actions=[
-                        ClipAction(
-                            f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
-                        )
-                    ],
-                ),
-            )
+            trace = traceback.format_exc()
+            print(trace)
+
+            yield [self.get_error_item(trace)]

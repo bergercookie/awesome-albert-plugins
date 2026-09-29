@@ -1,23 +1,33 @@
 """Emoji picker."""
 
+import pickle
 import subprocess
 import traceback
 from pathlib import Path
+from typing import Iterator, List
 
-from albert import *
 import em
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    Notification,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
 from fuzzywuzzy import process
 
-import pickle
-
-md_iid = "0.5"
-md_version = "0.2"
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Emoji picker"
 md_description = "Lookup and copy various emojis to your clipboard"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji"
-md_maintainers = "Nikos Koukis"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["em-keyboard", "fuzzywuzzy"]
 md_bin_dependencies = ["xclip"]
-md_lib_dependencies = ["em", "fuzzywuzzy"]
+ICON_PATH = Path(__file__).parent / "emoji.png"
 
 # Let Exceptions fly
 
@@ -28,38 +38,35 @@ if "parse_emojis" not in dir(em):
     )
 
 
-class Plugin(QueryHandler):
-    def id(self):
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self):
-        return md_name
-
-    def description(self):
-        return md_description
-
-    def defaultTrigger(self):
-        return "em "
-
-    def synopsis(self):
-        return "<emoji name>"
-
-    def initialize(self):
         self.parse_emojis()
 
-        self.icon_path = [str(Path(__file__).parent / "emoji.png")]
-        self.cache_path = Path(cacheLocation()) / "emoji"
-        self.config_path = Path(configLocation()) / "emoji"
-        self.data_path = Path(dataLocation()) / "emoji"
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
         self.stats_path = self.config_path / "stats"
 
         # create plugin locations
         for p in (self.cache_path, self.config_path, self.data_path):
-            p.mkdir(parents=False, exist_ok=True)
+            p.mkdir(parents=True, exist_ok=True)
 
         if not self.stats_path.exists():
             with self.stats_path.open("wb") as f:
                 pickle.dump({}, f)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
+
+    def defaultTrigger(self):
+        return "em "
+
+    def synopsis(self, query):
+        return "<emoji name>"
 
     def parse_emojis(self):
         self.emojis = em.parse_emojis()
@@ -106,12 +113,12 @@ class Plugin(QueryHandler):
         self.update_stats(emoji)
         subprocess.run(f"echo {emoji} | xclip -r -selection clipboard", shell=True)
 
-    def handleQuery(self, query):
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
+        """Called by albert with *every new keypress*."""
         results = []
 
         try:
-            query_str = query.string.strip()
+            query_str = ctx.query.strip()
 
             if query_str == "":
                 results.append(self.get_reindex_item())
@@ -122,7 +129,10 @@ class Plugin(QueryHandler):
                     )[:10]
                 ]
                 results.extend(
-                    [self.get_emoji_as_item((emoji, self.emojis[emoji])) for emoji in recent]
+                    [
+                        self.get_emoji_as_item((emoji, self.emojis[emoji]), "-recent")
+                        for emoji in recent
+                    ]
                 )
 
                 if len(results) < 30:
@@ -142,73 +152,88 @@ class Plugin(QueryHandler):
                 )
 
         except Exception:  # user to report error
-            critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
 
             results.insert(
                 0,
-                Item(
-                    id=md_name,
-                    icon=self.icon_path,
+                StandardItem(
+                    id="emoji-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
                         Action(
-                            "copy_error",
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            lambda t=traceback.format_exc(): setClipboardText(t),
+                            lambda t=trace: setClipboardText(t),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results
 
     def notify(self, msg: str, app_name: str = md_name):
-        sendTrayNotification(title=app_name, msg=msg, ms=2000)
+        Notification(title=app_name, text=msg).send()
 
-    def get_reindex_item(self):
+    def get_reindex_item(self) -> StandardItem:
         return self.get_as_item(
+            item_id="emoji-reindex",
             text="Re-index list of emojis",
             actions=[Action("reindex", "Re-index list of emojis", self.update_emojis)],
         )
 
     def get_as_item(
-        self, *, text: str, actions: list, subtext: str = None, completion: str = None
-    ):
+        self,
+        *,
+        item_id: str,
+        text: str,
+        actions: list,
+        subtext: str = None,
+        input_action_text: str = None,
+    ) -> StandardItem:
         if subtext is None:
             subtext = text
 
-        if completion is None:
-            completion = f"{self.defaultTrigger()}{text}"
+        if input_action_text is None:
+            input_action_text = f"{self.defaultTrigger()}{text}"
 
         """Return an item - ready to be appended to the items list and be rendered by Albert."""
-        return Item(
-            id=md_name,
-            icon=self.icon_path,
+        return StandardItem(
+            id=item_id,
+            icon_factory=self.makeIcon,
             text=text,
             subtext=subtext,
-            completion=completion,
+            input_action_text=input_action_text,
             actions=actions,
         )
 
-    def get_emoji_as_item(self, emoji_tuple: tuple):
-        """Return an item - ready to be appended to the items list and be rendered by Albert."""
+    def get_emoji_as_item(self, emoji_tuple: tuple, suffix: str = "") -> StandardItem:
+        """Return an item - ready to be appended to the items list and be rendered by Albert.
+
+        `suffix` keeps the id unique for the "recently used" section, which may list the very
+        same emojis as the full listing right below it
+        """
         emoji = emoji_tuple[0]
         labels = [label.replace("_", " ") for label in emoji_tuple[1]]
         main_label = labels[0]
 
+        # a single emoji may span multiple codepoints (e.g. ☺️ or a ZWJ sequence)
+        codepoints = "-".join(f"{ord(c):x}" for c in emoji)
+
         text = f"{emoji} {main_label}"
         subtext = " | ".join(labels[1:])
-        return Item(
-            id=md_name,
-            icon=self.icon_path,
+        return StandardItem(
+            id=f"emoji-{codepoints}{suffix}",
+            icon_factory=self.makeIcon,
             text=text,
             subtext=subtext,
-            completion=f"{self.defaultTrigger()}{main_label}",
+            input_action_text=f"{self.defaultTrigger()}{main_label}",
             actions=[
-                Action("copy", f"Copy this emoji", lambda emoji=emoji: self.copy_emoji(emoji)),
+                Action("copy", "Copy this emoji", lambda emoji=emoji: self.copy_emoji(emoji)),
                 Action(
                     "google",
-                    f"Google this emoji",
+                    "Google this emoji",
                     lambda u=f"https://www.google.com/search?q={main_label} emoji": openUrl(u),
                 ),
             ],

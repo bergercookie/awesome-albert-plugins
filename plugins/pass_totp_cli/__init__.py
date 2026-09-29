@@ -4,29 +4,32 @@ import os
 import subprocess
 import traceback
 from pathlib import Path
+from typing import Iterator, List
 
-import albert as v0
 import gi
 
 gi.require_version("Notify", "0.7")  # isort:skip
 gi.require_version("GdkPixbuf", "2.0")  # isort:skip
 from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
+
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "OTP/2FA Codes"
 md_description = "Fetch OTP codes using otp-cli and pass"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
-md_url = (
-    "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/pass_totp_cli"
-)
-md_bin_dependencies = ["pass", "totp"]
-
-icon_path = str(Path(__file__).parent / "pass_totp_cli")
-
-cache_path = Path(v0.cacheLocation()) / "pass_totp_cli"
-config_path = Path(v0.configLocation()) / "pass_totp_cli"
-data_path = Path(v0.dataLocation()) / "pass_totp_cli"
+md_license = "MIT"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_bin_dependencies = ["totp"]
+ICON_PATH = Path(__file__).parent / "pass_totp_cli.svg"
 
 pass_dir = Path(
     os.environ.get(
@@ -51,85 +54,62 @@ def totp_show(name: str) -> str:
         return subprocess.check_output(["totp", "show", name]).decode("utf-8")
     except Exception:
         exc = f"Exception:\n\n{traceback.format_exc()}"
-        v0.critical(exc)
+        critical(exc)
         do_notify(f"Couldn't fetch the OTP code. {exc}")
         return ""
 
 
-def get_as_item(path: Path):
+def get_as_item(path: Path) -> StandardItem:
     name = str(path.relative_to(pass_2fa_dir).parent)
-    return v0.Item(
-        id=md_name,
-        icon=[icon_path],
+    return StandardItem(
+        id=f"pass-totp-{name}",
+        icon_factory=Plugin.makeIcon,
         text=name,
-        completion="",
+        input_action_text="",
         actions=[
-            FuncAction(
+            Action(
+                "copy",
                 "Copy 2FA code",
-                lambda name=name: totp_show(name=name).strip(),
+                lambda: setClipboardText(totp_show(name=name).strip()),
             )
         ],
     )
 
 
-def save_data(data: str, data_name: str):
-    """Save a piece of data in the configuration directory."""
-    with open(config_path / data_name, "w") as f:
-        f.write(data)
-
-
-def load_data(data_name) -> str:
-    """Load a piece of data from the configuration directory."""
-    with open(config_path / data_name, "r") as f:
-        data = f.readline().strip().split()[0]
-
-    return data
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
-
-
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-    def description(self):
-        return md_description
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "totp "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return ""
 
-    def initialize(self):
-        # Called when the extension is loaded (ticked in the settings) - blocking
+    def save_data(self, data: str, data_name: str):
+        """Save a piece of data in the configuration directory."""
+        with open(self.config_path / data_name, "w") as f:
+            f.write(data)
 
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
+    def load_data(self, data_name) -> str:
+        """Load a piece of data from the configuration directory."""
+        with open(self.config_path / data_name, "r") as f:
+            return f.readline().strip().split()[0]
 
-    def finalize(self):
-        pass
-
-    def handleQuery(self, query) -> None:
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
         results = []
 
         try:
@@ -137,19 +117,21 @@ class Plugin(v0.QueryHandler):
                 results.append(get_as_item(path))
 
         except Exception:  # user to report error
+            trace = traceback.format_exc()
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="pass-totp-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
+        yield results

@@ -1,122 +1,114 @@
 """Fetch xkcd comics like a boss."""
 
-from datetime import datetime, timedelta
-from pathlib import Path
 import json
 import subprocess
 import sys
 import traceback
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Iterator, List
 
-import albert as v0
 from fuzzywuzzy import process
 
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    openUrl,
+    setClipboardText,
+)
+
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "Xkcd"
 md_description = "Xkcd Comics Fetcher"
-md_iid = "0.5"
-md_version = "0.2"
-md_maintainers = "Nikos Koukis"
+md_license = "MIT"
 md_url = "https://github.com/bergercookie/xkcd-albert-plugin"
-md_bin_dependencies = ["xkcd-dl"]
+md_maintainers = ["Nikos Koukis"]
 md_lib_dependencies = ["fuzzywuzzy"]
-
-icon_path = str(Path(__file__).parent / "image.png")
-settings_path = Path(v0.cacheLocation()) / "xkcd"
-last_update_path = settings_path / "last_update"
-xkcd_dict = Path.home() / ".xkcd_dict.json"
+md_bin_dependencies = ["xkcd-dl"]
+ICON_PATH = Path(__file__).parent / "image.png"
+XKCD_DICT = Path.home() / ".xkcd_dict.json"
 
 
-def get_as_item(k: str, v: dict):
-    return v0.Item(
-        id=md_name,
-        icon=[icon_path],
+def get_as_item(k: str, v: dict) -> StandardItem:
+    url = f"https://www.xkcd.com/{k}"
+    return StandardItem(
+        id=f"xkcd-{k}",
+        icon_factory=Plugin.makeIcon,
         text=v["description"],
         subtext=v["date-published"],
-        completion="",
+        input_action_text="",
         actions=[
-            UrlAction("Open in xkcd.com", f"https://www.xkcd.com/{k}"),
-            ClipAction("Copy URL", f"https://www.xkcd.com/{k}"),
+            Action("open", "Open in xkcd.com", lambda: openUrl(url)),
+            Action("copy", "Copy URL", lambda: setClipboardText(url)),
         ],
     )
 
 
-def update_date_file():
+def update_date_file(last_update_path: Path) -> None:
     now = (datetime.now() - datetime(1970, 1, 1)).total_seconds()
     with open(last_update_path, "w") as f:
         f.write(str(now))
 
 
 def update_xkcd_db():
-    return subprocess.call(["xkcd-dl", "-u"])
-
-
-# helpers for backwards compatibility ------------------------------------------
-class UrlAction(v0.Action):
-    def __init__(self, name: str, url: str):
-        super().__init__(name, name, lambda: v0.openUrl(url))
-
-
-class ClipAction(v0.Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: v0.setClipboardText(copy_text))
-
-
-class FuncAction(v0.Action):
-    def __init__(self, name, command):
-        super().__init__(name, name, command)
+    try:
+        return subprocess.call(["xkcd-dl", "-u"])
+    except OSError as e:
+        print(f"xkcd: could not run xkcd-dl - {e}")
+        return None
 
 
 # main plugin class ------------------------------------------------------------
-class Plugin(v0.QueryHandler):
-    def id(self) -> str:
-        return __name__
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
-    def name(self) -> str:
-        return md_name
+        self.settings_path = Path(self.cacheLocation())
+        self.last_update_path = self.settings_path / "last_update"
 
-    def description(self):
-        return md_description
+        self.settings_path.mkdir(parents=True, exist_ok=True)
+        if not self.last_update_path.is_file():
+            update_date_file(self.last_update_path)
+            update_xkcd_db()
+
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "xkcd "
 
-    def synopsis(self):
+    def synopsis(self, query):
         return "xkcd title term"
 
-    def finalize(self):
-        pass
-
-    def initialize(self):
-        # Called when the extension is loaded (ticked in the settings) - blocking
-
-        # create cache location
-        settings_path.mkdir(parents=False, exist_ok=True)
-        if not last_update_path.is_file():
-            update_date_file()
-            update_xkcd_db()
-
-    def handleQuery(self, query) -> None:
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
         results = []
 
         # check whether I have downloaded the latest metadata
-        with open(last_update_path, "r") as f:
+        with open(self.last_update_path, "r") as f:
             date_str = float(f.readline().strip())
 
         last_date = datetime.fromtimestamp(date_str)
         if datetime.now() - last_date > timedelta(days=1):  # run an update daily
-            update_date_file()
+            update_date_file(self.last_update_path)
             update_xkcd_db()
 
         try:
-            with open(xkcd_dict, "r", encoding="utf-8") as f:
+            with open(XKCD_DICT, "r", encoding="utf-8") as f:
                 d = json.load(f)
 
-            if len(query.string) in [0, 1]:  # Display all items
+            if len(ctx.query) in [0, 1]:  # Display all items
                 for k, v in d.items():
                     results.append(get_as_item(k, v))
             else:  # fuzzy search
                 desc_to_item = {item[1]["description"]: item for item in d.items()}
                 matched = process.extract(
-                    query.string.strip(), list(desc_to_item.keys()), limit=20
+                    ctx.query.strip(), list(desc_to_item.keys()), limit=20
                 )
                 for m in [elem[0] for elem in matched]:
                     # bypass a unicode issue - use .get
@@ -125,23 +117,22 @@ class Plugin(v0.QueryHandler):
                         results.append(get_as_item(*item))
 
         except Exception:  # user to report error
-            v0.critical(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
             results.insert(
                 0,
-                v0.Item(
-                    id=md_name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="xkcd-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{sys.exc_info()}",
+                            lambda: setClipboardText(str(sys.exc_info())),
                         )
                     ],
                 ),
             )
 
-        query.add(results)
-
-
-
+        yield results

@@ -1,28 +1,31 @@
 """IPs of the host machine."""
 
-from typing import Dict
 import traceback
 from pathlib import Path
-import netifaces
+from typing import Dict, Iterator, List
 from urllib import request
+
+import netifaces
 from fuzzywuzzy import process
 
-from albert import *
+from albert import (
+    Action,
+    GeneratorQueryHandler,
+    Icon,
+    PluginInstance,
+    StandardItem,
+    setClipboardText,
+)
 
-md_iid = "0.5"
-md_version = "0.2"
+md_iid = "5.0"
+md_version = "0.3"
 md_name = "IPs of the host machine"
 md_description = "Shows machine IPs"
 md_license = "BSD-2"
-md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins//ipshow"
-md_maintainers = "Nikos Koukis"
-md_lib_dependencies = ["fuzzywuzzy"]
-
-icon_path = str(Path(__file__).parent / "ipshow")
-
-cache_path = Path(cacheLocation()) / "ipshow"
-config_path = Path(configLocation()) / "ipshow"
-data_path = Path(dataLocation()) / "ipshow"
+md_url = "https://github.com/bergercookie/awesome-albert-plugins"
+md_maintainers = ["Nikos Koukis"]
+md_lib_dependencies = ["fuzzywuzzy", "netifaces"]
+ICON_PATH = Path(__file__).parent / "ipshow.png"
 
 
 # flags to tweak ------------------------------------------------------------------------------
@@ -54,38 +57,32 @@ def filter_actions_by_query(items, query, score_cutoff=20):
     return [x[0] for x in results_arr if x[1] > score_cutoff or len(query.strip()) == 0]
 
 
-class ClipAction(Action):
-    def __init__(self, name, copy_text):
-        super().__init__(name, name, lambda: setClipboardText(copy_text))
+class Plugin(PluginInstance, GeneratorQueryHandler):
+    def __init__(self):
+        PluginInstance.__init__(self)
+        GeneratorQueryHandler.__init__(self)
 
+        self.cache_path = Path(self.cacheLocation())
+        self.config_path = Path(self.configLocation())
+        self.data_path = Path(self.dataLocation())
 
-class Plugin(QueryHandler):
-    def id(self):
-        return __name__
+        for p in (self.cache_path, self.config_path, self.data_path):
+            p.mkdir(parents=True, exist_ok=True)
 
-    def name(self):
-        return md_name
-
-    def description(self):
-        return md_description
-
-    def initialize(self):
-        # Called when the extension is loaded (ticked in the settings) - blocking
-
-        # create plugin locations
-        for p in (cache_path, config_path, data_path):
-            p.mkdir(parents=False, exist_ok=True)
-
-    def finalize(self):
-        pass
+    @staticmethod
+    def makeIcon():
+        return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
         return "ip "
 
-    def handleQuery(self, query):
+    def synopsis(self, query):
+        return "ip address or interface"
+
+    def items(self, ctx) -> Iterator[List[StandardItem]]:
         results = []
 
-        if not query.isValid:
+        if not ctx.isValid:
             return
 
         try:
@@ -101,7 +98,7 @@ class Plugin(QueryHandler):
                     text=external_ip,
                     subtext="External IP Address",
                     actions=[
-                        ClipAction("Copy address", external_ip),
+                        Action("copy", "Copy address", lambda a=external_ip: setClipboardText(a)),
                     ],
                 )
             )
@@ -133,8 +130,8 @@ class Plugin(QueryHandler):
                                 subtext=iface.ljust(15)
                                 + f" | {family} | Broadcast: {broadcast} | Netmask: {netmask}",
                                 actions=[
-                                    ClipAction("Copy address", own_addr),
-                                    ClipAction("Copy interface", iface),
+                                    Action("copy", "Copy address", lambda a=own_addr: setClipboardText(a)),
+                                    Action("copy", "Copy interface", lambda i=iface: setClipboardText(i)),
                                 ],
                             )
                         )
@@ -152,38 +149,40 @@ class Plugin(QueryHandler):
                         text=f"[GW - {iface}] {addr}",
                         subtext=families[family_int],
                         actions=[
-                            ClipAction("Copy address", addr),
-                            ClipAction("Copy interface", iface),
+                            Action("copy", "Copy address", lambda a=addr: setClipboardText(a)),
+                            Action("copy", "Copy interface", lambda i=iface: setClipboardText(i)),
                         ],
                     )
                 )
 
         except Exception:  # user to report error
-            print(traceback.format_exc())
+            trace = traceback.format_exc()
+            print(trace)
 
             results.insert(
                 0,
-                Item(
-                    id=self.name,
-                    icon=[icon_path],
+                StandardItem(
+                    id="ipshow-error",
+                    icon_factory=self.makeIcon,
                     text="Something went wrong! Press [ENTER] to copy error and report it",
                     actions=[
-                        ClipAction(
+                        Action(
+                            "copy",
                             f"Copy error - report it to {md_url[8:]}",
-                            f"{traceback.format_exc()}",
+                            lambda: setClipboardText(trace),
                         )
                     ],
                 ),
             )
-        query.add(filter_actions_by_query(results, query.string, 20))
+        yield filter_actions_by_query(results, ctx.query, 20)
 
-    def get_as_item(self, text, subtext, actions=[]):
-        return Item(
-            id=self.name(),
-            icon=[icon_path],
+    def get_as_item(self, text, subtext, actions=[]) -> StandardItem:
+        return StandardItem(
+            id=f"ipshow-{text}",
+            icon_factory=self.makeIcon,
             text=text,
             subtext=subtext,
-            completion=self.defaultTrigger() + text,
+            input_action_text=self.defaultTrigger() + text,
             actions=actions,
         )
 
