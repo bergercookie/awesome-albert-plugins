@@ -45,7 +45,26 @@ country_to_cities = {
     country: code_to_cities[code] for country, code in country_to_code.items()
 }
 countries = list(country_to_code.keys())
-local_tz_str = tzlocal.get_localzone().zone
+
+
+def get_local_tz_name() -> str:
+    """IANA name of the local timezone, or "" if it can't be determined.
+
+    tzlocal < 3 hands back a pytz tzinfo, which exposes ``zone``; >= 3 returns a
+    zoneinfo.ZoneInfo, which exposes ``key`` and has no ``zone`` at all. ``str()``
+    yields the same IANA name for both, so prefer the explicit attributes and
+    fall back to it.
+    """
+    try:
+        zone = tzlocal.get_localzone()
+    except Exception:  # tzlocal raises when it cannot resolve the local zone
+        traceback.print_exc()
+        return ""
+
+    return str(getattr(zone, "zone", None) or getattr(zone, "key", None) or zone)
+
+
+local_tz_str = get_local_tz_name()
 
 
 def get_pretty_city_name(city: str) -> str:
