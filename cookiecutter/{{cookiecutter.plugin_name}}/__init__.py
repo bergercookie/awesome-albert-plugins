@@ -194,8 +194,8 @@ def get_as_item():
         subtext="Python version",
         completion="",
         actions=[
-            v0.UrlAction("Open in xkcd.com", "https://www.xkcd.com/"),
-            v0.ClipAction("Copy URL", f"https://www.xkcd.com/"),
+            v0.UrlAction("Open example.com", "https://example.com/"),
+            v0.ClipAction("Copy URL", "https://example.com/"),
         ],
     )
 

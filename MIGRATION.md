@@ -111,7 +111,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
    `icon_factory=self.makeIcon`, and **`id` must now be unique per item**. Old
    code often used `id=md_name` everywhere, which collapses distinct results
    during ranking — derive a stable key instead (`f"errno-lookup-{code}"`,
-   `f"xkcd-{num}"`, `f"task-{uuid}"`).
+   `f"contacts-{email}"`, `f"task-{uuid}"`).
 
    `icon_factory` is a zero-arg callable: pass the reference, never its result.
    Icons load lazily, so a wrong path only fails when the item is rendered —

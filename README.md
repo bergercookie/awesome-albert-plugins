@@ -67,7 +67,6 @@ Currently the list of plugins includes:
 - [Tldr Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/tldr_pages) - Lookup [tldr](https://github.com/tldr-pages/tldr) pages and commands
 - [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
 - [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
-- [Xkcd](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/xkcd) - 📓 List and fuzzy-search the latest [xkcd](https://fr.wikipedia.org/wiki/Xkcd) comics
 
 Plugins have been migrated to the Albert python `5.0` interface. If you're
 looking for a version that works with earlier versions of the plugin, see the
