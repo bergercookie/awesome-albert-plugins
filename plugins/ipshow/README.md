@@ -4,6 +4,19 @@
 
 Show the IPs of the machine at hand. Pretty much like `ip a s` or `ifconfig`.
 
+Each interface is listed with an icon matching its transport type - WiFi,
+ethernet, bridge or loopback - falling back to the generic plugin icon for
+interface types that can't be identified (tunnels, veth pairs, ...). The type
+is read from `/sys/class/net` where available, otherwise inferred from the
+interface name.
+
+## Credits
+
+The `wifi.svg`, `ethernet.svg`, `bridge.svg` and `loopback.svg` icons are
+derived from [Font Awesome Free 6](https://fontawesome.com) (icons licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), Copyright Fonticons,
+Inc.), recoloured to a theme-neutral grey.
+
 ## Demo
 
 ![demo](https://github.com/bergercookie/awesome-albert-plugins/blob/master/misc/ipshow.png)

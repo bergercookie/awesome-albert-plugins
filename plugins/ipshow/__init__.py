@@ -27,12 +27,66 @@ md_maintainers = ["Nikos Koukis"]
 md_lib_dependencies = ["fuzzywuzzy", "netifaces"]
 ICON_PATH = Path(__file__).parent / "ipshow.png"
 
+# Per-transport icons. netifaces doesn't report the interface type, so the kind is
+# derived from sysfs where possible and from the interface name otherwise.
+# Icons: Font Awesome Free 6 (CC BY 4.0), recoloured to a theme-neutral grey.
+ICON_PATH_WIFI = Path(__file__).parent / "wifi.svg"
+ICON_PATH_ETHERNET = Path(__file__).parent / "ethernet.svg"
+ICON_PATH_BRIDGE = Path(__file__).parent / "bridge.svg"
+ICON_PATH_LOOPBACK = Path(__file__).parent / "loopback.svg"
+
+KIND_ICONS = {
+    "wifi": ICON_PATH_WIFI,
+    "ethernet": ICON_PATH_ETHERNET,
+    "bridge": ICON_PATH_BRIDGE,
+    "loopback": ICON_PATH_LOOPBACK,
+    "unknown": ICON_PATH,
+}
+
+# netifaces gives us names only, so fall back to conventional prefixes. Note that on
+# macOS a Wi-Fi link shows up as "en0", indistinguishable by name from an ethernet
+# port - sysfs doesn't exist there either, so those are reported as ethernet.
+KIND_NAME_PREFIXES = (
+    ("loopback", ("lo", "lo0")),
+    ("bridge", ("br", "br-", "bridge", "virbr")),
+    ("wifi", ("wl", "wlan", "wifi", "airport")),
+    ("ethernet", ("eth", "en", "enp", "eno", "ens", "em", "igb")),
+)
+
+IFF_LOOPBACK = 0x8
+SYS_CLASS_NET = Path("/sys/class/net")
+
 
 # flags to tweak ------------------------------------------------------------------------------
 show_ipv4_only = True
 discard_bridge_ifaces = True
 
 families = netifaces.address_families
+
+
+def interface_kind(iface: str) -> str:
+    """Best-effort transport type of a network interface.
+
+    Returns one of "wifi", "ethernet", "bridge", "loopback" or "unknown".
+    """
+    sysfs = SYS_CLASS_NET / iface
+    try:
+        # linux exposes the definitive answer; trust it over the name
+        if (sysfs / "wireless").is_dir():
+            return "wifi"
+        if (sysfs / "bridge").is_dir():
+            return "bridge"
+        flags = int((sysfs / "flags").read_text().strip(), 0)
+        if flags & IFF_LOOPBACK:
+            return "loopback"
+    except (OSError, ValueError):
+        pass  # not linux, unreadable flags, or the interface went away
+
+    for kind, prefixes in KIND_NAME_PREFIXES:
+        if any(iface == p or iface.startswith(p) for p in prefixes):
+            return kind
+
+    return "unknown"
 
 
 def filter_actions_by_query(items, query, score_cutoff=20):
@@ -107,6 +161,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
             # for each interface --------------------------------------------------------------
             for iface in ifaces:
+                kind = interface_kind(iface)
                 addrs = netifaces.ifaddresses(iface)
                 for family_to_addrs in addrs.items():
                     family = families[family_to_addrs[0]]
@@ -116,7 +171,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                         continue
 
                     # discard bridge interfaces?
-                    if discard_bridge_ifaces and iface.startswith("br-"):
+                    if discard_bridge_ifaces and kind == "bridge":
                         continue
 
                     # for all addresses in this interface -------------------------------------
@@ -129,6 +184,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                                 text=own_addr,
                                 subtext=iface.ljust(15)
                                 + f" | {family} | Broadcast: {broadcast} | Netmask: {netmask}",
+                                icon=KIND_ICONS[kind],
                                 actions=[
                                     Action("copy", "Copy address", lambda a=own_addr: setClipboardText(a)),
                                     Action("copy", "Copy interface", lambda i=iface: setClipboardText(i)),
@@ -148,6 +204,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                     self.get_as_item(
                         text=f"[GW - {iface}] {addr}",
                         subtext=families[family_int],
+                        icon=KIND_ICONS[interface_kind(iface)],
                         actions=[
                             Action("copy", "Copy address", lambda a=addr: setClipboardText(a)),
                             Action("copy", "Copy interface", lambda i=iface: setClipboardText(i)),
@@ -176,10 +233,12 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             )
         yield filter_actions_by_query(results, ctx.query, 20)
 
-    def get_as_item(self, text, subtext, actions=[]) -> StandardItem:
+    def get_as_item(self, text, subtext, actions=[], icon=None) -> StandardItem:
         return StandardItem(
             id=f"ipshow-{text}",
-            icon_factory=self.makeIcon,
+            icon_factory=(
+                self.makeIcon if icon is None else (lambda i=icon: Icon.image(i))
+            ),
             text=text,
             subtext=subtext,
             input_action_text=self.defaultTrigger() + text,
