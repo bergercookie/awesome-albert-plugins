@@ -4,10 +4,9 @@ import json
 import re
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
 import httpx
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -15,6 +14,7 @@ from albert import (
     Notification,
     PluginInstance,
     StandardItem,
+    critical,
     setClipboardText,
 )
 
@@ -294,7 +294,7 @@ class AddBasicNote(Subcommand):
         if query_parts:
             front = query_parts[0]
             back = query_parts[1]
-            subtext = f'{front} | {back}'
+            subtext = f"{front} | {back}"
         else:
             subtext = AddBasicNote.usage_str
 
