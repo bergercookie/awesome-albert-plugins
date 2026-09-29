@@ -142,6 +142,39 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
    | `v0.util.fuzzy_match` | `Matcher` / `Match` / `MatchConfig` |
    | `v0.Hook`, `v0.fzf`, `hideWindow()` | removed |
 
+### The four logging functions are injected, not imported
+
+`debug`, `info`, `warning` and `critical` look like they belong to the `albert`
+module. They do not. The loader sets them on each plugin's **own module
+namespace** immediately before executing it:
+
+```cpp
+// albert-plugin-python src/pypluginloader.cpp
+py::setattr(module_, "debug",    ...);
+py::setattr(module_, "info",     ...);
+py::setattr(module_, "warning",  ...);
+py::setattr(module_, "critical", ...);
+```
+
+So call them as bare globals and import nothing:
+
+```python
+# correct
+critical(traceback.format_exc())
+
+# ImportError: cannot import name 'critical' from 'albert'
+from albert import critical
+```
+
+Two traps worth knowing:
+
+- The `albert.pyi` stub lists them as module-level functions. It is
+  hand-written and wrong on this point — do not trust it for the logging API.
+  `dir(albert)` on a real install shows no `critical`.
+- `ruff` reports `F821 Undefined name 'critical'` for every bare call, because
+  it cannot see loader-injected globals. **These are false positives.** Do not
+  "fix" them by adding an import; that is what breaks the plugin.
+
 ## House style
 
 `black` / `isort`, **line length 95** (see `pyproject.toml`). Keep
@@ -154,8 +187,15 @@ helper structure — this is an API port, not a rewrite.
 ```sh
 python3 -m compileall -q plugins/<name>
 rg 'v0\.|handleQuery|completion=|md_iid = "0' plugins/<name>/__init__.py
+python3 -m ruff check --select F821 plugins/<name>/__init__.py
 ```
 
-The second command should return nothing. Then enable the plugin in Albert and
-type its trigger with and without a query string — a plugin that only ever
-yields under a non-empty query is a common porting mistake.
+The second command should return nothing. The third will report `F821` for
+`critical` / `debug` / `info` / `warning`; those are the injected globals
+described above and are expected. Any *other* `F821` is a real bug — an
+annotation that lost its `typing` import, for instance, which raises at class
+body evaluation and stops the plugin loading entirely.
+
+Then enable the plugin in Albert and type its trigger with and without a query
+string — a plugin that only ever yields under a non-empty query is a common
+porting mistake.
