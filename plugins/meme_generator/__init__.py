@@ -3,8 +3,9 @@
 import shutil
 import subprocess
 import traceback
+from functools import lru_cache
 from pathlib import Path
-from typing import Iterator, List
+from typing import Iterator, List, Optional, Tuple
 
 from fuzzywuzzy import process
 
@@ -43,18 +44,80 @@ def import_template_ids() -> List[str]:
     return subprocess.check_output(["meme", "-list-templates"]).decode("utf-8").splitlines()
 
 
-def get_template_img(meme_id: str) -> Path:
-    """Get the path to the template image, given the template meme ID."""
-    # may be a bit fragile - TODO Find a better way to do it.
-    bin_path = Path(shutil.which("meme")).parent  # type: ignore
-    meme_reg_path = bin_path.parent / "pkg" / "mod" / "github.com" / "nomad-software"
-    meme_reg_versions = list(meme_reg_path.glob("meme@*"))
+MEME_MODULE_DIR = ("github.com", "nomad-software")
 
-    if not meme_reg_versions:
-        raise RuntimeError(f'Can\'t find any Go "meme" packages under {meme_reg_path}')
 
-    # use the most recent versions
-    return meme_reg_versions[0] / "data" / "images" / f"{meme_id}.jpg"
+def _go_env(name: str) -> Optional[Path]:
+    """Return the path reported by ``go env <name>``, or None if it can't be determined."""
+    try:
+        value = subprocess.check_output(
+            ["go", "env", name], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    return Path(value) if value else None
+
+
+def _candidate_module_dirs() -> List[Path]:
+    """Directories that may hold the unpacked "meme" Go module, most authoritative first.
+
+    The binary and the module sources frequently live in unrelated trees - toolchain
+    managers such as mise install the binary under their Go prefix while the module
+    cache stays in $GOPATH - so the sources have to be asked for, not inferred.
+    """
+    candidates = []
+
+    mod_cache = _go_env("GOMODCACHE")
+    if mod_cache is not None:
+        candidates.append(mod_cache.joinpath(*MEME_MODULE_DIR))
+
+    gopath = _go_env("GOPATH")
+    if gopath is not None:
+        candidates.append(gopath.joinpath("pkg", "mod", *MEME_MODULE_DIR))
+
+    # Last resort, and how this plugin used to work: assume the binary sits in
+    # $GOPATH/bin. Only valid when GOBIN and GOPATH actually coincide.
+    meme_bin = shutil.which("meme")
+    if meme_bin:
+        candidates.append(
+            Path(meme_bin).parent.parent.joinpath("pkg", "mod", *MEME_MODULE_DIR)
+        )
+
+    return [c for c in dict.fromkeys(candidates) if c.is_dir()]
+
+
+def _version_key(path: Path) -> List[Tuple[int, int]]:
+    """Sort key ordering Go module versions numerically instead of lexically."""
+    version = path.name.split("@", 1)[-1]
+    chunks = version.replace("-", ".").replace("+", ".").split(".")
+    return [(0, int(c)) if c.isdigit() else (1, 0) for c in chunks]
+
+
+@lru_cache(maxsize=1)
+def find_meme_module_dir() -> Optional[Path]:
+    """Locate the unpacked "meme" module in the Go module cache, newest version first.
+
+    Returns None when the sources aren't on disk. That's the normal outcome for tool
+    managers that install the binary without keeping the module cache around, and it
+    only costs us the template thumbnails - meme generation itself goes through the
+    "meme" binary, which embeds the templates.
+    """
+    found: List[Path] = []
+    for candidate in _candidate_module_dirs():
+        found.extend(candidate.glob("meme@*"))
+
+    return max(found, key=_version_key) if found else None
+
+
+def get_template_img(meme_id: str) -> Optional[Path]:
+    """Path to the vanilla template image, or None if it isn't available on disk."""
+    module_dir = find_meme_module_dir()
+    if module_dir is None:
+        return None
+
+    img = module_dir / "data" / "images" / f"{meme_id}.jpg"
+    return img if img.is_file() else None
 
 
 class Template:
@@ -69,20 +132,40 @@ class Template:
     def albert_id(self):
         return f"{md_name}_{self.id}"
 
+    @property
+    def has_img(self) -> bool:
+        """Whether the vanilla template image is available on disk."""
+        return self.img is not None
+
+    def _icon_factory(self) -> Icon:
+        """Thumbnail of the template, or the plugin icon if the image can't be found."""
+        return Icon.image(str(self.img) if self.img is not None else ICON_PATH)
+
+    def _vanilla_actions(self) -> List[Action]:
+        """Actions that need the template image on disk, skipped if it's missing."""
+        if self.img is None:
+            return []
+
+        return [
+            Action("copy", "Copy vanilla image", lambda: self.copy_vanilla_img()),
+            Action(
+                "copy",
+                "Copy vanilla image path",
+                lambda: setClipboardText(str(self.img)),
+            ),
+        ]
+
     def get_as_item(self, query):
         """Return it as item - ready to be appended to the items list and be rendered by
         Albert.
         """
         return StandardItem(
             id=self.albert_id,
-            icon_factory=lambda: Icon.image(str(self.img)),
+            icon_factory=self._icon_factory,
             text=self.title(),
             subtext="",
             input_action_text=f"{query.trigger} {self.id} ",
-            actions=[
-                Action("copy", "Copy vanilla image", lambda: self.copy_vanilla_img()),
-                Action("copy", "Copy vanilla image path", lambda: setClipboardText(str(self.img))),
-            ],
+            actions=self._vanilla_actions(),
         )
 
     def _create_custom_meme(self, caption1: str, caption2: str) -> Path:
@@ -108,7 +191,7 @@ class Template:
             subtext = f"USAGE: {self.id} [upper-text] | [lower-text]"
         return StandardItem(
             id=f"{md_name}-{self.id}",
-            icon_factory=lambda: Icon.image(str(self.img)),
+            icon_factory=self._icon_factory,
             text=self.title(),
             subtext=subtext,
             input_action_text=f"{query.trigger} {self.id} ",
@@ -133,6 +216,11 @@ class Template:
         )
 
     def copy_vanilla_img(self):
+        if self.img is None:
+            raise RuntimeError(
+                f"No vanilla image available for '{self.id}' - the Go module sources for"
+                " meme are not in the module cache"
+            )
         fname_out = "/tmp/meme.png"
         subprocess.check_call(["convert", "-format", "png", str(self.img), fname_out])
         subprocess.check_call(

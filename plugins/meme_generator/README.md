@@ -16,9 +16,13 @@ The meme generation runs offline, there's no need to be connected to the interne
 ## Installation instructions
 
 * Install [meme](https://github.com/nomad-software/meme) directly from github.
-  You'll need a relatively recent version of `go` for this. You could use
-  [gvm](https://github.com/moovweb/gvm) if that's not supported by your package
-  manager.
+  You'll need a relatively recent version of `go` for this. Something like this
+  should work:
+
+  ```sh
+  go install github.com/nomad-software/meme@latest
+  ```
+
 * Install [xclip](https://linux.die.net/man/1/xclip)
 
 Refer to the parent project for more: [Awesome albert
