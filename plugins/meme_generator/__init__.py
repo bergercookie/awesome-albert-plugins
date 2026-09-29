@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Iterator, List
 
 from fuzzywuzzy import process
-from gi.repository import GdkPixbuf, Notify
 
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
@@ -155,11 +155,8 @@ def get_all_templates() -> List["Template"]:
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(ICON_PATH),
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def sanitize_string(s: str) -> str:

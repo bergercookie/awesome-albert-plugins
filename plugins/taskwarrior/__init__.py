@@ -11,7 +11,6 @@ from subprocess import PIPE, Popen
 from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
 import dateutil
-import gi
 import taskw
 from fuzzywuzzy import process
 from syncall import TaskWarriorSide
@@ -20,15 +19,13 @@ from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     openUrl,
     setClipboardText,
 )
 
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
 
 curr_trigger: str = ""
 
@@ -137,12 +134,9 @@ url_re = re.compile(
 # plugin main functions -----------------------------------------------------------------------
 
 
-def do_notify(msg: str, image=None):
+def do_notify(msg: str):
     app_name = "Taskwarrior"
-    Notify.init(app_name)
-    image = image
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def date_only_tzlocal(datetime: datetime.datetime):
@@ -262,13 +256,11 @@ def run_tw_action(args_list: list, need_pty=False):
     stdout, stderr = proc.communicate()
 
     if proc.returncode != 0:
-        image = str(ICON_PATH_R)
         msg = f'stdout: {stdout.decode("utf-8")} | stderr: {stderr.decode("utf-8")}'
     else:
-        image = str(ICON_PATH)
         msg = stdout.decode("utf-8")
 
-    do_notify(msg=msg, image=image)
+    do_notify(msg=msg)
     async_reload_items()
 
 

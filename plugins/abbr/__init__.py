@@ -5,22 +5,17 @@ import traceback
 from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 
-import gi
-from fuzzywuzzy import process
-
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip
-
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     openUrl,
     setClipboardText,
 )
+from fuzzywuzzy import process
 
 md_iid = "5.0"
 md_version = "0.3"
@@ -52,11 +47,8 @@ def save_abbr(name: str, desc: str):
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(ICON_PATH),
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def sanitize_string(s: str) -> str:

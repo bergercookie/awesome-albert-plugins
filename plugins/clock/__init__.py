@@ -7,15 +7,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Iterator, List, Optional, Union
 
-import gi  # isort:skip
-
-gi.require_version("Notify", "0.7")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip
-
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
@@ -51,13 +47,8 @@ def play_sound(num):
         t.start()
 
 
-def notify(app_name: str, msg: str, image=None):
-    if image is not None:
-        image = str(image)
-
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+def notify(app_name: str, msg: str):
+    Notification(app_name, msg).send()
 
 
 def format_time(t: float):
@@ -114,7 +105,7 @@ class Watch(ABC):
         self.notify(msg=f"Cancelling [{self.name()}]")
 
     def notify(self, msg: str):
-        notify(app_name=self._app_name, msg=msg, image=self._image_path)
+        notify(app_name=self._app_name, msg=msg)
 
     def to_remove(
         self,

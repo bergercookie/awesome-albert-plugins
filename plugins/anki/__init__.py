@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Tuple
 
 import httpx
-from gi.repository import GdkPixbuf, Notify
 
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
@@ -148,11 +148,8 @@ def add_anki_note(note_type: str, **kargs):
 def notify(
     msg: str,
     app_name: str = notif_title,
-    image=str(ICON_PATH),
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def get_as_item(**kargs) -> StandardItem:
@@ -181,8 +178,6 @@ def get_as_subtext_field(field, field_title=None) -> str:
         s = f"{field_title}: " + s
 
     return s
-
-
 
 
 # subcommands ---------------------------------------------------------------------------------

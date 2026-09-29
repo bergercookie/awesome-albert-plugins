@@ -12,12 +12,12 @@ from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
 )
 from fuzzywuzzy import process
-from gi.repository import GdkPixbuf, Notify
 from psutil import Process
 
 md_iid = "5.0"
@@ -36,11 +36,8 @@ ICON_PATH = Path(__file__).parent / "logo.png"
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(ICON_PATH),
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def cmdline(p: Process) -> str:

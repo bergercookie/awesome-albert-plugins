@@ -8,12 +8,12 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List
 
-from gi.repository import GdkPixbuf, Notify
 
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     openUrl,
@@ -82,11 +82,8 @@ def bing_search_set_download(query, limit, download_dir: Path) -> Iterator[BingI
 def notify(
     msg: str,
     app_name: str = md_name,
-    image=str(ICON_PATH),
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def copy_image(result: BingImage):

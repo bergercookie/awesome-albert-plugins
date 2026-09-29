@@ -6,16 +6,11 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List
 
-import gi
-
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
-
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
@@ -28,7 +23,7 @@ md_description = "Fetch OTP codes using otp-cli and pass"
 md_license = "MIT"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins"
 md_maintainers = ["Nikos Koukis"]
-md_bin_dependencies = ["totp"]
+md_lib_dependencies = ["totp"]
 ICON_PATH = Path(__file__).parent / "pass_totp_cli.svg"
 
 pass_dir = Path(
@@ -40,12 +35,9 @@ pass_dir = Path(
 pass_2fa_dir = pass_dir / "2fa"
 
 
-def do_notify(msg: str, image=None):
+def do_notify(msg: str):
     app_name = "pass_topt_cli"
-    Notify.init(app_name)
-    image = image
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 # supplementary functions ---------------------------------------------------------------------

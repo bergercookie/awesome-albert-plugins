@@ -12,16 +12,12 @@ from typing import Iterator, List, Optional
 
 import subprocess
 
-import gi  # isort:skip
-
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip
 
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     openUrl,
@@ -48,11 +44,8 @@ def get_icon(icon: str):
 def notify(
     app_name: str,
     msg: str,
-    image=None,
 ):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def sort_random(streams):

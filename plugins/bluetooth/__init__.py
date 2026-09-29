@@ -6,17 +6,11 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List, Mapping, MutableMapping, Optional, Sequence
 
-import gi
-
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-
-from gi.repository import Notify  # isort:skip
-
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     setClipboardText,
@@ -202,7 +196,6 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 stderr = proc.stderr.decode("utf-8").strip()
                 notify(
                     msg=f"Error when executing {command}\n\nstdout: {stdout}\n\nstderr: {stderr}",
-                    image=str(ICON_ERROR_PATH),
                 )
 
         return StandardItem(
@@ -229,14 +222,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return data
 
 
-def notify(
-    msg: str,
-    app_name: str = md_name,
-    image=str(ICON_PATH),
-):
-    Notify.init(app_name)
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+def notify(msg: str, app_name: str = md_name):
+    Notification(app_name, msg).send()
 
 
 def async_bl_cmd(cmd: Sequence[str]):
@@ -261,7 +248,7 @@ def async_bl_cmd(cmd: Sequence[str]):
                 msg += f"\n\nSTDOUT:\n\n{proc.stdout}"
             if stderr:
                 msg += f"\n\nSTDERR:\n\n{proc.stderr}"
-            notify(msg=msg, image=str(ICON_ERROR_PATH))
+            notify(msg=msg)
 
     t = threading.Thread(target=_async_bl_cmd)
     t.start()

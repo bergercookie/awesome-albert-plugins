@@ -8,22 +8,17 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List, Sequence
 
-import gi
-from fuzzywuzzy import process
-
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
-
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     runDetachedProcess,
     setClipboardText,
 )
+from fuzzywuzzy import process
 
 md_iid = "5.0"
 md_version = "0.3"
@@ -100,12 +95,9 @@ class PasswordsCacheManager:
 
 
 # plugin main functions -----------------------------------------------------------------------
-def do_notify(msg: str, image=None):
+def do_notify(msg: str):
     app_name = "pass_rlded"
-    Notify.init(app_name)
-    image = image
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 def generate_passwd_cmd(passwd_name: str) -> str:
