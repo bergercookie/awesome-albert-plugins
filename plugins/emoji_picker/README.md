@@ -1,8 +1,8 @@
-# emoji - Albert plugin
+# emoji_picker - Albert plugin
 
 ## Description
 
-The `emojis` Albert plugin allows you to quickly lookup and copy various emojis
+The `emoji_picker` Albert plugin allows you to quickly lookup and copy various emojis
 to your clipboard
 
 Thanks to @hugovk for providing the
@@ -16,11 +16,11 @@ well as custom emojis in `JSON` format added under `~/.emojis.json`.
 
 Without any keyword it shows you your most recently used emojis on top:
 
-![recently_used](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png)
+![recently_used](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji_picker/misc/demo0.png)
 
 On additional key presses it allows for fuzzy search on the labels of each emoji:
 
-| ![demo1](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png) | ![demo2](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo2.png) |
+| ![demo1](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji_picker/misc/demo1.png) | ![demo2](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji_picker/misc/demo2.png) |
 | :----------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------: |
 
 ## Installation instructions

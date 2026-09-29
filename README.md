@@ -23,7 +23,7 @@ an older albert version, see the branches of this repo.
 
 ## Demos
 
-| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo0.png)               |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji/misc/demo1.png)        |
+| ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji_picker/misc/demo0.png)               |        ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/emoji_picker/misc/demo1.png)        |
 | :----------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------: |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo0.png)            |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts/misc/demo1.png)       |
 | ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo0.png)           |      ![](https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/bluetooth/misc/demo1.png)      |
@@ -47,7 +47,7 @@ Currently the list of plugins includes:
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
 - [Contacts](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/contacts) - 📕 View your contacts and copy emails/telephones, etc.
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
-- [Emoji](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji) - 🎉 Search for and copy emojis to clipboard
+- [Emoji picker](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji_picker) - 🎉 Search for and copy emojis to clipboard
 - [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
 - [Harakiri](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/harakiri) - 📫 Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
 - [IP show](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/ipshow) - 🌐 Display information about your network interfaces and public IPs
