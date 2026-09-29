@@ -48,7 +48,7 @@ class BingImage:
 
     @property
     def type(self) -> str:
-        if self._type is "":
+        if self._type == "":
             self._type = _image_type(self.image)
 
             if self._type is None:

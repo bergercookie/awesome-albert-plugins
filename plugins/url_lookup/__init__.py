@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Iterator, List, Tuple
 
 import requests
-
 from albert import (
     Action,
     GeneratorQueryHandler,

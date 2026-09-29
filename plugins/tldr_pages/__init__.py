@@ -6,8 +6,6 @@ import traceback
 from pathlib import Path
 from typing import Dict, Iterator, List, Tuple
 
-from fuzzywuzzy import process
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -17,6 +15,7 @@ from albert import (
     openUrl,
     setClipboardText,
 )
+from fuzzywuzzy import process
 
 md_iid = "5.0"
 md_version = "0.3"
@@ -231,7 +230,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return items
 
     def items(self, ctx) -> Iterator[List[StandardItem]]:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+        """Hook that is called by albert with *every new keypress*."""
         results = []
         try:
             query_text = ctx.query.strip()

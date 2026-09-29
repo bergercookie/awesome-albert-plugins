@@ -332,7 +332,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         )
 
     def items(self, ctx) -> Iterator[List[StandardItem]]:
-        """Hook that is called by albert with *every new keypress*."""  # noqa
+        """Hook that is called by albert with *every new keypress*."""
         results = []
 
         try:

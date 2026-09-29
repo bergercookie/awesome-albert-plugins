@@ -12,9 +12,6 @@ from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
 import dateutil
 import taskw
-from fuzzywuzzy import process
-from syncall import TaskWarriorSide
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -25,7 +22,8 @@ from albert import (
     openUrl,
     setClipboardText,
 )
-
+from fuzzywuzzy import process
+from syncall import TaskWarriorSide
 
 curr_trigger: str = ""
 

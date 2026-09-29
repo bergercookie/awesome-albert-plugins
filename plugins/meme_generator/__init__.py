@@ -7,8 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Iterator, List, Optional, Tuple
 
-from fuzzywuzzy import process
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -18,6 +16,7 @@ from albert import (
     StandardItem,
     setClipboardText,
 )
+from fuzzywuzzy import process
 
 md_name = "Meme"
 md_description = (
@@ -163,7 +162,7 @@ class Template:
             id=self.albert_id,
             icon_factory=self._icon_factory,
             text=self.title(),
-            subtext="",
+            subtext=f"<i>USAGE: {self.title()} [upper] | [lower]</i>",
             input_action_text=f"{query.trigger} {self.id} ",
             actions=self._vanilla_actions(),
         )
@@ -237,6 +236,33 @@ def get_all_templates() -> List["Template"]:
     if not _templates_cache:
         _templates_cache = [Template(id=id) for id in import_template_ids()]
     return _templates_cache
+
+
+def find_template(
+    templates: List["Template"], query_parts: List[str]
+) -> Tuple[Optional["Template"], List[str]]:
+    """Resolve the leading query words to a template by exact ID or exact title.
+
+    The listing shows titles, so those are what people type, but a title can
+    contain spaces ("Dr evil lasers"). The longest leading run of words is
+    therefore matched and whatever is left over is treated as the caption.
+
+    Matching is exact and case-sensitive, and partial titles are not resolved -
+    they fall through to the fuzzy search as before.
+
+    Returns the template plus the remaining words, or (None, query_parts) if
+    nothing matched.
+    """
+    by_id = {t.id: t for t in templates}
+    by_title = {t.title(): t for t in templates}
+
+    for n in range(len(query_parts), 0, -1):
+        token = " ".join(query_parts[:n])
+        template = by_id.get(token) or by_title.get(token)
+        if template is not None:
+            return template, query_parts[n:]
+
+    return None, query_parts
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -325,17 +351,14 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 yield [template.get_as_item(ctx) for template in all_templates]
                 return
 
-            id_to_template = {template.id: template for template in all_templates}
-            meme_id = query_parts[0]
-            if meme_id in id_to_template:
-                captions = [c.strip() for c in " ".join(query_parts[1:]).split("|")]
+            template, caption_parts = find_template(all_templates, query_parts)
+            if template is not None:
+                captions = [c.strip() for c in " ".join(caption_parts).split("|")]
                 c1 = captions[0]
                 c2 = captions[1] if len(captions) > 1 else ""
                 results.insert(
                     0,
-                    id_to_template[meme_id].get_as_item_custom(
-                        ctx, caption1=c1, caption2=c2
-                    ),
+                    template.get_as_item_custom(ctx, caption1=c1, caption2=c2),
                 )
             else:
                 title_to_templ = {template.title(): template for template in all_templates}

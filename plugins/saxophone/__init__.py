@@ -1,17 +1,15 @@
 """Saxophone - Play internet radio streams from albert."""
 
-import select
-import socket
 import json
 import operator
 import random
+import select
+import socket
+import subprocess
 import traceback
 from enum import Enum
 from pathlib import Path
 from typing import Iterator, List, Optional
-
-import subprocess
-
 
 from albert import (
     Action,

@@ -6,8 +6,6 @@ from typing import Dict, Iterator, List
 from urllib import request
 
 import netifaces
-from fuzzywuzzy import process
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -16,6 +14,7 @@ from albert import (
     StandardItem,
     setClipboardText,
 )
+from fuzzywuzzy import process
 
 md_iid = "5.0"
 md_version = "0.3"

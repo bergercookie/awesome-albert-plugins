@@ -6,10 +6,6 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List, Optional, cast
 
-from fuzzywuzzy import process
-from jira import JIRA, resources
-from jira.client import ResultList
-
 from albert import (
     Action,
     GeneratorQueryHandler,
@@ -19,6 +15,10 @@ from albert import (
     openUrl,
     setClipboardText,
 )
+from fuzzywuzzy import process
+
+from jira import JIRA, resources
+from jira.client import ResultList
 
 # initial configuration -----------------------------------------------------------------------
 

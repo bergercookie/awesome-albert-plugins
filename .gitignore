@@ -113,3 +113,4 @@ Session.vim
 # external plugins I use but don't develop myself
 /plugins/ext-*
 albert-plugin-python-vikunja/
+dinatos

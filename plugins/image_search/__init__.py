@@ -8,7 +8,6 @@ import traceback
 from pathlib import Path
 from typing import Iterator, List
 
-
 from albert import (
     Action,
     GeneratorQueryHandler,
