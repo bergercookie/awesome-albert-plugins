@@ -4,14 +4,14 @@ import json
 import subprocess
 import traceback
 from pathlib import Path
-from shutil import copyfile, which
+from shutil import which
 from typing import Any, Dict, Iterator, List, Optional, Sequence
 
-import gi
 from albert import (
     Action,
     GeneratorQueryHandler,
     Icon,
+    Notification,
     PluginInstance,
     StandardItem,
     openUrl,
@@ -19,19 +19,17 @@ from albert import (
 )
 from fuzzywuzzy import process
 
-gi.require_version("Notify", "0.7")  # isort:skip
-gi.require_version("GdkPixbuf", "2.0")  # isort:skip
-from gi.repository import GdkPixbuf, Notify  # isort:skip  # type: ignore
-
 md_iid = "5.0"
 md_version = "0.3"
 md_name = "Contacts"
 md_description = "Contact VCF Viewer"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/contacts"
 md_maintainers = ["Nikos Koukis"]
-md_lib_dependencies = ["fuzzywuzzy"]
-md_bin_dependencies = ["vcfxplr"]
+md_lib_dependencies = ["fuzzywuzzy", "vcfxplr"]
+md_bin_dependencies = []
 ICON_PATH = Path(__file__).parent / "contacts.png"
+
+CONFIG_VCF_PATH = "vcf_path"
 
 
 class Contact:
@@ -73,36 +71,12 @@ class Contact:
         )
 
 
-# FileBackedVar class -------------------------------------------------------------------------
-class FileBackedVar:
-    def __init__(self, config_path, varname, convert_fn=str, init_val=None):
-        self._fpath = config_path / varname
-        self._convert_fn = convert_fn
-
-        if init_val:
-            with open(self._fpath, "w") as f:
-                f.write(str(init_val))
-        else:
-            self._fpath.touch()
-
-    def get(self):
-        with open(self._fpath, "r") as f:
-            return self._convert_fn(f.read().strip())
-
-    def set(self, val):
-        with open(self._fpath, "w") as f:
-            return f.write(str(val))
-
-
 # plugin main functions -----------------------------------------------------------------------
 
 
-def do_notify(msg: str, image=None):
+def do_notify(msg: str):
     app_name = "Contacts"
-    Notify.init(app_name)
-    image = image
-    n = Notify.Notification.new(app_name, msg, image)
-    n.show()
+    Notification(app_name, msg).send()
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -131,20 +105,74 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         GeneratorQueryHandler.__init__(self)
 
         self.cache_path = Path(self.cacheLocation()) / "contacts"
-        self.config_path = Path(self.configLocation()) / "contacts"
-        self.data_path = Path(self.dataLocation()) / "contacts"
+        self.cache_path.mkdir(parents=True, exist_ok=True)
 
-        for p in (self.cache_path, self.config_path, self.data_path):
-            p.mkdir(parents=True, exist_ok=True)
-
-        self.stats_path = self.config_path / "stats"
-        self.vcf_path = self.cache_path / "contacts.vcf"
+        configured = self.readConfig(CONFIG_VCF_PATH, str) or ""
+        if configured:
+            self._vcf_path: Optional[Path] = Path(configured).expanduser()
+        else:
+            # releases before the vcf path became configurable kept a copy in the cache
+            legacy = self.cache_path / "contacts.vcf"
+            self._vcf_path = legacy if legacy.is_file() else None
 
         self.contacts: List[Contact] = []
         self.fullnames_to_contacts: Dict[str, Contact] = {}
 
-        if self.vcf_path.is_file():
+        if self._vcf_path is not None and self._vcf_path.is_file():
+            try:
+                self.reindex_contacts()
+            except Exception:  # keep the plugin usable, the file may be half-written
+                traceback.print_exc()
+
+    # -- config, bound to the settings widget below -----------------------
+
+    @property
+    def vcf_path(self) -> str:
+        return "" if self._vcf_path is None else str(self._vcf_path)
+
+    @vcf_path.setter
+    def vcf_path(self, value: str):
+        value = (value or "").strip()
+
+        if not value:
+            self._vcf_path = None
+            self._reset_contacts()
+            self.writeConfig(CONFIG_VCF_PATH, "")
+            return
+
+        # store the raw string so a typo is preserved and can be corrected
+        self.writeConfig(CONFIG_VCF_PATH, value)
+        self._vcf_path = Path(value).expanduser()
+
+        if not self._vcf_path.is_file():
+            self._reset_contacts()
+            do_notify(f'"{self._vcf_path}" is not a file - please check the plugin settings.')
+            return
+
+        try:
             self.reindex_contacts()
+        except Exception:
+            self._reset_contacts()
+            traceback.print_exc()
+            do_notify(f'Could not parse "{self._vcf_path}" - see the Albert logs.')
+
+    def configWidget(self):
+        return [
+            {
+                "type": "label",
+                "text": (
+                    "Path to the vCard (.vcf) file to search, e.g. an export of your Google, "
+                    "Nextcloud or Thunderbird contacts. The file is read in place rather than copied, "
+                    "so edits show up after the next re-index."
+                ),
+            },
+            {
+                "type": "lineedit",
+                "property": "vcf_path",
+                "label": "Contacts VCF file",
+                "widget_properties": {"placeholderText": "/home/you/contacts.vcf"},
+            },
+        ]
 
     @staticmethod
     def makeIcon():
@@ -158,13 +186,17 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
     # -- contacts index ------------------------------------------------------------------------
 
+    def _reset_contacts(self) -> None:
+        self.contacts = []
+        self.fullnames_to_contacts = {}
+
     def reindex_contacts(self) -> None:
         self.contacts = self.get_new_contacts()
         self.fullnames_to_contacts = {c.fullname: c for c in self.contacts}
 
     def get_new_contacts(self) -> List[Contact]:
         proc = subprocess.run(
-            ["vcfxplr", "-c", str(self.vcf_path), "json", "-g", "fn"],
+            ["vcfxplr", "-c", str(self._vcf_path), "json", "-g", "fn"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -172,30 +204,17 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         contacts_json = json.loads(proc.stdout)
         return [Contact.parse(k, v) for k, v in contacts_json.items()]
 
-    def save_data(self, data: str, data_name: str):
-        """Save a piece of data in the configuration directory."""
-        with open(self.config_path / data_name, "w") as f:
-            f.write(data)
-
-    def load_data(self, data_name: str) -> str:
-        """Load a piece of data from the configuration directory."""
-        with open(self.config_path / data_name, "r") as f:
-            data = f.readline().strip().split()[0]
-
-        return data
-
-    def data_exists(self, data_name: str) -> bool:
-        """Check whwether a piece of data exists in the configuration directory."""
-        return (self.config_path / data_name).is_file()
+    def clear_vcf_path(self):
+        """Forget the configured VCF file, so the setup prompt reappears."""
+        self.vcf_path = ""
 
     def save_vcf_file(self, query: str):
-        p = Path(query).expanduser().absolute()
-        if not p.is_file():
-            do_notify(f'Given path "{p}" is not valid - please input it again.')
-
-        copyfile(p, self.vcf_path)
-        self.reindex_contacts()
-        do_notify(f"Copied VCF contacts file to -> {self.vcf_path}. You should be ready to go...")
+        """Point the plugin at a VCF file, for users who prefer the prompt over the settings UI."""
+        self.vcf_path = query
+        if self._vcf_path is not None and self._vcf_path.is_file():
+            do_notify(
+                f"Reading contacts from -> {self._vcf_path}. You should be ready to go..."
+            )
 
     def setup(self, ctx) -> Optional[List[StandardItem]]:
         """Return the setup items the user has to deal with first - None if there's nothing
@@ -214,9 +233,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                         Action(
                             "copy",
                             "Copy install command",
-                            lambda: setClipboardText(
-                                "pip3 install --user --upgrade vcfxplr"
-                            ),
+                            lambda: setClipboardText("pip3 install --user --upgrade vcfxplr"),
                         ),
                         Action(
                             "open",
@@ -227,10 +244,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 )
             ]
 
-        if self.vcf_path.exists() and not self.vcf_path.is_file():
-            raise RuntimeError(f"vcf file exists but it's not a file -> {self.vcf_path}")
-
-        if not self.vcf_path.exists():
+        if self._vcf_path is None:
             return [
                 StandardItem(
                     id=f"{self.id()}.vcf-setup",
@@ -241,6 +255,24 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                         Action(
                             "save", "Save VCF file", lambda q=ctx.query: self.save_vcf_file(q)
                         ),
+                    ],
+                )
+            ]
+
+        if not self._vcf_path.is_file():
+            return [
+                StandardItem(
+                    id=f"{self.id()}.vcf-missing",
+                    icon_factory=self.makeIcon,
+                    text=f"Contacts file not found: {self._vcf_path}",
+                    subtext="Fix the path in the plugin settings, or enter a new one here.",
+                    actions=[
+                        Action(
+                            "save",
+                            "Use this file instead",
+                            lambda q=ctx.query: self.save_vcf_file(q),
+                        ),
+                        Action("reset", "Forget the configured path", self.clear_vcf_path),
                     ],
                 )
             ]
@@ -284,7 +316,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         actions = []
 
         for field in phones_and_emails:
-            actions.append(Action("copy", f"Copy {field}", lambda f=field: setClipboardText(f)))
+            actions.append(
+                Action("copy", f"Copy {field}", lambda f=field: setClipboardText(f))
+            )
 
         actions.append(Action("copy", "Copy name", lambda: setClipboardText(contact.fullname)))
 
@@ -321,7 +355,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 )
                 results.append(self.get_reindex_item(ctx))
             else:
-                matched = process.extract(query_str, self.fullnames_to_contacts.keys(), limit=10)
+                matched = process.extract(
+                    query_str, self.fullnames_to_contacts.keys(), limit=10
+                )
                 results.extend(
                     [
                         self.get_contact_as_item(ctx, self.fullnames_to_contacts[m[0]])
