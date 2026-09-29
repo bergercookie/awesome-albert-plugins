@@ -95,7 +95,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         self.page_paths = self.get_page_paths()
 
     def update_tldr_db(self):
-        subprocess.check_call(f"git -C {self.tldr_root} pull --rebase origin master".split())
+        subprocess.check_call(f"git -C {self.tldr_root} pull --rebase origin main".split())
         self.reindex_tldr_pages()
 
     def get_page_paths(self) -> Dict[str, Path]:
