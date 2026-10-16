@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Dict
 from concurrent import futures
 from pathlib import Path
 
@@ -8,12 +9,16 @@ import requests
 logger = logging.getLogger("__file__")
 
 
-def check_link(link: str) -> int:
-    headers = {}
+def check_link(link: str) -> requests.Response:
+    headers: Dict[str, str] = {}
     req = requests.head(link, headers=headers, timeout=1)
     return req
 
 
+import pytest
+
+
+@pytest.mark.network
 def test_links():
     json_file = Path(__file__).absolute().parent.parent / "config" / "saxophone.json"
 

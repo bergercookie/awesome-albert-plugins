@@ -35,7 +35,7 @@ md_bin_dependencies = ["vlc"]
 icons_path = Path(__file__).parent / "images"
 
 
-def get_icon(icon: str):
+def get_icon(icon: str) -> str:
     return str(icons_path / icon)
 
 
@@ -252,7 +252,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
     def items(self, ctx) -> Iterator[List[StandardItem]]:
         """Yield the radio streams matching the current query."""
-        results = []
+        results: List = []
 
         if len(ctx.query.strip()) <= 1 and is_radio_on():
             results.insert(

@@ -1,0 +1,35 @@
+# pre-commit for awesome-albert-plugins
+#
+# Two hooks, and that is all this repo needs:
+#
+#   ruff      the whole lint config from pyproject.toml, on the python files
+#   mypy      the type check, reading the albert stub in stubs/
+#
+# No pytest hook. The suite takes about two and a half seconds, but it also
+# needs the tools in .venv and would re-run on every commit for no benefit that
+# `just test` does not already give. `just check` runs both.
+#
+# The first commit will install hook environments into ~/.cache/pre-commit, which
+# takes a minute; after that it is fast. Bypass once with `git commit -n` while
+# iterating, but run `just check` before you push.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    # 2.x, not 1.x: mypy 1.x refuses python_version below 3.10 and 2.x is what
+    # `just lint-mypy` runs. Pinning the two to different majors would mean the
+    # hook and the recipe disagree about what the code has to satisfy.
+    rev: v2.3.1
+    hooks:
+      - id: mypy
+        # Everything is configured in pyproject.toml already: which paths to
+        # check, the stub directory, and the legacy plugins that are exempt.
+        # Passing the paths again here would duplicate that list, and the hook
+        # runs in its own environment where the local .venv is not on the path.
+        args: [--config-file=pyproject.toml]
+        additional_dependencies: [types-requests, types-colorama]
+        pass_filenames: false

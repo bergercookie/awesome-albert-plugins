@@ -47,14 +47,17 @@ Currently the list of plugins includes:
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
 - [Contacts](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/contacts) - 📕 View your contacts and copy emails/telephones, etc.
 - [Colors](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/colors) - 🎨 Color lookup using RGB, hex notation or color name
+- [Dockge](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/dockge) - 🐳 Control the docker stacks of a running [Dockge](https://github.com/louislam/dockge) server
 - [Emoji picker](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/emoji_picker) - 🎉 Search for and copy emojis to clipboard
 - [Errno](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/errno_lookup) - ❗Lookup and get information on Linux error codes
 - [Harakiri](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/harakiri) - 📫 Create temporary email addresses at [harakirimail.com](https://harakirimail.com/)
 - [IP show](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/ipshow) - 🌐 Display information about your network interfaces and public IPs
 - [Image Search](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/image_search) - 📷 Search the web for images, download them and/or copy them to clipboard
+- [Jellyseerr](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jellyseerr) - 🎬 Review Jellyseerr requests and request new movies and series
 - [Jira](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jira) - 📝 View and edit your [Jira](https://www.atlassian.com/software/jira) tickets from Albert
 - [Killproc](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/killproc) - ☠️ Kill processes based on fuzzy-search
 - [Meme Generator](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/meme_generator) - 😸 Generate memes and copy them to clipboard
+- [Pastebin](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pastebin) - 📋 Share a snippet or a file as a link via pastebin.com or another service
 - [Pass TOTP](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_totp_cli) - 🔢 Generate 2FA codes with [Pass](https://www.passwordstore.org/) and [totp](https://pypi.org/project/totp/)
 - [Pass_rlded](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pass_rlded) - 🔒 UNIX Password Manager interaction with fuzzy-search capabilities
 - [Pulse Control](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pulse_control) - 🎤 Enable/disable sources and sinks from Pulse Control
@@ -112,6 +115,34 @@ cp -r plugins/jira ~/.local/share/albert/org.albert.extension.python/modules/jir
 ```
 
 After that, enable the plugin from the Albert settings.
+
+## Working on a plugin
+
+Every plugin in this repo is linted, type checked and tested by the same
+tooling, all configured in `pyproject.toml` and driven from the `justfile`:
+
+```sh
+just install-tools   # ruff, mypy, pytest, pre-commit, into ./.venv
+just check           # lint + test
+just                 # list the recipes
+```
+
+Two things about the type check are worth knowing before you add a plugin. The
+`albert` module is injected into your plugin's interpreter by the launcher's
+plugin loader, so it is not importable; `stubs/albert/__init__.pyi` is what mypy
+reads instead, and `test/albert_stub.py` is what pytest imports. If you use an
+`albert` name that neither has, `test/test_albert_stub.py` will say so. The four
+logging helpers — `debug`, `info`, `warning`, `critical` — are the exception:
+they are attached to your plugin's own module by the loader, so call them as
+bare globals and do **not** import them from `albert`.
+
+Plugins upstreamed from elsewhere are exempt from some lint rules until someone
+tidies them; the exemption is listed per file in `pyproject.toml`, so a new
+violation in one of them still fails. New code is not exempt.
+
+Tests live in `plugins/<name>/test/`. Anything that needs the internet is
+marked `@pytest.mark.network` and skipped unless you pass `--run-network`; the
+reason is in `conftest.py`.
 
 ## Self Promotion
 
