@@ -4,11 +4,16 @@
 #   just lint       ruff + mypy, what pre-commit runs
 #   just test       pytest with doctests, no network
 #   just check      lint + test, what you want before pushing
+#   just deb        build the .deb that ships every plugin
+#   just deb-smoke  build it, install it, import every plugin back
 #
 # Everything runs against the repo's own .venv. Plugins declare their own
 # md_lib_dependencies and are installed into per-plugin venvs by the launcher,
 # so there is deliberately no "install all dependencies" recipe here: the tools
 # in .venv are the only third-party packages this repo's own code needs.
+#
+# devbox.json provisions the environment (just, python, dpkg, ...) and creates
+# .venv on first entry, so `devbox shell` and CI run the same recipes below.
 
 venv := ".venv"
 python := venv / "bin/python"
@@ -76,6 +81,22 @@ fix:
 # behaviour, so this one is not for a half-finished state.
 fix-unsafe:
     {{ruff}} check --fix --unsafe-fixes .
+
+# --- packaging -----------------------------------------------------------------
+
+# Build one Debian package containing every plugin, installed under
+# /usr/share/albert/python/plugins. Writes dist/albert-plugins_<version>_all.deb
+# and prints its path. Needs dpkg-deb (devbox provides it).
+deb:
+    ./packaging/build-deb.sh
+
+# The end-to-end check for that package: build it, install it system-wide with
+# dpkg (root or passwordless sudo) and import every plugin from where it
+# landed, the way the launcher does on startup. `just test` already builds,
+# unpacks and imports the package; this recipe additionally performs the real
+# install. Set up so it is the same smoke test, just with the install enabled.
+deb-smoke:
+    ALBERT_DEB_INSTALL=1 {{pytest}} test/test_deb_package.py
 
 # --- housekeeping --------------------------------------------------------------
 

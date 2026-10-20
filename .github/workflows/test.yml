@@ -1,0 +1,30 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # The default suite: no network, no root, no system changes.
+      - run: just test
+
+      # The Debian package end to end: build it, install it with the runner's
+      # passwordless sudo, and import every plugin back from
+      # /usr/share/albert/python/plugins. `just deb-smoke` sets
+      # ALBERT_DEB_INSTALL=1 for the smoke test and leaves the machine clean.
+      - run: just deb-smoke

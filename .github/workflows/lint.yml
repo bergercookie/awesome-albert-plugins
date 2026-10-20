@@ -1,0 +1,25 @@
+name: lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # devbox provisions the toolchain; from there on `just` is in charge.
+      - uses: ./.github/actions/setup
+
+      # `just` is the source of truth: the workflow only names the recipe.
+      - run: just lint

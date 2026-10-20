@@ -189,6 +189,34 @@ def load_plugin(name: str) -> types.ModuleType:
     return module
 
 
+def load_plugin_from(init: Path, name: str) -> types.ModuleType:
+    """Import a plugin's ``__init__.py`` from an arbitrary path.
+
+    Same contract as :func:`load_plugin`, for a plugin that does not live under
+    ``plugins/`` -- the copy a built Debian package installed, say. A distinct
+    module name is used so importing the installed copy never collides with the
+    source-tree module pytest already collected, and the file is loaded as a
+    package so a plugin that keeps helper modules next to ``__init__.py`` (e.g.
+    ``image_search/bing.py``) still finds them.
+    """
+    init = Path(init)
+    spec = importlib.util.spec_from_file_location(
+        f"albertplug_installed_{name}",
+        init,
+        submodule_search_locations=[str(init.parent)],
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+
+    spec.loader.exec_module(module)
+
+    for fn in _LOGGING_GLOBALS:
+        setattr(module, fn, _log_recorder(name, fn))
+
+    return module
+
+
 def _log_recorder(plugin: str, level: str):
     def _log(message):
         albert = sys.modules["albert"]

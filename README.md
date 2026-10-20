@@ -5,8 +5,10 @@ much and I cannot keep up with maintaining this amount of plugins.
 
 ---
 
-<a href="https://travis-ci.com/bergercookie/awesome-albert-plugins" alt="Build Status">
-<img src="https://travis-ci.com/bergercookie/awesome-albert-plugins.svg?branch=master"></a>
+<a href="https://github.com/bergercookie/awesome-albert-plugins/actions/workflows/lint.yml" alt="Lint">
+<img src="https://github.com/bergercookie/awesome-albert-plugins/actions/workflows/lint.yml/badge.svg?branch=master"></a>
+<a href="https://github.com/bergercookie/awesome-albert-plugins/actions/workflows/test.yml" alt="Tests">
+<img src="https://github.com/bergercookie/awesome-albert-plugins/actions/workflows/test.yml/badge.svg?branch=master"></a>
 <a href="https://www.codacy.com/manual/bergercookie/awesome-albert-plugins">
 <img src="https://api.codacy.com/project/badge/Grade/dbefc49bb5f446488da561c7497bb821"/></a>
 <a href=https://github.com/bergercookie/awesome-albert-plugins/blob/master/LICENSE alt="LICENCE">
@@ -43,6 +45,7 @@ Currently the list of plugins includes:
 
 - [Abbreviations](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - ❗Lookup words stored in a file along with their description
 - [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
+- [Audiobookshelf](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/audiobookshelf) - 🎧 Search an [Audiobookshelf](https://www.audiobookshelf.org/) library and play audiobooks locally
 - [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Manage bluetooth devices
 - [Clock](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/clock) - ⏰ Create countdown and stopwatch timers
 - [Contacts](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/contacts) - 📕 View your contacts and copy emails/telephones, etc.
@@ -68,6 +71,7 @@ Currently the list of plugins includes:
 - [Template Albert Plugin](https://github.com/bergercookie/awesome-albert-plugins) - 🛠️ Template [cookiecutter](https://github.com/cookiecutter/cookiecutter) for creating new Albert plugins
 - [Timezones](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/timezones) - 🌏 Lookup timezone information
 - [Tldr Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/tldr_pages) - Lookup [tldr](https://github.com/tldr-pages/tldr) pages and commands
+- [Trakt](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/trakt) - 🍿 Search movies and shows on [Trakt](https://trakt.tv) and rate them
 - [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
 - [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
 
@@ -119,10 +123,11 @@ After that, enable the plugin from the Albert settings.
 ## Working on a plugin
 
 Every plugin in this repo is linted, type checked and tested by the same
-tooling, all configured in `pyproject.toml` and driven from the `justfile`:
+tooling, all configured in `pyproject.toml` and driven from the `justfile`.
+`devbox.json` provisions the toolchain and creates `.venv` on first entry:
 
 ```sh
-just install-tools   # ruff, mypy, pytest, pre-commit, into ./.venv
+devbox shell         # provisions just/python/dpkg and creates .venv on first entry
 just check           # lint + test
 just                 # list the recipes
 ```
@@ -143,6 +148,13 @@ violation in one of them still fails. New code is not exempt.
 Tests live in `plugins/<name>/test/`. Anything that needs the internet is
 marked `@pytest.mark.network` and skipped unless you pass `--run-network`; the
 reason is in `conftest.py`.
+
+### Packaging
+
+`just deb` builds a single Debian package that installs every plugin under
+`/usr/share/albert/python/plugins`. `just deb-smoke` additionally installs it
+with `dpkg` and imports every plugin from the installed location — that is the
+package test CI runs. See [AGENTS.md](AGENTS.md) for the conventions.
 
 ## Self Promotion
 

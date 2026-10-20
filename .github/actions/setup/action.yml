@@ -1,0 +1,25 @@
+name: Setup
+description: Provision the devbox toolchain and make `just` available to later steps.
+
+inputs:
+  enable-cache:
+    description: Cache the nix store between runs.
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    # Installs the devbox CLI, the packages from devbox.json, and (through the
+    # init hook) the repo's own .venv.
+    - uses: jetify-com/devbox-install-action@v0.15.0
+      with:
+        enable-cache: ${{ inputs.enable-cache }}
+
+    # `just` and the rest of the devbox packages are not on the PATH of later
+    # steps by default. Evaluate the devbox environment once and publish the
+    # resulting PATH, so every following step can call `just` directly.
+    - name: Activate the devbox environment
+      shell: bash
+      run: |
+        eval "$(devbox shellenv --init-hook)"
+        echo "$PATH" | tr ':' '\n' >> "$GITHUB_PATH"

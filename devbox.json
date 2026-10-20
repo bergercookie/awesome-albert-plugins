@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/main/.schema/devbox.schema.json",
+  "name": "awesome-albert-plugins",
+  "description": "Lint, type-check, test and package the Albert python plugins in this repo.",
+  "packages": [
+    "just@latest",
+    "pre-commit@latest",
+    "python311@latest",
+    "git@latest",
+    "dpkg@latest",
+    "coreutils@latest",
+    "findutils@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "# The python tooling (ruff, mypy, pytest, pre-commit) lives in the repo's",
+      "# own .venv, which every justfile recipe drives. Build it once on first",
+      "# entry; later entries reuse it. `just install-tools` is the single source",
+      "# of truth for what goes in, so there is no second list here. Every task",
+      "# itself is a `just` recipe, never a devbox script.",
+      "if [ ! -x .venv/bin/python ]; then python -m venv .venv && just install-tools; fi"
+    ]
+  }
+}
