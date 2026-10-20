@@ -58,6 +58,8 @@ Currently the list of plugins includes:
 - [Image Search](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/image_search) - 📷 Search the web for images, download them and/or copy them to clipboard
 - [Jellyseerr](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jellyseerr) - 🎬 Review Jellyseerr requests and request new movies and series
 - [Jira](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/jira) - 📝 View and edit your [Jira](https://www.atlassian.com/software/jira) tickets from Albert
+- [Komodo](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/komodo) - 🦎 Control the containers, stacks and resource syncs of a running [Komodo](https://komo.do) server
+- [Vikunja](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/vikunja) - 🦎 Search/add/remove/update tasks on vikunja
 - [Killproc](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/killproc) - ☠️ Kill processes based on fuzzy-search
 - [Meme Generator](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/meme_generator) - 😸 Generate memes and copy them to clipboard
 - [Pastebin](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/pastebin) - 📋 Share a snippet or a file as a link via pastebin.com or another service
