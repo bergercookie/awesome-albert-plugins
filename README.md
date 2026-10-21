@@ -73,7 +73,6 @@ Currently the list of plugins includes:
 - [Template Albert Plugin](https://github.com/bergercookie/awesome-albert-plugins) - 🛠️ Template [cookiecutter](https://github.com/cookiecutter/cookiecutter) for creating new Albert plugins
 - [Timezones](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/timezones) - 🌏 Lookup timezone information
 - [Tldr Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/tldr_pages) - Lookup [tldr](https://github.com/tldr-pages/tldr) pages and commands
-- [Trakt](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/trakt) - 🍿 Search movies and shows on [Trakt](https://trakt.tv) and rate them
 - [URL Error Lookup](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/url_lookup) - 🔗 Lookup URL error codes
 - [Words](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/words) - 🔤 Lookup a word definition, synonyms and antonyms
 
