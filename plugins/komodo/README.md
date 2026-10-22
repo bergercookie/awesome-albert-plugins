@@ -28,12 +28,21 @@ The actions on each kind, reached with the usual Albert
 
 | Kind | Actions |
 | ---- | ------- |
-| Container | `Open in browser`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
-| Stack | `Open in browser`, `Deploy`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
+| Container | `Open in browser`, `Start`, `Stop`, `Restart`, `Pull image`, `Pause`, `Unpause` |
+| Stack | `Open in browser`, `Deploy`, `Pull images`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
 | Resource Sync | `Open in browser`, `Refresh`, `Execute` |
 
 `Open in browser` is always the first action, so `komodo home` plus
 <kbd>ENTER</kbd> takes you straight to that entry's page in the Komodo web UI.
+
+`Pull images` is Komodo's own `docker compose pull` for the whole stack: the
+images of all of its services are pulled. `Pull image` pulls the image of the
+one container - Komodo pulls per compose service, so the plugin first asks
+Komodo which stack and service the container belongs to, and pulls that service
+only. A container that belongs to neither a stack nor a deployment cannot be
+pulled, since Komodo's API has no way to pull an image on its own; the plugin
+says so instead of pretending it worked. Pulling an image changes nothing that
+is running - deploy or restart the container afterwards to run the new image.
 
 For a resource sync, `Refresh` recomputes the pending diff against its source
 (the same as Komodo's own "Refresh" button) without changing anything, and
@@ -97,6 +106,8 @@ row as an error you can retry.
   very next query.
 - A container's or stack's server is read straight from Komodo's own list
   response; the plugin never has to ask about servers separately.
+- Pulling an image needs a Komodo that knows the `PullStack` API (1.16.9 and
+  newer); an older server answers with an error, which is shown as it is.
 - Authentication is the `X-Api-Key` / `X-Api-Secret` header pair. Whatever the URL
   is, it is contacted as given; put Komodo behind TLS (or a reverse proxy) if it is
   not on localhost.

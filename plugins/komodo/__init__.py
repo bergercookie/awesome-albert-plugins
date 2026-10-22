@@ -4,13 +4,14 @@
 The empty query lists everything Komodo knows about - containers, stacks and
 resource syncs - and anything typed narrows that list by name. Every result
 carries the actions that make sense for its kind: start/stop/restart/pause for
-containers and stacks, deploy for stacks, and refresh/execute for resource
-syncs.
+containers and stacks, deploy and image pulls for stacks, image pulls for
+containers, and refresh/execute for resource syncs.
 
 Everything goes through Komodo's REST API, authenticated with an API key and
 secret pair, and nothing but that one server is ever contacted.
 """
 
+import re
 import subprocess
 import threading
 import time
@@ -381,6 +382,53 @@ def fetch_syncs(base_url: str, api_key: str, api_secret: str) -> List[Dict]:
     return [sync for sync in payload if isinstance(sync, dict)]
 
 
+def fetch_container_resource(
+    base_url: str, api_key: str, api_secret: str, server_id: str, container: str
+) -> Dict:
+    """The stack or deployment *container* belongs to.
+
+    An empty dict when the container belongs to neither of them.
+
+    .. raises:: KomodoError
+    """
+    payload = call(
+        "POST",
+        base_url,
+        api_key,
+        api_secret,
+        "read/GetResourceMatchingContainer",
+        {"server": server_id, "container": container},
+    )
+    if not isinstance(payload, dict):
+        raise KomodoError(
+            f"{base_url} answered the container lookup with something unexpected."
+        )
+    resource = payload.get("resource")
+    return resource if isinstance(resource, dict) else {}
+
+
+def fetch_stack_services(
+    base_url: str, api_key: str, api_secret: str, stack_id: str
+) -> List[Dict]:
+    """The services of a stack, each with the container it runs.
+
+    .. raises:: KomodoError
+    """
+    payload = call(
+        "POST",
+        base_url,
+        api_key,
+        api_secret,
+        "read/ListStackServices",
+        {"stack": stack_id},
+    )
+    if not isinstance(payload, list):
+        raise KomodoError(
+            f"{base_url} answered the stack services with something unexpected."
+        )
+    return [service for service in payload if isinstance(service, dict)]
+
+
 def update_error(update: Dict) -> str:
     """Why a Komodo `Update` (the response to an execute call) reports failure.
 
@@ -413,6 +461,130 @@ def run_action(
     payload = call("POST", base_url, api_key, api_secret, path, body)
     if isinstance(payload, dict) and payload.get("success") is False:
         raise KomodoError(update_error(payload))
+
+
+# pulling images ----------------------------------------------------------------------
+
+
+def stack_pull_body(stack_id: str, services: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+    """The body of a `PullStack` call.
+
+    Without *services* the images of all the stack's services are pulled.
+
+    >>> stack_pull_body("673e1f2b9c1d4a0012ab34cd")
+    {'stack': '673e1f2b9c1d4a0012ab34cd', 'services': []}
+    >>> stack_pull_body("673e1f2b9c1d4a0012ab34cd", ["web"])
+    {'stack': '673e1f2b9c1d4a0012ab34cd', 'services': ['web']}
+    """
+    return {"stack": stack_id, "services": list(services or [])}
+
+
+def replica_stripped(name: str) -> str:
+    """The container *name* without its replica number.
+
+    Compose names the containers of a service `<project>-<service>-<replica>`,
+    and Komodo lists only the first container of a service that runs more than
+    one replica.
+
+    >>> replica_stripped("media-web-1")
+    'media-web'
+    >>> replica_stripped("media-web")
+    'media-web'
+    """
+    return re.sub(r"-\d+$", "", name)
+
+
+def service_of_container(services: Sequence[Dict], container: str) -> str:
+    """The name of the stack service *container* is the container of.
+
+    Komodo lists a stack's services together with the container each of them
+    runs, so the container is what the service is looked up by. An empty string
+    when no service of the list runs that container.
+
+    A service running more than one replica only lists its first container, so
+    the other replicas are matched by their name without the replica number.
+
+    >>> service_of_container(
+    ...     [{"service": "web", "container": {"name": "media-web-1"}}], "media-web-1"
+    ... )
+    'web'
+    >>> service_of_container(
+    ...     [{"service": "web", "container": {"name": "media-web-1"}}], "media-web-2"
+    ... )
+    'web'
+    >>> service_of_container(
+    ...     [{"service": "web", "container": {"name": "media-web-1"}}], "media-db-1"
+    ... )
+    ''
+    """
+    for service in services:
+        item = service.get("container")
+        if isinstance(item, dict) and str(item.get("name") or "") == container:
+            return str(service.get("service") or "")
+
+    for service in services:
+        item = service.get("container")
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "")
+        if name and replica_stripped(name) == replica_stripped(container):
+            return str(service.get("service") or "")
+    return ""
+
+
+def pull_container_image(
+    base_url: str, api_key: str, api_secret: str, server_id: str, container: str
+) -> None:
+    """Pull the latest image of *container*.
+
+    Komodo pulls images per compose service, so the stack the container
+    belongs to is looked up first and only the service that container runs is
+    pulled. The container of a deployment has its image pulled as a whole
+    deployment.
+
+    .. raises:: KomodoError
+    """
+    if not server_id:
+        raise KomodoError(
+            f"Komodo does not know the server of the container {container}, so its "
+            "image cannot be pulled."
+        )
+
+    resource = fetch_container_resource(base_url, api_key, api_secret, server_id, container)
+    kind = str(resource.get("type") or "")
+    resource_id = str(resource.get("id") or "")
+
+    if kind == "deployment":
+        run_action(
+            base_url,
+            api_key,
+            api_secret,
+            "execute/PullDeployment",
+            {"deployment": resource_id},
+        )
+        return
+
+    if kind != "stack":
+        raise KomodoError(
+            f"Komodo cannot pull the image of {container}: it is not part of a stack "
+            "or a deployment."
+        )
+
+    services = fetch_stack_services(base_url, api_key, api_secret, resource_id)
+    service = service_of_container(services, container)
+    if not service:
+        raise KomodoError(
+            f"Komodo does not know which service of the stack the container "
+            f"{container} belongs to."
+        )
+
+    run_action(
+        base_url,
+        api_key,
+        api_secret,
+        "execute/PullStack",
+        stack_pull_body(resource_id, [service]),
+    )
 
 
 # searching -------------------------------------------------------------------------------
@@ -938,6 +1110,11 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         actions = [
             Action("open", "Open in browser", lambda url=page: openUrl(url)),
             Action("deploy", f"Deploy {name}", lambda: run("execute/DeployStack", "Deployed")),
+            Action(
+                "pull",
+                f"Pull images for {name}",
+                lambda i=stack_id, n=name: self._pull_stack(i, n),
+            ),
             Action("start", f"Start {name}", lambda: run("execute/StartStack", "Started")),
             Action("stop", f"Stop {name}", lambda: run("execute/StopStack", "Stopped")),
             Action(
@@ -977,6 +1154,11 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 "restart",
                 f"Restart {name}",
                 lambda: run("execute/RestartContainer", "Restarted"),
+            ),
+            Action(
+                "pull",
+                f"Pull image for {name}",
+                lambda s=server_id, c=name: self._pull_container(s, c),
             ),
             Action(
                 "pause", f"Pause {name}", lambda: run("execute/PauseContainer", "Paused")
@@ -1083,6 +1265,26 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 {"server": server_id, "container": container},
             ),
             f"{verb} {container}",
+        )
+
+    def _pull_stack(self, stack_id: str, name: str) -> None:
+        self._async(
+            lambda: run_action(
+                self._url,
+                self._api_key(),
+                self._api_secret(),
+                "execute/PullStack",
+                stack_pull_body(stack_id),
+            ),
+            f"Pulled the images of {name}",
+        )
+
+    def _pull_container(self, server_id: str, container: str) -> None:
+        self._async(
+            lambda: pull_container_image(
+                self._url, self._api_key(), self._api_secret(), server_id, container
+            ),
+            f"Pulled the image of {container}",
         )
 
     def _refresh_sync(self, sync_id: str, name: str) -> None:

@@ -280,3 +280,154 @@ def test_update_error_uses_the_last_failed_logs_stderr():
 
 def test_update_error_falls_back_when_there_are_no_logs():
     assert "failed" in komodo.update_error({})
+
+
+# -- pulling images ---------------------------------------------------------------------------
+
+
+class _Ctx:
+    """The little of Albert's query context the items ask for."""
+
+    trigger = "komodo "
+
+
+def test_stack_item_offers_pulling_the_images():
+    plugin = komodo.Plugin()
+    item = plugin._stack_item(_Ctx(), {"id": "st1", "name": "media", "info": {}})
+    actions = {action.id: action.text for action in item.actions}
+    assert actions["pull"] == "Pull images for media"
+
+
+def test_container_item_offers_pulling_the_image():
+    plugin = komodo.Plugin()
+    item = plugin._container_item(
+        _Ctx(), {"server_id": "srv1", "server_name": "homelab", "name": "web"}
+    )
+    actions = {action.id: action.text for action in item.actions}
+    assert actions["pull"] == "Pull image for web"
+
+
+def _fake_call(payloads):
+    """A `call` stand-in answering with the payload registered for the path.
+
+    The paths it was asked for are kept in its `calls` attribute.
+    """
+    calls = []
+
+    def fake_call(method, base_url, api_key, api_secret, path, body=None, timeout=None):
+        calls.append((path, body))
+        return payloads.get(path, {})
+
+    fake_call.calls = calls
+    return fake_call
+
+
+def test_service_of_container_finds_the_service_running_it():
+    services = [
+        {"service": "web", "container": {"name": "media-web-1"}},
+        {"service": "db", "container": {"name": "media-db-1"}},
+    ]
+    assert komodo.service_of_container(services, "media-db-1") == "db"
+
+
+def test_service_of_container_finds_the_service_of_another_replica():
+    services = [{"service": "web", "container": {"name": "media-web-1"}}]
+    assert komodo.service_of_container(services, "media-web-2") == "web"
+
+
+def test_service_of_container_is_empty_for_an_unknown_container():
+    services = [{"service": "web", "container": {"name": "media-web-1"}}]
+    assert komodo.service_of_container(services, "media-db-1") == ""
+
+
+def test_service_of_container_is_empty_for_a_service_without_a_container():
+    assert komodo.service_of_container([{"service": "web"}], "media-web-1") == ""
+
+
+def test_pull_container_image_pulls_the_service_of_its_stack(monkeypatch):
+    fake = _fake_call(
+        {
+            "read/GetResourceMatchingContainer": {"resource": {"type": "stack", "id": "st1"}},
+            "read/ListStackServices": [
+                {"service": "web", "container": {"name": "media-web-1"}},
+                {"service": "db", "container": {"name": "media-db-1"}},
+            ],
+        }
+    )
+    monkeypatch.setattr(komodo, "call", fake)
+    pulled = []
+    monkeypatch.setattr(komodo, "run_action", lambda *args: pulled.append((args[3], args[4])))
+
+    komodo.pull_container_image(
+        "http://localhost:9120", "key", "secret", "srv1", "media-db-1"
+    )
+
+    assert pulled == [
+        ("execute/PullStack", {"stack": "st1", "services": ["db"]}),
+    ]
+    assert [path for path, _ in fake.calls] == [
+        "read/GetResourceMatchingContainer",
+        "read/ListStackServices",
+    ]
+
+
+def test_pull_container_image_pulls_a_deployment(monkeypatch):
+    monkeypatch.setattr(
+        komodo,
+        "call",
+        _fake_call(
+            {
+                "read/GetResourceMatchingContainer": {
+                    "resource": {"type": "deployment", "id": "dep1"}
+                },
+            }
+        ),
+    )
+    pulled = []
+    monkeypatch.setattr(komodo, "run_action", lambda *args: pulled.append((args[3], args[4])))
+
+    komodo.pull_container_image("http://localhost:9120", "key", "secret", "srv1", "web")
+
+    assert pulled == [("execute/PullDeployment", {"deployment": "dep1"})]
+
+
+def test_pull_container_image_refuses_a_container_without_a_server(monkeypatch):
+    monkeypatch.setattr(komodo, "call", _fake_call({}))
+
+    with pytest.raises(komodo.KomodoError, match="does not know the server"):
+        komodo.pull_container_image("http://localhost:9120", "key", "secret", "", "web")
+
+
+def test_pull_container_image_refuses_a_container_without_a_stack(monkeypatch):
+    monkeypatch.setattr(
+        komodo,
+        "call",
+        _fake_call({"read/GetResourceMatchingContainer": {"resource": None}}),
+    )
+
+    with pytest.raises(komodo.KomodoError, match="not part of a stack"):
+        komodo.pull_container_image(
+            "http://localhost:9120", "key", "secret", "srv1", "web"
+        )
+
+
+def test_pull_container_image_refuses_a_container_of_an_unknown_service(monkeypatch):
+    monkeypatch.setattr(
+        komodo,
+        "call",
+        _fake_call(
+            {
+                "read/GetResourceMatchingContainer": {
+                    "resource": {"type": "stack", "id": "st1"}
+                },
+                "read/ListStackServices": [
+                    {"service": "web", "container": {"name": "media-web-1"}},
+                ],
+            }
+        ),
+    )
+
+    with pytest.raises(komodo.KomodoError, match="does not know which service"):
+        komodo.pull_container_image(
+            "http://localhost:9120", "key", "secret", "srv1", "media-db-1"
+        )
