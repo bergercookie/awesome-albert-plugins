@@ -2,10 +2,13 @@
 
 import json
 import operator
+import os
 import random
 import select
+import signal
 import socket
 import subprocess
+import time
 import traceback
 from enum import Enum
 from pathlib import Path
@@ -25,12 +28,12 @@ from albert import (
 md_name = "Saxophone"
 md_description = "Play internet radio streams from albert"
 md_iid = "5.0"
-md_version = "0.3"
+md_version = "0.4"
 md_license = "MIT"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins"
 md_maintainers = ["Nikos Koukis"]
 md_lib_dependencies = ["requests"]
-md_bin_dependencies = ["vlc"]
+md_bin_dependencies = ["vlc", "pgrep"]
 
 icons_path = Path(__file__).parent / "images"
 
@@ -65,6 +68,8 @@ sort_fn = sort_random
 
 vlc_socket = Path("/tmp/cvlc.unix")
 socket_timeout = 0.2
+vlc_stop_timeout = 1.0
+vlc_process: Optional[subprocess.Popen] = None
 
 # Classes & supplementary functions -----------------------------------------------------------
 
@@ -156,6 +161,7 @@ def init_streams():
 
 
 def launch_vlc():
+    global vlc_process
     if vlc_socket.exists():
         if not vlc_socket.is_socket():
             raise RuntimeError(f'Exected socket file "{vlc_socket}" is not a socket')
@@ -164,9 +170,90 @@ def launch_vlc():
     else:
         # communicate over UNIX socket with vlc
         try:
-            subprocess.Popen(["vlc", "-I", "oldrc", "--rc-unix", str(vlc_socket)])
+            vlc_process = subprocess.Popen(
+                ["vlc", "-I", "oldrc", "--rc-unix", str(vlc_socket)]
+            )
         except OSError as e:
             print(f"saxophone: could not launch vlc - {e}")
+
+
+def _vlc_pids() -> List[int]:
+    """The PIDs of the VLC processes that serve this plugin's RC socket."""
+    global vlc_process
+    pids = []
+    if vlc_process is not None:
+        if vlc_process.poll() is None:
+            pids.append(vlc_process.pid)
+        else:
+            vlc_process = None
+
+    # VLC outlives the module when the plugin is unloaded, and an old instance
+    # may still be around, so look beyond the process handle. Only our own VLC
+    # has the socket on its command line.
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", f"[v]lc .*--rc-unix {vlc_socket}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as e:
+        print(f"saxophone: could not look for the vlc process - {e}")
+        return pids
+    pids.extend(int(pid) for pid in result.stdout.split() if pid.isdigit())
+    return sorted(set(pids))
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _kill_vlc(pids: List[int]) -> None:
+    """Ask *pids* to quit, killing them if they do not within the timeout."""
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+
+    deadline = time.monotonic() + vlc_stop_timeout
+    while time.monotonic() < deadline and any(_pid_alive(pid) for pid in pids):
+        time.sleep(0.05)
+
+    for pid in pids:
+        if _pid_alive(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+
+def restart_vlc():
+    """Restart VLC, killing it first if it has become unresponsive."""
+    global vlc_process
+
+    issue_cmd("quit")
+    pids = _vlc_pids()
+    if pids:
+        _kill_vlc(pids)
+    vlc_process = None
+
+    # A killed VLC does not always remove its socket file, and launch_vlc()
+    # would then mistake it for a running instance.
+    if vlc_socket.exists():
+        try:
+            vlc_socket.unlink()
+        except OSError as e:
+            print(f"saxophone: could not remove {vlc_socket} - {e}")
+
+    launch_vlc()
+    info("Restarted VLC.")
 
 
 def is_radio_on() -> bool:
@@ -272,11 +359,20 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             actions=[Action("reindex", "Reindex", lambda: init_streams())],
         )
 
+        restart_item = StandardItem(
+            id=f"{md_name}_restart",
+            icon_factory=lambda: Icon.image(REPEAT_ICON_PATH),
+            text="Restart VLC",
+            subtext="Use this when VLC stops responding and no station plays",
+            actions=[Action("restart", "Restart VLC", lambda: restart_vlc())],
+        )
+
         try:
             query_str = ctx.query.strip().lower()
 
             if not query_str:
                 results.append(reindex_item)
+                results.append(restart_item)
                 for stream in streams:
                     results.append(get_as_item(stream))
             else:
@@ -288,6 +384,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
                 # reindex goes at the end of the list if we are searching for a stream
                 results.append(reindex_item)
+                results.append(restart_item)
 
         except Exception:  # user to report error
             trace = traceback.format_exc()

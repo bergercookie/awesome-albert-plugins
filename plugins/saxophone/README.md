@@ -37,6 +37,12 @@ bindings, I'm using the `cvlc` executable to play the radio streams.
 
 ![demo_gif](https://github.com/bergercookie/awesome-albert-plugins/misc/demo.gif)
 
+## Troubleshooting
+
+If no station plays no matter which one you pick, VLC's remote-control interface
+has probably become unresponsive. Run the plugin and choose **Restart VLC**: it
+asks VLC to quit, kills it if it does not respond, and starts a fresh process.
+
 ## Installation instructions
 
 Refer to the parent project: [Awesome albert plugins](https://github.com/bergercookie/awesome-albert-plugins)
