@@ -673,7 +673,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self.makeIcon,
         )
 
-    def _add_preview_item(self, raw_text: str):
+    def _add_preview_item(self, raw_text: str, no_matches: bool = False):
         now = datetime.now().astimezone()
         parsed = parse_quick_add(raw_text, now)
         if not parsed.title:
@@ -687,6 +687,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         if parsed.due:
             bits.append("Due " + parsed.due.strftime("%a %d %b %H:%M"))
         subtext = "Create task in Vikunja · " + "  ·  ".join(bits)
+        if no_matches:
+            subtext = "No matching tasks · " + subtext
 
         return StandardItem(
             id="vikunja-add-preview",
@@ -859,7 +861,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
             project_map = self._project_map()
             results = self._fetch_search(query, project_map)
-            yield results or [self._empty_item(f'No tasks matching "{query}"')]
+            yield results or [self._add_preview_item(query, no_matches=True)]
 
         except VikunjaError as e:
             error(str(e))

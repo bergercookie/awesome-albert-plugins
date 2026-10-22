@@ -46,7 +46,9 @@ to open the equivalent view in your browser.
 
 **Fuzzy search** — anything else you type is matched against both the title
 and the description of your open tasks, e.g. `v invoice` or a partial/typo'd
-word.
+word. When nothing matches, the result turns into an add-task preview instead:
+**Enter** creates the task with what you typed as its title (the Quick Add
+Magic below still applies), rather than opening Vikunja.
 
 **Adding tasks** — type `v add ` followed by the task text, using Vikunja's
 Quick Add Magic syntax:
