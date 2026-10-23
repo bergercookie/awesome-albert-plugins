@@ -1282,7 +1282,7 @@ def test_the_config_widget_has_a_url_and_a_masked_key():
 
 def test_the_trigger_and_synopsis():
     plugin = make_plugin()
-    assert plugin.defaultTrigger() == "jellyseerr "
+    assert plugin.defaultTrigger() == "seerr "
     assert plugin.synopsis("") == "a title, or nothing for the recent requests"
 
 

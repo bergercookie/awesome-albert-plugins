@@ -5,7 +5,7 @@
 Review the media requests on a [Jellyseerr](https://github.com/Fallenbagel/jellyseerr)
 server and add new ones, without leaving the keyboard.
 
-Type `jellyseerr ` with nothing after it and you get the recent requests, the ones
+Type `seerr ` with nothing after it and you get the recent requests, the ones
 waiting for a decision first, so <kbd>ENTER</kbd> on a pending request approves it.
 Anything you type instead is searched on Jellyseerr's own catalogue, and
 <kbd>ENTER</kbd> on a hit requests it.
@@ -14,7 +14,7 @@ Anything you type instead is searched on Jellyseerr's own catalogue, and
 
 ### The request list
 
-`jellyseerr ` lists the recent requests. Pending ones come first - they are the
+`seerr ` lists the recent requests. Pending ones come first - they are the
 ones there is something to decide about - and everything else follows in the order
 Jellyseerr returns it, newest first. Each row shows the title, the kind of media,
 the seasons for a series, the status, who asked for it and how long ago.

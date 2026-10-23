@@ -288,7 +288,7 @@ def test_update_error_falls_back_when_there_are_no_logs():
 class _Ctx:
     """The little of Albert's query context the items ask for."""
 
-    trigger = "komodo "
+    trigger = "komo "
 
 
 def test_stack_item_offers_pulling_the_images():

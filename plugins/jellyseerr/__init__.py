@@ -866,7 +866,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return Icon.image(ICON_PATH)
 
     def defaultTrigger(self):
-        return "jellyseerr "
+        return "seerr "
 
     def synopsis(self, query):
         return "a title, or nothing for the recent requests"

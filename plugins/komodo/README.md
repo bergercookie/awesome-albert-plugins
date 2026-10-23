@@ -5,17 +5,17 @@
 Control the containers, stacks and resource syncs of a running
 [Komodo](https://github.com/moghtech/komodo) server without leaving the keyboard.
 
-Type `komodo ` with nothing after it and you get everything Komodo knows about -
+Type `komo ` with nothing after it and you get everything Komodo knows about -
 containers, stacks and resource syncs - grouped by kind. Anything you type instead
 narrows that list by name, across all three kinds at once.
 
 ## Usage
 
-`komodo ` lists every container, stack and resource sync, stacks first, then
-containers, then resource syncs, each alphabetical. Type to filter - `komodo medi`
-narrows the list down to anything named `media`. The match is fuzzy, so `komodo
+`komo ` lists every container, stack and resource sync, stacks first, then
+containers, then resource syncs, each alphabetical. Type to filter - `komo medi`
+narrows the list down to anything named `media`. The match is fuzzy, so `komo
 mdia` still finds it, and a typo still finds the entry you meant. A container or
-stack is also found by the name of the server it runs on, so `komodo raspberrypi`
+stack is also found by the name of the server it runs on, so `komo raspberrypi`
 lists everything on that server.
 
 Every row shows its kind, state and a couple of useful details in its subtext, e.g.
@@ -32,7 +32,7 @@ The actions on each kind, reached with the usual Albert
 | Stack | `Open in browser`, `Deploy`, `Pull images`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
 | Resource Sync | `Open in browser`, `Refresh`, `Execute` |
 
-`Open in browser` is always the first action, so `komodo home` plus
+`Open in browser` is always the first action, so `komo home` plus
 <kbd>ENTER</kbd> takes you straight to that entry's page in the Komodo web UI.
 
 `Pull images` is Komodo's own `docker compose pull` for the whole stack: the

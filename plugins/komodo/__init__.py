@@ -942,7 +942,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return lambda: Icon.image(path)
 
     def defaultTrigger(self):
-        return "komodo "
+        return "komo "
 
     def synopsis(self, query):
         return "a container, stack or sync name, or nothing for everything"
