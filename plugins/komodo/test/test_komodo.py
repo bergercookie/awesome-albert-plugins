@@ -42,6 +42,12 @@ def test_sync_page_url():
     )
 
 
+def test_procedure_page_url():
+    assert komodo.procedure_page_url("http://localhost:9120", "abc123") == (
+        "http://localhost:9120/procedures/abc123"
+    )
+
+
 def test_container_page_url_links_to_its_server():
     assert komodo.container_page_url("http://localhost:9120", "srv1", "nginx") == (
         "http://localhost:9120/servers/srv1/container/nginx"
@@ -149,6 +155,12 @@ def test_sync_state_category_maps_every_known_state():
         assert category in komodo.STATE_ICONS
 
 
+def test_procedure_state_category_maps_every_known_state():
+    for state in ("Ok", "Running", "Failed", "Unknown"):
+        category = komodo.procedure_state_category({"info": {"state": state}})
+        assert category in komodo.STATE_ICONS
+
+
 def test_every_state_has_an_icon_file_on_disk():
     # a typo in STATE_ICONS would leave albert with no icon and no error
     for state, filename in komodo.STATE_ICONS.items():
@@ -192,6 +204,15 @@ def test_sync_subtext_falls_back_to_the_last_sync_hash():
     assert komodo.sync_subtext(sync) == "Resource Sync | Up to date | last sync abc123"
 
 
+def test_procedure_subtext_includes_state_and_stage_count():
+    procedure = {"info": {"state": "Failed", "stages": 3}}
+    assert komodo.procedure_subtext(procedure) == "Procedure | Last run failed | 3 stages"
+
+
+def test_procedure_subtext_without_info():
+    assert komodo.procedure_subtext({}) == "Procedure | Unknown status"
+
+
 # -- fuzzy_score ------------------------------------------------------------------------------
 
 
@@ -225,10 +246,16 @@ def _sync(name, sync_id=None):
     return {"id": sync_id or name, "name": name, "info": {}}
 
 
+def _procedure(name, procedure_id=None):
+    return {"id": procedure_id or name, "name": name, "info": {}}
+
+
 def test_build_entries_covers_every_kind():
-    entries = komodo.build_entries([_stack("media")], [_container("nginx")], [_sync("infra")])
+    entries = komodo.build_entries(
+        [_stack("media")], [_container("nginx")], [_sync("infra")], [_procedure("backup")]
+    )
     kinds = {entry.kind for entry in entries}
-    assert kinds == {"stack", "container", "sync"}
+    assert kinds == {"stack", "container", "sync", "procedure"}
 
 
 def test_search_entries_empty_term_groups_by_kind_then_name():
@@ -236,6 +263,7 @@ def test_search_entries_empty_term_groups_by_kind_then_name():
         [_stack("zeta"), _stack("alpha")],
         [_container("beta")],
         [_sync("gamma")],
+        [_procedure("delta")],
     )
     names = [(entry.kind, entry.data["name"]) for entry in komodo.search_entries(entries, "")]
     assert names == [
@@ -243,6 +271,7 @@ def test_search_entries_empty_term_groups_by_kind_then_name():
         ("stack", "zeta"),
         ("container", "beta"),
         ("sync", "gamma"),
+        ("procedure", "delta"),
     ]
 
 
@@ -305,6 +334,24 @@ def test_container_item_offers_pulling_the_image():
     )
     actions = {action.id: action.text for action in item.actions}
     assert actions["pull"] == "Pull image for web"
+
+
+def test_procedure_item_offers_running_it():
+    plugin = komodo.Plugin()
+    item = plugin._procedure_item(_Ctx(), {"id": "pr1", "name": "backup", "info": {}})
+    actions = {action.id: action.text for action in item.actions}
+    assert actions["run"] == "Run backup"
+
+
+def test_run_procedure_executes_it(monkeypatch):
+    calls = []
+    monkeypatch.setattr(komodo, "run_action", lambda *args: calls.append(args[3:]))
+    monkeypatch.setattr(komodo, "notify", lambda msg: None)
+
+    plugin = komodo.Plugin()
+    plugin._async = lambda work, note: work()
+    plugin._run_procedure("pr1", "backup")
+    assert calls == [("execute/RunProcedure", {"procedure": "pr1"})]
 
 
 def _fake_call(payloads):

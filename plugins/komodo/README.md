@@ -2,17 +2,17 @@
 
 ## Description
 
-Control the containers, stacks and resource syncs of a running
+Control the containers, stacks, resource syncs and procedures of a running
 [Komodo](https://github.com/moghtech/komodo) server without leaving the keyboard.
 
 Type `komo ` with nothing after it and you get everything Komodo knows about -
-containers, stacks and resource syncs - grouped by kind. Anything you type instead
-narrows that list by name, across all three kinds at once.
+containers, stacks, resource syncs and procedures - grouped by kind. Anything you
+type instead narrows that list by name, across all four kinds at once.
 
 ## Usage
 
-`komo ` lists every container, stack and resource sync, stacks first, then
-containers, then resource syncs, each alphabetical. Type to filter - `komo medi`
+`komo ` lists every container, stack, resource sync and procedure, stacks first,
+then containers, then resource syncs, then procedures, each alphabetical. Type to filter - `komo medi`
 narrows the list down to anything named `media`. The match is fuzzy, so `komo
 mdia` still finds it, and a typo still finds the entry you meant. A container or
 stack is also found by the name of the server it runs on, so `komo raspberrypi`
@@ -31,6 +31,7 @@ The actions on each kind, reached with the usual Albert
 | Container | `Open in browser`, `Start`, `Stop`, `Restart`, `Pull image`, `Pause`, `Unpause` |
 | Stack | `Open in browser`, `Deploy`, `Pull images`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
 | Resource Sync | `Open in browser`, `Refresh`, `Execute` |
+| Procedure | `Open in browser`, `Run` |
 
 `Open in browser` is always the first action, so `komo home` plus
 <kbd>ENTER</kbd> takes you straight to that entry's page in the Komodo web UI.
@@ -47,6 +48,11 @@ is running - deploy or restart the container afterwards to run the new image.
 For a resource sync, `Refresh` recomputes the pending diff against its source
 (the same as Komodo's own "Refresh" button) without changing anything, and
 `Execute` applies it - deploys whatever the sync says should change.
+
+For a procedure, `Run` starts it the same way Komodo's own "Run" button does.
+The notification only confirms that Komodo started it - a procedure can run for a
+while, so follow its stages in Komodo's update log. A procedure's icon and subtext
+reflect how its last run went.
 
 Destructive actions (destroying a container or a stack) are deliberately left out
 of this plugin; use the Komodo web UI for those.
@@ -100,7 +106,7 @@ row as an error you can retry.
 
 ## Notes
 
-- The container, stack and resource sync list is cached in memory for 5 seconds,
+- The container, stack, resource sync and procedure list is cached in memory for 5 seconds,
   so backspacing or retyping a search does not re-query Komodo on every keystroke.
   Triggering an action clears the cache, so the list reflects the change on the
   very next query.

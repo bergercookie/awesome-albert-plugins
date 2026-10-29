@@ -1,11 +1,12 @@
-"""Komodo - control the containers, stacks and resource syncs of a running Komodo
-(https://komo.do) server.
+"""Komodo - control the containers, stacks, resource syncs and procedures of a
+running Komodo (https://komo.do) server.
 
-The empty query lists everything Komodo knows about - containers, stacks and
-resource syncs - and anything typed narrows that list by name. Every result
-carries the actions that make sense for its kind: start/stop/restart/pause for
-containers and stacks, deploy and image pulls for stacks, image pulls for
-containers, and refresh/execute for resource syncs.
+The empty query lists everything Komodo knows about - containers, stacks,
+resource syncs and procedures - and anything typed narrows that list by name.
+Every result carries the actions that make sense for its kind:
+start/stop/restart/pause for containers and stacks, deploy and image pulls for
+stacks, image pulls for containers, refresh/execute for resource syncs and run
+for procedures.
 
 Everything goes through Komodo's REST API, authenticated with an API key and
 secret pair, and nothing but that one server is ever contacted.
@@ -35,7 +36,9 @@ from albert import (
 md_iid = "5.0"
 md_version = "0.1"
 md_name = "Komodo"
-md_description = "Control the containers, stacks and resource syncs of a running Komodo server"
+md_description = (
+    "Control the containers, stacks, resource syncs and procedures of a running Komodo server"
+)
 md_license = "MIT"
 md_url = (
     "https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/komodo"
@@ -62,15 +65,15 @@ HTTP_TIMEOUT = 10
 # How long a command that prints the API key or secret may take. A password
 # manager that has to be unlocked can be slow, but not this slow.
 KEY_COMMAND_TIMEOUT = 30
-# How long the merged list of containers/stacks/syncs is reused before Komodo
-# is asked again. Short enough that a change made in Komodo's own UI shows up
-# here almost immediately, long enough that typing a search term does not cost
-# three HTTP round trips per keystroke.
+# How long the merged list of containers/stacks/syncs/procedures is reused
+# before Komodo is asked again. Short enough that a change made in Komodo's own
+# UI shows up here almost immediately, long enough that typing a search term
+# does not cost four HTTP round trips per keystroke.
 ENTRIES_TTL = 5.0
 USER_AGENT = "awesome-albert-plugins/komodo"
 
-# The icon shown for each of the five states a container, stack or sync can be
-# in, as far as this plugin distinguishes them.
+# The icon shown for each of the five states a container, stack, sync or
+# procedure can be in, as far as this plugin distinguishes them.
 STATE_ICONS = {
     "running": "komodo-running.svg",
     "restarting": "komodo-restarting.svg",
@@ -129,9 +132,26 @@ SYNC_STATE_LABELS = {
     "Unknown": "Unknown status",
 }
 
+# ProcedureState, as of Komodo's entities/procedure.rs - like ResourceSyncState,
+# no `rename_all`, so PascalCase.
+PROCEDURE_STATE_CATEGORY = {
+    "Ok": "running",
+    "Running": "restarting",
+    "Failed": "error",
+    "Unknown": "unknown",
+}
+
+PROCEDURE_STATE_LABELS = {
+    "Ok": "Last run succeeded",
+    "Running": "Running",
+    "Failed": "Last run failed",
+    "Unknown": "Never run",
+}
+
 # The order entries of equal search score are shown in - stacks first, since
-# they are usually what you are looking for, then containers, then syncs.
-KIND_PRIORITY = {"stack": 0, "container": 1, "sync": 2}
+# they are usually what you are looking for, then containers, then syncs, then
+# procedures.
+KIND_PRIORITY = {"stack": 0, "container": 1, "sync": 2, "procedure": 3}
 
 
 # plugin main functions -----------------------------------------------------------------------
@@ -177,6 +197,15 @@ def sync_page_url(base_url: str, sync_id: str) -> str:
     'http://localhost:9120/resource-syncs/673e1f2b9c1d4a0012ab34cd'
     """
     return join_url(base_url, f"resource-syncs/{quote(sync_id, safe='')}")
+
+
+def procedure_page_url(base_url: str, procedure_id: str) -> str:
+    """Deep link to a procedure's page in the Komodo web UI.
+
+    >>> procedure_page_url("http://localhost:9120", "673e1f2b9c1d4a0012ab34cd")
+    'http://localhost:9120/procedures/673e1f2b9c1d4a0012ab34cd'
+    """
+    return join_url(base_url, f"procedures/{quote(procedure_id, safe='')}")
 
 
 def container_page_url(base_url: str, server_id: str, container: str) -> str:
@@ -380,6 +409,19 @@ def fetch_syncs(base_url: str, api_key: str, api_secret: str) -> List[Dict]:
     if not isinstance(payload, list):
         raise KomodoError(f"{base_url} answered the sync list with something unexpected.")
     return [sync for sync in payload if isinstance(sync, dict)]
+
+
+def fetch_procedures(base_url: str, api_key: str, api_secret: str) -> List[Dict]:
+    """Every procedure Komodo knows about.
+
+    .. raises:: KomodoError
+    """
+    payload = call(
+        "POST", base_url, api_key, api_secret, "read/ListProcedures", {"limit": 0}
+    )
+    if not isinstance(payload, list):
+        raise KomodoError(f"{base_url} answered the procedure list with something unexpected.")
+    return [procedure for procedure in payload if isinstance(procedure, dict)]
 
 
 def fetch_container_resource(
@@ -638,18 +680,21 @@ def fuzzy_score(needle: str, haystack: str) -> float:
 
 
 class Entry(NamedTuple):
-    """One row of the merged container/stack/sync list."""
+    """One row of the merged container/stack/sync/procedure list."""
 
-    kind: str  # "stack", "container" or "sync"
+    kind: str  # "stack", "container", "sync" or "procedure"
     key: str  # unique within its kind, used to build the StandardItem id
     search_text: str  # what a query is matched against
     data: Dict
 
 
 def build_entries(
-    stacks: Sequence[Dict], containers: Sequence[Dict], syncs: Sequence[Dict]
+    stacks: Sequence[Dict],
+    containers: Sequence[Dict],
+    syncs: Sequence[Dict],
+    procedures: Sequence[Dict] = (),
 ) -> List[Entry]:
-    """Turn three raw API responses into one flat, uniform list."""
+    """Turn the raw API responses into one flat, uniform list."""
     entries: List[Entry] = []
 
     for stack in stacks:
@@ -670,6 +715,10 @@ def build_entries(
         name = str(sync.get("name") or "")
         entries.append(Entry("sync", str(sync.get("id") or ""), name, sync))
 
+    for procedure in procedures:
+        name = str(procedure.get("name") or "")
+        entries.append(Entry("procedure", str(procedure.get("id") or ""), name, procedure))
+
     return entries
 
 
@@ -677,7 +726,7 @@ def search_entries(entries: Sequence[Entry], term: str) -> List[Entry]:
     """The *entries* matching *term*, best first.
 
     An empty *term* keeps every entry, grouped by kind (stacks, then
-    containers, then syncs) and alphabetical within each group.
+    containers, then syncs, then procedures) and alphabetical within each group.
     """
     term = term.strip()
 
@@ -783,6 +832,31 @@ def sync_subtext(sync: Dict) -> str:
         parts.append(message.strip())
     elif info.get("last_sync_hash"):
         parts.append(f"last sync {info['last_sync_hash']}")
+
+    return " | ".join(parts)
+
+
+def procedure_info(procedure: Dict) -> Dict:
+    info = procedure.get("info")
+    return info if isinstance(info, dict) else {}
+
+
+def procedure_state_category(procedure: Dict) -> str:
+    return PROCEDURE_STATE_CATEGORY.get(
+        str(procedure_info(procedure).get("state") or ""), "unknown"
+    )
+
+
+def procedure_subtext(procedure: Dict) -> str:
+    info = procedure_info(procedure)
+    parts = [
+        "Procedure",
+        PROCEDURE_STATE_LABELS.get(str(info.get("state") or ""), "Unknown status"),
+    ]
+
+    stages = info.get("stages")
+    if isinstance(stages, int) and not isinstance(stages, bool):
+        parts.append(f"{stages} stage" + ("" if stages == 1 else "s"))
 
     return " | ".join(parts)
 
@@ -945,7 +1019,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return "komo "
 
     def synopsis(self, query):
-        return "a container, stack or sync name, or nothing for everything"
+        return "a container, stack, sync or procedure name, or nothing for everything"
 
     # -- secrets and cache ------------------------------------------------------------------
 
@@ -992,7 +1066,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return secret
 
     def _entries_list(self) -> List[Entry]:
-        """The merged container/stack/sync list, refetched at most every ENTRIES_TTL seconds.
+        """The merged container/stack/sync/procedure list, refetched at most every
+        ENTRIES_TTL seconds.
 
         .. raises:: KomodoError
         """
@@ -1007,6 +1082,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             fetch_stacks(self._url, api_key, api_secret),
             fetch_containers(self._url, api_key, api_secret),
             fetch_syncs(self._url, api_key, api_secret),
+            fetch_procedures(self._url, api_key, api_secret),
         )
 
         with self._lock:
@@ -1097,6 +1173,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             return self._stack_item(ctx, entry.data)
         if entry.kind == "container":
             return self._container_item(ctx, entry.data)
+        if entry.kind == "procedure":
+            return self._procedure_item(ctx, entry.data)
         return self._sync_item(ctx, entry.data)
 
     def _stack_item(self, ctx, stack: Dict) -> StandardItem:
@@ -1207,12 +1285,36 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             actions=actions,
         )
 
+    def _procedure_item(self, ctx, procedure: Dict) -> StandardItem:
+        procedure_id = str(procedure.get("id") or "")
+        name = str(procedure.get("name") or procedure_id)
+        page = procedure_page_url(self._url, procedure_id)
+
+        actions = [
+            Action("open", "Open in browser", lambda url=page: openUrl(url)),
+            Action(
+                "run",
+                f"Run {name}",
+                lambda i=procedure_id, n=name: self._run_procedure(i, n),
+            ),
+            Action("reload", "Reload the list", self._forget),
+        ]
+
+        return StandardItem(
+            id=f"{self.id()}.procedure-{procedure_id}",
+            icon_factory=self._make_icon(procedure_state_category(procedure)),
+            text=name,
+            subtext=procedure_subtext(procedure),
+            input_action_text=f"{ctx.trigger}{name}",
+            actions=actions,
+        )
+
     def _no_match_item(self, term: str) -> StandardItem:
         return StandardItem(
             id=f"{self.id()}.no-match",
             icon_factory=self.makeIcon,
             text=f'Nothing on Komodo matches "{term}"',
-            subtext="Searches containers, stacks and resource syncs by name",
+            subtext="Searches containers, stacks, resource syncs and procedures by name",
             input_action_text="",
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
@@ -1224,7 +1326,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return StandardItem(
             id=f"{self.id()}.empty",
             icon_factory=self.makeIcon,
-            text="Komodo has no containers, stacks or resource syncs yet",
+            text="Komodo has no containers, stacks, resource syncs or procedures yet",
             input_action_text="",
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
@@ -1309,6 +1411,20 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 {"sync": sync_id},
             ),
             f"Ran sync {name}",
+        )
+
+    def _run_procedure(self, procedure_id: str, name: str) -> None:
+        # Komodo answers as soon as the procedure is queued, so this reports
+        # that it started - its stages show up in Komodo's update log
+        self._async(
+            lambda: run_action(
+                self._url,
+                self._api_key(),
+                self._api_secret(),
+                "execute/RunProcedure",
+                {"procedure": procedure_id},
+            ),
+            f"Started procedure {name}",
         )
 
     def _async(self, work, note: str) -> None:
