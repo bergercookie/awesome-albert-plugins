@@ -10,8 +10,10 @@ of a plain file on disk, the abbreviation lines live in a note that you choose.
 The plugin talks to your Trilium server through its
 [ETAPI](https://docs.triliumnotes.org/user-guide/advanced-usage/etapi).
 
-Each line in the note is read as `* abbreviation: description`. Multiple lines
-may use the same abbreviation; searching for it shows all of them.
+Each entry is read as `abbreviation: description`; in Code notes the lines are
+conventionally prefixed with `* `. New entries in Text notes are appended as
+`<li>` bullet list items. Multiple entries may use the same abbreviation;
+searching for it shows all of them.
 
 ## Usage
 
@@ -31,11 +33,12 @@ Open the plugin's configuration window from the Albert settings and fill in:
 | `Trilium URL`            | Base URL of your Trilium server, e.g. `https://trilium.example.com`     |
 | `ETAPI token`            | Token created in Trilium under Options > ETAPI                          |
 | `ETAPI token command`    | A command that prints the token, keeps it off the disk                  |
-| `Abbreviations note ID`  | ID of the note that holds the abbreviations                             |
+| `Abbreviations note ID or URL` | URL or ID of the note that holds the abbreviations                |
 | `Verify TLS certificate` | Turn off only if your server uses a self-signed certificate             |
 
-The note ID is the part after the `#` in the note's URL. A Text note is written
-as HTML; a Code note with a plain-text MIME type is written as-is.
+Paste the note's URL as it appears in Trilium, including the part after the
+`#`, or just the last path segment (the note ID). A Text note is written as HTML
+bullet list items; a Code note with a plain-text MIME type is written as-is.
 
 A token typed into the `ETAPI token` field is kept by Albert in plaintext. To
 keep it off the disk entirely, leave that field empty and put a command here

@@ -130,6 +130,29 @@ def join_url(base_url: str, path: str) -> str:
     return urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
 
 
+def normalize_note_id(value: str) -> str:
+    """The ETAPI note ID from a note URL, a note path, or a bare note ID.
+
+    Trilium URLs carry the whole path to the note after a ``#``, but the ETAPI
+    only wants the last segment.
+
+    >>> normalize_note_id("v9MDnZFkTKYF")
+    'v9MDnZFkTKYF'
+    >>> normalize_note_id("#root/QIaJXuFX5LkL/qWEdT6qn61dY/v9MDnZFkTKYF")
+    'v9MDnZFkTKYF'
+    >>> normalize_note_id("https://trilium.example.com/#root/QIaJXuFX5LkL/v9MDnZFkTKYF")
+    'v9MDnZFkTKYF'
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+
+    parsed = urlparse(value)
+    path = parsed.fragment or parsed.path or value
+    segment = path.rstrip("/").rsplit("/", 1)[-1]
+    return segment.split("?", 1)[0].split("#", 1)[0].strip()
+
+
 def html_to_text(content: str) -> str:
     """Turn the HTML content of a Trilium text note into plain text lines."""
     content = BREAK_RE.sub("\n", content)
@@ -168,9 +191,14 @@ def abbreviation_line(name: str, desc: str, separator: str = DEFAULT_SEPARATOR) 
 
 
 def append_abbreviation(content: str, note_type: str, line: str) -> str:
-    """Append *line* to note *content*, as HTML for a text note."""
+    """Append *line* to note *content*, as a list item for a text note."""
     if note_type == "text":
-        return f"{content}<p>{html.escape(line)}</p>"
+        text = line[2:] if line.startswith("* ") else line
+        item = f"<li>{html.escape(text)}</li>"
+        stripped = content.rstrip()
+        if stripped.endswith("</ul>"):
+            return f"{stripped[:-5]}{item}</ul>"
+        return f"{content}<ul>{item}</ul>"
 
     if content and not content.endswith("\n"):
         content += "\n"
@@ -252,7 +280,7 @@ def error_message(response: Any, base_url: str) -> str:
     if response.status_code in (401, 403):
         message += ". Check the ETAPI token in the plugin settings."
     if response.status_code == 404:
-        message += ". Check the note ID in the plugin settings."
+        message += ". Check the note ID or URL in the plugin settings."
     return message
 
 
@@ -304,7 +332,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         self._token_command: str = str(
             self.readConfig(CONFIG_TOKEN_COMMAND, str) or ""
         ).strip()
-        self._note_id: str = str(self.readConfig(CONFIG_NOTE_ID, str) or "").strip()
+        self._note_id: str = normalize_note_id(
+            str(self.readConfig(CONFIG_NOTE_ID, str) or "")
+        )
         verify = self.readConfig(CONFIG_VERIFY_SSL, bool)
         self._verify_ssl: bool = True if verify is None else bool(verify)
 
@@ -356,7 +386,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
     @note_id.setter
     def note_id(self, value: str):
-        self._note_id = (value or "").strip()
+        self._note_id = normalize_note_id(value)
         self.writeConfig(CONFIG_NOTE_ID, self._note_id)
         self._forget()
 
@@ -414,8 +444,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             {
                 "type": "lineedit",
                 "property": "note_id",
-                "label": "Abbreviations note ID",
-                "widget_properties": {"placeholderText": "e.g. i6ra4ZshJhgN"},
+                "label": "Abbreviations note ID or URL",
+                "widget_properties": {
+                    "placeholderText": "e.g. https://trilium.example.com/#root/.../i6ra4ZshJhgN"
+                },
             },
             {
                 "type": "checkbox",
@@ -425,9 +457,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             {
                 "type": "label",
                 "text": (
-                    "Create the token in Trilium under Options > ETAPI. The note ID is "
-                    "the part after the # in the note's URL. A Text note is written as "
-                    "HTML; a Code note with a plain-text MIME type is written as-is."
+                    "Create the token in Trilium under Options > ETAPI. Paste the whole "
+                    "note URL or just its last path segment (the note ID). A Text note "
+                    "gets HTML bullet list items; a Code note with a plain-text MIME "
+                    "type is written as-is."
                 ),
             },
         ]
@@ -538,8 +571,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             return StandardItem(
                 id=f"{self.id()}.setup-note",
                 icon_factory=self.makeIcon,
-                text="Please fill in the plugin settings - abbreviations note ID missing",
-                subtext="The note ID is the part after the # in the note's URL.",
+                text="Please fill in the plugin settings - abbreviations note missing",
+                subtext="Paste the note's URL or its last path segment (the note ID).",
                 actions=[],
             )
 

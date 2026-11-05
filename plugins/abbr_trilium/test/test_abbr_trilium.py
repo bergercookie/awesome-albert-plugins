@@ -51,6 +51,35 @@ def test_join_url_keeps_a_reverse_proxy_prefix():
     )
 
 
+def test_normalize_note_id_accepts_an_id_a_path_or_a_url():
+    note_id = "v9MDnZFkTKYF"
+    assert trilium.normalize_note_id(note_id) == note_id
+    assert trilium.normalize_note_id(f"#root/QIaJXuFX5LkL/{note_id}") == note_id
+    assert trilium.normalize_note_id(f"https://host/#root/QIaJXuFX5LkL/{note_id}") == (
+        note_id
+    )
+    assert trilium.normalize_note_id(f"#root/QIaJXuFX5LkL/{note_id}/") == note_id
+
+
+def test_a_stored_note_url_is_reduced_to_its_id():
+    plugin_id = trilium.Plugin().id()
+    albert.PluginInstance._CONFIG[(plugin_id, trilium.CONFIG_NOTE_ID)] = (
+        "https://host/#root/QIaJXuFX5LkL/v9MDnZFkTKYF"
+    )
+
+    assert trilium.Plugin().note_id == "v9MDnZFkTKYF"
+
+
+def test_setting_a_note_url_stores_only_its_id():
+    plugin = trilium.Plugin()
+    plugin.note_id = "#root/QIaJXuFX5LkL/v9MDnZFkTKYF"
+
+    assert plugin.note_id == "v9MDnZFkTKYF"
+    assert albert.PluginInstance._CONFIG[(plugin.id(), trilium.CONFIG_NOTE_ID)] == (
+        "v9MDnZFkTKYF"
+    )
+
+
 def test_html_to_text_turns_paragraphs_into_lines():
     content = "<p>* foo: first</p><p>* bar: second &amp; third</p>"
     assert trilium.html_to_text(content).splitlines() == [
@@ -66,11 +95,21 @@ def test_entries_keep_abbreviations_that_share_a_key():
     assert entries == [("foo", "first"), ("foo", "second"), ("bar", "third")]
 
 
-def test_append_abbreviation_writes_html_for_text_notes():
+def test_append_abbreviation_writes_a_list_item_for_text_notes():
     line = trilium.abbreviation_line("foo", "A & B")
     assert trilium.append_abbreviation("<p>* old: one</p>", "text", line) == (
-        "<p>* old: one</p><p>* foo: A &amp; B</p>"
+        "<p>* old: one</p><ul><li>foo: A &amp; B</li></ul>"
     )
+
+
+def test_append_abbreviation_reuses_a_trailing_list():
+    line = trilium.abbreviation_line("foo", "bar")
+    assert trilium.append_abbreviation("<ul><li>old: one</li></ul>", "text", line) == (
+        "<ul><li>old: one</li><li>foo: bar</li></ul>"
+    )
+    assert trilium.append_abbreviation(
+        "<ul><li>old: one</li></ul>\n", "text", line
+    ) == ("<ul><li>old: one</li><li>foo: bar</li></ul>")
 
 
 def test_append_abbreviation_writes_plain_text_for_other_notes():
@@ -317,4 +356,4 @@ def test_save_appends_to_the_designated_note(monkeypatch):
 
     plugin._save("foo", "bar")
 
-    assert stored["content"] == "<p>* old: one</p><p>* foo: bar</p>"
+    assert stored["content"] == "<p>* old: one</p><ul><li>foo: bar</li></ul>"
