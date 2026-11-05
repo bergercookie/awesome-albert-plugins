@@ -43,7 +43,8 @@ an older albert version, see the branches of this repo.
 
 Currently the list of plugins includes:
 
-- [Abbreviations](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - ❗Lookup words stored in a file along with their description
+- [Abbreviations](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/abbr) - ❗Lookup words stored in a file along with their description
+- [Abbreviations (Trilium)](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/abbr_trilium) - 📝 Store and look up abbreviations in a [Trilium](https://triliumnotes.org/) note
 - [Anki](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/anki) - 📇 Generate flashcards for [Anki](https://apps.ankiweb.net/)
 - [Audiobookshelf](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/audiobookshelf) - 🎧 Search an [Audiobookshelf](https://www.audiobookshelf.org/) library and play audiobooks locally
 - [Bluetooth](https://github.com/bergercookie/awesome-albert-plugins/tree/master/plugins/bluetooth) - 🦷 Manage bluetooth devices

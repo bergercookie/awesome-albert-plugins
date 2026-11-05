@@ -247,7 +247,6 @@ select = [
 "plugins/pass_rlded/__init__.py" = ["B008", "E501", "UP015", "UP034"]
 "plugins/tldr_pages/__init__.py" = ["E501", "RET504", "RUF015", "UP015"]
 "plugins/words/__init__.py" = ["E501", "RET504", "UP008", "UP015"]
-"plugins/abbr/__init__.py" = ["C419", "E501", "UP015"]
 "plugins/clock/__init__.py" = ["F401", "RET505", "UP008"]
 "plugins/ipshow/__init__.py" = ["B006", "E501", "E722"]
 "plugins/meme_generator/__init__.py" = ["E501", "F821", "RET504", "UP015"]

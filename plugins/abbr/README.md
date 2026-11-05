@@ -8,7 +8,19 @@ This is a, rather esoteric, plugin that looks up and saves pairs of (key, value)
 file on disk.
 
 I use it to lookup items from my personal abbreviations list. You can also add
-new items to it by using the `new` keyword
+new items to it by using the `new` keyword.
+
+## Configuration
+
+Open the plugin's configuration window from the Albert settings and fill in:
+
+| Setting            | Meaning                                                              |
+| ------------------ | -------------------------------------------------------------------- |
+| `Abbreviations file` | Path to the file holding the abbreviations                          |
+| `Separator`        | The character between an abbreviation and its description (default `:`) |
+
+Each line in the file is read as `* abbreviation: description`. Multiple lines
+may use the same abbreviation; searching for it shows all of them.
 
 ## Demo
 

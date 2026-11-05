@@ -3,7 +3,7 @@
 import hashlib
 import traceback
 from pathlib import Path
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from albert import (
     Action,
@@ -18,29 +18,30 @@ from albert import (
 from fuzzywuzzy import process
 
 md_iid = "5.0"
-md_version = "0.3"
+md_version = "0.4"
 md_name = "User-defined abbreviations read/written a file"
-md_description = "TODO"
+md_description = "Store and look up abbreviations in a plain-text file"
 md_url = "https://github.com/bergercookie/awesome-albert-plugins/blob/master/plugins/abbr"
 md_maintainers = ["Nikos Koukis"]
 md_lib_dependencies = ["fuzzywuzzy"]
 
 ICON_PATH = Path(__file__).parent / "abbr.png"
 
-abbreviations_path = Path()
-abbr_latest_hash = ""
-abbr_latest_entries: List[Tuple[str, str]] = []
-abbr_latest_search: Dict[str, List[int]] = {}
-split_at = ":"
+CONFIG_ABBREVIATIONS_PATH = "abbreviations_path"
+CONFIG_SEPARATOR = "separator"
+DEFAULT_SEPARATOR = ":"
+LEGACY_FNAME = "fname"
+LEGACY_SEPARATOR = "separator"
 
 
 # plugin main functions -----------------------------------------------------------------------
 
 
-def save_abbr(name: str, desc: str):
-    with open(abbreviations_path, "a") as f:
-        li = f"\n* {name}: {desc}"
-        f.write(li)
+def append_abbreviation(
+    path: Path, name: str, desc: str, separator: str = DEFAULT_SEPARATOR
+) -> None:
+    with open(path, "a") as f:
+        f.write(f"\n* {name}{separator} {desc}")
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -51,31 +52,15 @@ def notify(
     Notification(app_name, msg).send()
 
 
-def sanitize_string(s: str) -> str:
-    return s.replace("<", "&lt;")
-
-
-def get_as_subtext_field(field, field_title=None) -> str:
-    """Get a certain variable as part of the subtext, along with a title for that variable."""
-    s = ""
-    if field:
-        s = f"{field} | "
-    else:
-        return ""
-
-    if field_title:
-        s = f"{field_title}: " + s
-
-    return s
-
-
-def make_latest_entries(conts: list) -> List[Tuple[str, str]]:
+def make_latest_entries(
+    conts: list, separator: str = DEFAULT_SEPARATOR
+) -> List[Tuple[str, str]]:
     entries = []
     for li in conts:
-        tokens = li.split(split_at, maxsplit=1)
+        tokens = li.split(separator, maxsplit=1)
         if len(tokens) == 2:
             # avoid cases where one of the two sides is essentially empty
-            if any([not t for t in tokens]):
+            if any(not t for t in tokens):
                 continue
 
             tokens = [t.strip().strip("*").strip() for t in tokens]
@@ -107,18 +92,90 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         PluginInstance.__init__(self)
         GeneratorQueryHandler.__init__(self)
 
-        self.cache_path = Path(self.cacheLocation())
-        self.config_path = Path(self.configLocation())
-        self.data_path = Path(self.dataLocation())
+        self._migrate_legacy_settings()
 
-        # create plugin locations
-        for p in (self.cache_path, self.config_path, self.data_path):
-            p.mkdir(parents=True, exist_ok=True)
+        configured_path = str(self.readConfig(CONFIG_ABBREVIATIONS_PATH, str) or "").strip()
+        self._abbreviations_path: Optional[Path] = (
+            Path(configured_path).expanduser() if configured_path else None
+        )
 
-        self.abbr_store_fname = self.config_path / "fname"
-        self.abbr_store_sep = self.config_path / "separator"
+        configured_separator = str(self.readConfig(CONFIG_SEPARATOR, str) or "")
+        self._separator: str = configured_separator or DEFAULT_SEPARATOR
 
-        self.load_settings()
+        self._latest_hash: str = ""
+        self._entries: List[Tuple[str, str]] = []
+        self._search: Dict[str, List[int]] = {}
+
+    def _migrate_legacy_settings(self) -> None:
+        """Read the file-based settings of older releases once, then forget them."""
+        config_path = Path(self.configLocation())
+
+        legacy_fname = config_path / LEGACY_FNAME
+        if not self.readConfig(CONFIG_ABBREVIATIONS_PATH, str) and legacy_fname.is_file():
+            value = legacy_fname.read_text().strip()
+            if value:
+                self.writeConfig(CONFIG_ABBREVIATIONS_PATH, value)
+
+        legacy_separator = config_path / LEGACY_SEPARATOR
+        if not self.readConfig(CONFIG_SEPARATOR, str) and legacy_separator.is_file():
+            value = legacy_separator.read_text()[:1]
+            if value:
+                self.writeConfig(CONFIG_SEPARATOR, value)
+
+    # -- config, bound to the settings widget below ---------------------------------------
+
+    @property
+    def abbreviations_path(self) -> str:
+        return "" if self._abbreviations_path is None else str(self._abbreviations_path)
+
+    @abbreviations_path.setter
+    def abbreviations_path(self, value: str):
+        value = (value or "").strip()
+        self.writeConfig(CONFIG_ABBREVIATIONS_PATH, value)
+        self._abbreviations_path = Path(value).expanduser() if value else None
+        self._forget()
+
+    @property
+    def separator(self) -> str:
+        return self._separator
+
+    @separator.setter
+    def separator(self, value: str):
+        value = (value or "").strip()
+        if len(value) > 1:
+            notify("Separator must be a single character!")
+            return
+
+        self._separator = value or DEFAULT_SEPARATOR
+        self.writeConfig(CONFIG_SEPARATOR, self._separator)
+        self._forget()
+
+    def configWidget(self):
+        return [
+            {
+                "type": "label",
+                "text": (
+                    "Path to the file holding the abbreviations. Each line is read as "
+                    "'* abbreviation: description', and new abbreviations are appended to it."
+                ),
+            },
+            {
+                "type": "lineedit",
+                "property": "abbreviations_path",
+                "label": "Abbreviations file",
+                "widget_properties": {"placeholderText": "/home/you/abbreviations.txt"},
+            },
+            {
+                "type": "label",
+                "text": "The character that separates an abbreviation from its description.",
+            },
+            {
+                "type": "lineedit",
+                "property": "separator",
+                "label": "Separator",
+                "widget_properties": {"placeholderText": ":", "maxLength": 1},
+            },
+        ]
 
     @staticmethod
     def makeIcon():
@@ -130,29 +187,70 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
     def synopsis(self, query):
         return "abbreviation to look for"
 
-    def load_settings(self) -> None:
-        """Read back the abbreviations file and the separator given in a previous run."""
-        global abbreviations_path, split_at
+    # -- abbreviations file -----------------------------------------------------------------
 
-        # abbreviations file
-        if self.abbr_store_fname.is_file():
-            with open(self.abbr_store_fname, "r") as f:
-                p = Path(f.readline().strip()).expanduser()
-                if not p.is_file():
-                    raise FileNotFoundError(p)
+    def _forget(self) -> None:
+        self._latest_hash = ""
+        self._entries = []
+        self._search = {}
 
-                abbreviations_path = p
+    def _reload(self) -> None:
+        path = self._abbreviations_path
+        if path is None:
+            return
 
-        if self.abbr_store_sep.is_file():
-            with open(self.abbr_store_sep, "r") as f:
-                sep = f.read(1)
-                if not sep:
-                    raise RuntimeError(f"Invalid separator: {sep}")
+        curr_hash = hash_file(path)
+        if curr_hash == self._latest_hash:
+            return
 
-                split_at = sep
+        with open(path) as f:
+            conts = f.readlines()
+
+        self._entries = make_latest_entries(conts, self._separator)
+        self._search = make_search_index(self._entries)
+        self._latest_hash = curr_hash
+
+    def save_abbr(self, name: str, desc: str) -> None:
+        path = self._abbreviations_path
+        if path is None:
+            notify("No abbreviations file is configured.")
+            return
+
+        append_abbreviation(path, name, desc, self._separator)
+        self._forget()
+
+    # -- items --------------------------------------------------------------------------------
+
+    def _setup_item(self) -> Optional[StandardItem]:
+        if self._abbreviations_path is None:
+            return StandardItem(
+                id="abbr-setup-fname",
+                icon_factory=self.makeIcon,
+                text="Please fill in the plugin settings - abbreviations file missing",
+                subtext=(
+                    "Open the Abbreviations plugin in the Albert settings to configure it."
+                ),
+            )
+
+        if not self._abbreviations_path.is_file():
+            return StandardItem(
+                id="abbr-setup-fname-missing",
+                icon_factory=self.makeIcon,
+                text=f"Abbreviations file not found: {self._abbreviations_path}",
+                subtext="Fix the path in the plugin settings.",
+                actions=[
+                    Action(
+                        "copy",
+                        "Copy the configured path",
+                        lambda t=str(self._abbreviations_path): setClipboardText(t),
+                    )
+                ],
+            )
+
+        return None
 
     def get_abbr_as_item(self, abbr: Tuple[str, str], suffix: str = "") -> StandardItem:
-        """Return the abbreviation pair as an item - ready to be appended to the items list and be rendered by Albert.
+        """Return the abbreviation pair as an item ready for Albert.
 
         `suffix` keeps items with the same abbreviation and description apart.
         """
@@ -175,79 +273,12 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             ],
         )
 
-    def submit_fname(self, p: Path):
-        p = p.expanduser().resolve()
-        if p.is_file():
-            with open(self.abbr_store_fname, "w") as f:
-                f.write(str(p))
-
-            global abbreviations_path
-            abbreviations_path = p
-        else:
-            notify(f"Given file path does not exist -> {p}")
-
-    def submit_sep(self, c: str):
-        if len(c) > 1:
-            notify("Separator must be a single character!")
-            return
-
-        with open(self.abbr_store_sep, "w") as f:
-            f.write(c)
-
-        global split_at
-        split_at = c
-
-    def setup(self, ctx) -> List[StandardItem]:
-        """Setup is successful if an empty list is returned.
-
-        Use this function if you need the user to provide you data
-        """
-
-        query_str = ctx.query
-
-        # abbreviations file
-        if not self.abbr_store_fname.is_file():
-            return [
-                StandardItem(
-                    id="abbr-setup-fname",
-                    icon_factory=self.makeIcon,
-                    text="Specify file to read/write abbreviations to/from",
-                    subtext="Paste the path to the file, then press ENTER",
-                    actions=[
-                        Action(
-                            "submit",
-                            "Submit path",
-                            lambda p=query_str: self.submit_fname(Path(p)),
-                        ),
-                    ],
-                )
-            ]
-
-        if not self.abbr_store_sep.is_file():
-            return [
-                StandardItem(
-                    id="abbr-setup-separator",
-                    icon_factory=self.makeIcon,
-                    text="Specify separator *character* for abbreviations",
-                    subtext=f"Separator: {query_str}",
-                    actions=[
-                        Action(
-                            "submit",
-                            "Submit separator",
-                            lambda c=query_str: self.submit_sep(c),
-                        ),
-                    ],
-                )
-            ]
-
-        return []
-
     def items(self, ctx) -> Iterator[List[StandardItem]]:
         """Called by albert with *every new keypress*."""
         try:
-            results_setup = self.setup(ctx)
-            if results_setup:
-                yield results_setup
+            setup = self._setup_item()
+            if setup is not None:
+                yield [setup]
                 return
 
             query_str = ctx.query
@@ -272,17 +303,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
                 return
 
-            # new behavior
             tokens = query_str.split()
             if len(tokens) >= 1 and tokens[0] == "new":
-                if len(tokens) > 1:
-                    name = tokens[1]
-                else:
-                    name = ""
-                if len(tokens) > 2:
-                    desc = " ".join(tokens[2:])
-                else:
-                    desc = ""
+                name = tokens[1] if len(tokens) > 1 else ""
+                desc = " ".join(tokens[2:]) if len(tokens) > 2 else ""
 
                 yield [
                     StandardItem(
@@ -294,7 +318,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                             Action(
                                 "save",
                                 "Save abbreviation to file",
-                                lambda name=name, desc=desc: save_abbr(name, desc),
+                                lambda name=name, desc=desc: self.save_abbr(name, desc),
                             )
                         ],
                     )
@@ -302,26 +326,19 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
                 return
 
-            curr_hash = hash_file(abbreviations_path)
-            global abbr_latest_hash, abbr_latest_entries, abbr_latest_search
-            if abbr_latest_hash != curr_hash:
-                abbr_latest_hash = curr_hash
-                with open(abbreviations_path) as f:
-                    conts = f.readlines()
-                    abbr_latest_entries = make_latest_entries(conts)
-                    abbr_latest_search = make_search_index(abbr_latest_entries)
+            self._reload()
 
-            if not abbr_latest_entries:
+            if not self._entries:
                 yield [
                     StandardItem(
                         id="abbr-no-entries",
                         icon_factory=self.makeIcon,
-                        text=f'No lines split by "{split_at}" in the file provided',
+                        text=f'No lines split by "{self._separator}" in the file provided',
                         actions=[
                             Action(
                                 "copy",
                                 "Copy provided filename",
-                                lambda t=str(abbreviations_path): setClipboardText(t),
+                                lambda t=str(self._abbreviations_path): setClipboardText(t),
                             )
                         ],
                     )
@@ -332,14 +349,14 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             # do fuzzy search on both the abbreviations and their descriptions
             results = []
             seen = set()
-            matched = process.extract(query_str, abbr_latest_search.keys(), limit=10)
+            matched = process.extract(query_str, self._search.keys(), limit=10)
             for term in [elem[0] for elem in matched]:
-                for i in abbr_latest_search[term]:
+                for i in self._search[term]:
                     if i in seen:
                         continue
 
                     seen.add(i)
-                    results.append(self.get_abbr_as_item(abbr_latest_entries[i], str(i)))
+                    results.append(self.get_abbr_as_item(self._entries[i], str(i)))
 
             yield results
 
