@@ -7,6 +7,7 @@ ones back to the same note.
 
 import html
 import re
+import subprocess
 import threading
 import time
 import traceback
@@ -43,11 +44,15 @@ ICON_PATH = Path(__file__).parent / "abbr.png"
 
 CONFIG_URL = "trilium_url"
 CONFIG_TOKEN = "trilium_etapi_token"
+CONFIG_TOKEN_COMMAND = "trilium_etapi_token_command"
 CONFIG_NOTE_ID = "trilium_note_id"
 CONFIG_VERIFY_SSL = "trilium_verify_ssl"
 
 DEFAULT_SEPARATOR = ":"
 HTTP_TIMEOUT = 10
+# How long a command that prints the ETAPI token may take. A password manager
+# that has to be unlocked can be slow, but not this slow.
+KEY_COMMAND_TIMEOUT = 30
 NOTE_TTL = 30.0
 USER_AGENT = "awesome-albert-plugins/abbr_trilium"
 
@@ -64,6 +69,57 @@ class TriliumError(Exception):
 
 def notify(msg: str, app_name: str = md_name) -> None:
     Notification(app_name, msg).send()
+
+
+# the ETAPI token -----------------------------------------------------------------------------
+
+
+def resolve_api_key(token: str, command: str) -> str:
+    """The ETAPI token to send, from the plaintext *token* or from *command*.
+
+    A *command* wins over the plaintext token, so the latter can be left out of
+    Albert's config entirely. The command is run through the shell and is
+    expected to print the token on stdout, e.g. ``pass show trilium`` or
+    ``rbw get trilium``; everything around it is ignored. Whatever it prints is
+    held in memory only - it is never written back to the config.
+
+    >>> resolve_api_key("  plain  ", "")
+    'plain'
+    >>> resolve_api_key("  plain  ", "   ")
+    'plain'
+
+    .. raises:: TriliumError
+    """
+    command = (command or "").strip()
+    if not command:
+        return (token or "").strip()
+
+    try:
+        proc = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=KEY_COMMAND_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise TriliumError(
+            f'"{command}" took longer than {KEY_COMMAND_TIMEOUT}s to print the ETAPI token.'
+        ) from e
+    except OSError as e:
+        raise TriliumError(f'Could not run "{command}": {e}') from e
+
+    if proc.returncode != 0:
+        detail = " ".join((proc.stderr or "").split())
+        message = f'"{command}" failed to print the ETAPI token'
+        raise TriliumError(f"{message}: {detail}" if detail else f"{message}.")
+
+    key = (proc.stdout or "").strip()
+    if not key:
+        raise TriliumError(
+            f'"{command}" printed nothing; it must print the ETAPI token on stdout.'
+        )
+    return key
 
 
 # supplementary functions ---------------------------------------------------------------------
@@ -245,6 +301,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
         self._url: str = str(self.readConfig(CONFIG_URL, str) or "").strip()
         self._token: str = str(self.readConfig(CONFIG_TOKEN, str) or "").strip()
+        self._token_command: str = str(
+            self.readConfig(CONFIG_TOKEN_COMMAND, str) or ""
+        ).strip()
         self._note_id: str = str(self.readConfig(CONFIG_NOTE_ID, str) or "").strip()
         verify = self.readConfig(CONFIG_VERIFY_SSL, bool)
         self._verify_ssl: bool = True if verify is None else bool(verify)
@@ -253,6 +312,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         self._cache: Optional[
             Tuple[float, List[Tuple[str, str]], Dict[str, List[int]]]
         ] = None
+        # The token a command printed, once it has been fetched. In memory only,
+        # so a token sourced from a command never touches the config on disk.
+        self._resolved_token: Optional[str] = None
 
     # -- config, bound to the settings widget below ---------------------------------------
 
@@ -274,6 +336,18 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
     def etapi_token(self, value: str):
         self._token = (value or "").strip()
         self.writeConfig(CONFIG_TOKEN, self._token)
+        self._resolved_token = None
+        self._forget()
+
+    @property
+    def etapi_token_command(self) -> str:
+        return self._token_command
+
+    @etapi_token_command.setter
+    def etapi_token_command(self, value: str):
+        self._token_command = (value or "").strip()
+        self.writeConfig(CONFIG_TOKEN_COMMAND, self._token_command)
+        self._resolved_token = None
         self._forget()
 
     @property
@@ -322,6 +396,22 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 },
             },
             {
+                "type": "label",
+                "text": (
+                    "A token typed above is kept by Albert in plaintext. To keep it off "
+                    "the disk entirely, leave that field empty and put a command here "
+                    "instead: it is run through the shell and must print the token on "
+                    "stdout, e.g. 'pass show trilium'. The command wins over the field "
+                    "above, and the token it prints is held in memory only."
+                ),
+            },
+            {
+                "type": "lineedit",
+                "property": "etapi_token_command",
+                "label": "ETAPI token command",
+                "widget_properties": {"placeholderText": "pass show trilium"},
+            },
+            {
                 "type": "lineedit",
                 "property": "note_id",
                 "label": "Abbreviations note ID",
@@ -358,17 +448,35 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         with self._lock:
             self._cache = None
 
+    def _api_key(self) -> str:
+        """The ETAPI token to send, running the configured command at most once.
+
+        .. raises:: TriliumError
+        """
+        if not self._token_command:
+            return self._token
+
+        with self._lock:
+            cached = self._resolved_token
+        if cached is not None:
+            return cached
+
+        key = resolve_api_key(self._token, self._token_command)
+
+        with self._lock:
+            self._resolved_token = key
+        return key
+
     def _load(self) -> Tuple[List[Tuple[str, str]], Dict[str, List[int]]]:
         with self._lock:
             cached = self._cache
         if cached is not None and time.monotonic() - cached[0] < NOTE_TTL:
             return cached[1], cached[2]
 
-        note = fetch_note(self._url, self._token, self._note_id, self._verify_ssl)
+        token = self._api_key()
+        note = fetch_note(self._url, token, self._note_id, self._verify_ssl)
         note_type = str(note.get("type") or "text")
-        content = fetch_note_content(
-            self._url, self._token, self._note_id, self._verify_ssl
-        )
+        content = fetch_note_content(self._url, token, self._note_id, self._verify_ssl)
         text = html_to_text(content) if note_type == "text" else content
 
         entries = make_latest_entries(text.splitlines())
@@ -380,15 +488,14 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
     def _save(self, name: str, desc: str) -> None:
         try:
-            note = fetch_note(self._url, self._token, self._note_id, self._verify_ssl)
+            token = self._api_key()
+            note = fetch_note(self._url, token, self._note_id, self._verify_ssl)
             note_type = str(note.get("type") or "text")
-            content = fetch_note_content(
-                self._url, self._token, self._note_id, self._verify_ssl
-            )
+            content = fetch_note_content(self._url, token, self._note_id, self._verify_ssl)
             line = abbreviation_line(name, desc)
             put_note_content(
                 self._url,
-                self._token,
+                token,
                 self._note_id,
                 self._verify_ssl,
                 append_abbreviation(content, note_type, line),
@@ -412,17 +519,19 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 icon_factory=self.makeIcon,
                 text="Please fill in the plugin settings - Trilium URL missing",
                 subtext="Open the Abbreviations (Trilium) plugin in the Albert settings.",
+                actions=[],
             )
 
-        if not self._token:
+        if not self._token and not self._token_command:
             return StandardItem(
                 id=f"{self.id()}.setup-token",
                 icon_factory=self.makeIcon,
                 text="Please fill in the plugin settings - ETAPI token missing",
                 subtext=(
-                    "Create one in Trilium under Options > ETAPI, then paste it "
-                    "in the settings."
+                    "Create one in Trilium under Options > ETAPI, then paste it, or a "
+                    "command that prints it, in the settings."
                 ),
+                actions=[],
             )
 
         if not self._note_id:
@@ -431,6 +540,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 icon_factory=self.makeIcon,
                 text="Please fill in the plugin settings - abbreviations note ID missing",
                 subtext="The note ID is the part after the # in the note's URL.",
+                actions=[],
             )
 
         return None

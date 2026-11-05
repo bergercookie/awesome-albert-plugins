@@ -1,5 +1,10 @@
 """Tests for the abbr_trilium plugin."""
 
+import subprocess
+
+import albert
+import pytest
+
 from conftest import load_plugin
 
 trilium = load_plugin("abbr_trilium")
@@ -11,6 +16,33 @@ class _Response:
 
     def json(self):
         return {"type": "text"}
+
+
+def completed(stdout="", returncode=0, stderr=""):
+    return subprocess.CompletedProcess(
+        args=[], returncode=returncode, stdout=stdout, stderr=stderr
+    )
+
+
+def make_plugin(url="https://host", token="token", command="", note_id="note"):
+    """A plugin instance with its settings set directly, no config or disk."""
+    plugin = trilium.Plugin()
+    plugin._url = url
+    plugin._token = token
+    plugin._token_command = command
+    plugin._note_id = note_id
+    plugin._resolved_token = None
+    return plugin
+
+
+@pytest.fixture(autouse=True)
+def clean_albert_state():
+    """The config store is class-level, so keep one test's writes out of the next."""
+    config = dict(albert.PluginInstance._CONFIG)
+    albert.PluginInstance._CONFIG.clear()
+    yield
+    albert.PluginInstance._CONFIG.clear()
+    albert.PluginInstance._CONFIG.update(config)
 
 
 def test_join_url_keeps_a_reverse_proxy_prefix():
@@ -83,9 +115,167 @@ def test_config_widget_exposes_every_setting():
     assert properties == {
         "trilium_url",
         "etapi_token",
+        "etapi_token_command",
         "note_id",
         "verify_ssl",
     }
+
+
+# -- the ETAPI token command -----------------------------------------------------------------
+
+
+def test_resolve_api_key_prefers_the_plaintext_token():
+    assert trilium.resolve_api_key("  plain  ", "") == "plain"
+    assert trilium.resolve_api_key("  plain  ", "   ") == "plain"
+
+
+def test_resolve_api_key_runs_the_command(monkeypatch):
+    seen = {}
+
+    def fake_run(command, **kwargs):
+        seen["command"] = command
+        seen["shell"] = kwargs.get("shell")
+        return completed(stdout="  key123\n")
+
+    monkeypatch.setattr(trilium.subprocess, "run", fake_run)
+
+    assert trilium.resolve_api_key("ignored", "pass show trilium") == "key123"
+    assert seen["command"] == "pass show trilium"
+    assert seen["shell"] is True
+
+
+def test_resolve_api_key_command_wins_over_the_plaintext_token(monkeypatch):
+    monkeypatch.setattr(
+        trilium.subprocess,
+        "run",
+        lambda command, **kwargs: completed(stdout="from-command"),
+    )
+    assert trilium.resolve_api_key("plaintext", "echo x") == "from-command"
+
+
+def test_resolve_api_key_reports_a_failed_command(monkeypatch):
+    monkeypatch.setattr(
+        trilium.subprocess,
+        "run",
+        lambda command, **kwargs: completed(returncode=1, stderr="keyring is locked\n"),
+    )
+    with pytest.raises(trilium.TriliumError, match=r"failed.*keyring is locked"):
+        trilium.resolve_api_key("", "rbw get trilium")
+
+
+def test_resolve_api_key_reports_a_command_that_hangs(monkeypatch):
+    def fake_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, trilium.KEY_COMMAND_TIMEOUT)
+
+    monkeypatch.setattr(trilium.subprocess, "run", fake_run)
+    with pytest.raises(trilium.TriliumError, match="took longer"):
+        trilium.resolve_api_key("", "sleep 100")
+
+
+def test_resolve_api_key_refuses_empty_output(monkeypatch):
+    monkeypatch.setattr(
+        trilium.subprocess, "run", lambda command, **kwargs: completed(stdout="  \n")
+    )
+    with pytest.raises(trilium.TriliumError, match="printed nothing"):
+        trilium.resolve_api_key("", "true")
+
+
+def test_resolve_api_key_reports_a_command_that_will_not_start(monkeypatch):
+    def fake_run(command, **kwargs):
+        raise OSError("exec format error")
+
+    monkeypatch.setattr(trilium.subprocess, "run", fake_run)
+    with pytest.raises(trilium.TriliumError, match="Could not run"):
+        trilium.resolve_api_key("", "some-missing-binary")
+
+
+def test_the_command_token_is_used_and_cached(monkeypatch):
+    calls = []
+
+    def fake_resolve(token, command):
+        calls.append((token, command))
+        return "from-command"
+
+    monkeypatch.setattr(trilium, "resolve_api_key", fake_resolve)
+    plugin = make_plugin(token="plain", command="pass show trilium")
+
+    assert plugin._api_key() == "from-command"
+    assert plugin._api_key() == "from-command"
+    assert calls == [("plain", "pass show trilium")]
+
+
+def test_a_failed_command_is_not_cached(monkeypatch):
+    calls = []
+
+    def fake_resolve(token, command):
+        calls.append(command)
+        if len(calls) == 1:
+            raise trilium.TriliumError("keyring is locked")
+        return "now-unlocked"
+
+    monkeypatch.setattr(trilium, "resolve_api_key", fake_resolve)
+    plugin = make_plugin(token="", command="rbw get trilium")
+
+    with pytest.raises(trilium.TriliumError, match="locked"):
+        plugin._api_key()
+    assert plugin._api_key() == "now-unlocked"
+    assert len(calls) == 2
+
+
+def test_the_command_token_is_never_written_to_the_config(monkeypatch):
+    saved = dict(albert.PluginInstance._CONFIG)
+    albert.PluginInstance._CONFIG.clear()
+    try:
+        monkeypatch.setattr(
+            trilium, "resolve_api_key", lambda token, command: "super-secret"
+        )
+        plugin = make_plugin(token="", command="pass show trilium")
+
+        plugin._api_key()
+        assert plugin._token == ""
+        assert albert.PluginInstance._CONFIG == {}
+    finally:
+        albert.PluginInstance._CONFIG.clear()
+        albert.PluginInstance._CONFIG.update(saved)
+
+
+def test_a_command_satisfies_the_setup_check():
+    assert make_plugin(token="", command="pass show trilium")._setup_item() is None
+    assert make_plugin(token="", command="")._setup_item() is not None
+
+
+def test_load_sends_the_command_token(monkeypatch):
+    plugin = make_plugin(token="", command="pass show trilium")
+    seen = {}
+
+    monkeypatch.setattr(trilium, "resolve_api_key", lambda token, command: "command-token")
+    monkeypatch.setattr(
+        trilium,
+        "fetch_note",
+        lambda base, token, note, verify: seen.update(token=token) or {"type": "text"},
+    )
+    monkeypatch.setattr(trilium, "fetch_note_content", lambda *args: "")
+
+    plugin._load()
+    assert seen["token"] == "command-token"
+
+
+def test_setting_the_token_clears_the_resolved_command_token():
+    plugin = make_plugin(token="", command="pass show trilium")
+    plugin._resolved_token = "old"
+
+    plugin.etapi_token = "  new-token  "
+    assert plugin.etapi_token == "new-token"
+    assert plugin._resolved_token is None
+
+
+def test_setting_the_command_clears_the_resolved_token():
+    plugin = make_plugin(token="", command="pass show old")
+    plugin._resolved_token = "old"
+
+    plugin.etapi_token_command = "  pass show new  "
+    assert plugin.etapi_token_command == "pass show new"
+    assert plugin._resolved_token is None
 
 
 def test_load_parses_the_content_of_a_text_note(monkeypatch):

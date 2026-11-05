@@ -30,11 +30,27 @@ Open the plugin's configuration window from the Albert settings and fill in:
 | ------------------------ | ----------------------------------------------------------------------- |
 | `Trilium URL`            | Base URL of your Trilium server, e.g. `https://trilium.example.com`     |
 | `ETAPI token`            | Token created in Trilium under Options > ETAPI                          |
+| `ETAPI token command`    | A command that prints the token, keeps it off the disk                  |
 | `Abbreviations note ID`  | ID of the note that holds the abbreviations                             |
 | `Verify TLS certificate` | Turn off only if your server uses a self-signed certificate             |
 
 The note ID is the part after the `#` in the note's URL. A Text note is written
 as HTML; a Code note with a plain-text MIME type is written as-is.
+
+A token typed into the `ETAPI token` field is kept by Albert in plaintext. To
+keep it off the disk entirely, leave that field empty and put a command here
+instead:
+
+```
+pass show trilium
+```
+
+The command is run through the shell when the token is first needed, and whatever
+it prints on stdout is used as the token. It **wins over** the `ETAPI token`
+field, so the two can both be set and the plaintext one is simply ignored. The
+token it prints is held in memory only and is never written back to the config;
+it is fetched once per session (a failure is not remembered, so unlocking your
+password manager and trying again just works).
 
 The plugin only talks to the Trilium server configured above. The note content is
 cached in memory for 30 seconds, and saving a new abbreviation clears that cache.
