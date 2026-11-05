@@ -29,8 +29,8 @@ ICON_PATH = Path(__file__).parent / "abbr.png"
 
 abbreviations_path = Path()
 abbr_latest_hash = ""
-abbr_latest_d: Dict[str, str] = {}
-abbr_latest_d_bi: Dict[str, str] = {}
+abbr_latest_entries: List[Tuple[str, str]] = []
+abbr_latest_search: Dict[str, List[int]] = {}
 split_at = ":"
 
 
@@ -69,8 +69,8 @@ def get_as_subtext_field(field, field_title=None) -> str:
     return s
 
 
-def make_latest_dict(conts: list):
-    d = {}
+def make_latest_entries(conts: list) -> List[Tuple[str, str]]:
+    entries = []
     for li in conts:
         tokens = li.split(split_at, maxsplit=1)
         if len(tokens) == 2:
@@ -78,10 +78,20 @@ def make_latest_dict(conts: list):
             if any([not t for t in tokens]):
                 continue
 
-            tokens = [t.strip().strip("*") for t in tokens]
-            d[tokens[0]] = tokens[1]
+            tokens = [t.strip().strip("*").strip() for t in tokens]
+            entries.append((tokens[0], tokens[1]))
 
-    return d
+    return entries
+
+
+def make_search_index(entries: List[Tuple[str, str]]) -> Dict[str, List[int]]:
+    """Map every abbreviation and description to the entries that contain it."""
+    index: Dict[str, List[int]] = {}
+    for i, entry in enumerate(entries):
+        for term in entry:
+            index.setdefault(term, []).append(i)
+
+    return index
 
 
 def hash_file(p: Path) -> str:
@@ -141,17 +151,16 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
                 split_at = sep
 
-    def get_abbr_as_item(self, abbr: Tuple[str, str], key: str = "") -> StandardItem:
+    def get_abbr_as_item(self, abbr: Tuple[str, str], suffix: str = "") -> StandardItem:
         """Return the abbreviation pair as an item - ready to be appended to the items list and be rendered by Albert.
 
-        `key` is the description this item was matched on - both the abbreviation and its
-        description may match the query, and only that keeps the two items' ids apart
+        `suffix` keeps items with the same abbreviation and description apart.
         """
         text = abbr[0].strip()
         subtext = abbr[1].strip()
 
         return StandardItem(
-            id=f"abbr-{text}-{key}" if key else f"abbr-{text}",
+            id=f"abbr-{text}-{suffix}" if suffix else f"abbr-{text}",
             icon_factory=self.makeIcon,
             text=f"{text}",
             subtext=f"{subtext}",
@@ -294,16 +303,15 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 return
 
             curr_hash = hash_file(abbreviations_path)
-            global abbr_latest_hash, abbr_latest_d, abbr_latest_d_bi
+            global abbr_latest_hash, abbr_latest_entries, abbr_latest_search
             if abbr_latest_hash != curr_hash:
                 abbr_latest_hash = curr_hash
                 with open(abbreviations_path) as f:
                     conts = f.readlines()
-                    abbr_latest_d = make_latest_dict(conts)
-                    abbr_latest_d_bi = abbr_latest_d.copy()
-                    abbr_latest_d_bi.update({v: k for k, v in abbr_latest_d.items()})
+                    abbr_latest_entries = make_latest_entries(conts)
+                    abbr_latest_search = make_search_index(abbr_latest_entries)
 
-            if not abbr_latest_d:
+            if not abbr_latest_entries:
                 yield [
                     StandardItem(
                         id="abbr-no-entries",
@@ -321,14 +329,17 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
                 return
 
-            # do fuzzy search on both the abbreviations and their description
+            # do fuzzy search on both the abbreviations and their descriptions
             results = []
-            matched = process.extract(query_str, abbr_latest_d_bi.keys(), limit=10)
-            for m in [elem[0] for elem in matched]:
-                if m in abbr_latest_d.keys():
-                    results.append(self.get_abbr_as_item((m, abbr_latest_d[m])))
-                else:
-                    results.append(self.get_abbr_as_item((abbr_latest_d_bi[m], m), m))
+            seen = set()
+            matched = process.extract(query_str, abbr_latest_search.keys(), limit=10)
+            for term in [elem[0] for elem in matched]:
+                for i in abbr_latest_search[term]:
+                    if i in seen:
+                        continue
+
+                    seen.add(i)
+                    results.append(self.get_abbr_as_item(abbr_latest_entries[i], str(i)))
 
             yield results
 
