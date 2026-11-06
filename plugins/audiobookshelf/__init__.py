@@ -16,6 +16,7 @@ import subprocess
 import threading
 import time
 import traceback
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 from urllib.parse import quote, urlencode, urljoin, urlparse
@@ -61,14 +62,9 @@ AUDIOBOOK_MEDIA_TYPE = "book"
 
 HTTP_TIMEOUT = 10
 KEY_COMMAND_TIMEOUT = 30
-# How many hits one search asks each library for. It is also the cap on the
-# merged list, since a hit in a second library is no more useful than one in the
-# first.
+# The cap on the merged result list: a hit in a second library is no more useful
+# than one in the first.
 SEARCH_LIMIT = 20
-# An author match carries no books of its own, so each one is followed up with a
-# second request. Only the first few are followed, which is enough to keep an
-# author search useful without turning it into a burst of requests.
-AUTHOR_LIMIT = 3
 MIN_SEARCH_CHARS = 2
 # Albert runs a fresh query per keystroke and cancels the one before it, so this
 # is a debounce with no timer of the plugin's own: a term that is still being
@@ -76,6 +72,12 @@ MIN_SEARCH_CHARS = 2
 SEARCH_DEBOUNCE = 0.25
 # The library list changes rarely, so it is cached for much longer than a search.
 LIBRARIES_TTL = 300
+# Every item in a library is fetched once and then searched locally, so this is
+# how long one of those snapshots is trusted before it is fetched again.
+ITEMS_TTL = 300
+# How many items one page of a library listing asks for while a snapshot is
+# being built. A page smaller than this is the last one.
+ITEMS_PAGE_SIZE = 100
 SEARCH_TTL = 60
 # Searched terms remembered, which is what makes backspacing over a word free
 # instead of one search per deleted character.
@@ -481,38 +483,82 @@ def playable_urls(base_url: str, token: str, item: Dict) -> List[str]:
     return [stream_url(base_url, content_url, token) for content_url in item_tracks(item)]
 
 
-def search_payload_items(payload: Dict) -> List[Dict]:
-    """The library items a search payload names, in the order they matter.
+def fuzzy_score(needle: str, haystack: str) -> float:
+    """How well *needle* matches *haystack*, 0.0 when it does not match at all.
 
-    A book hit is one; a series hit is the books in it, so that typing a series
-    name plays its books rather than showing the series itself.
+    A plain subsequence test plus a similarity ratio, so both `storm` and `strm`
+    find `The Stormlight Archive`, and a typo still finds the audiobook you
+    meant. Deliberately not `difflib.get_close_matches` on its own: that insists
+    on roughly the same length in both strings, so typing the first two letters
+    of a long title would match nothing.
+
+    >>> fuzzy_score("storm", "The Stormlight Archive") > 0.8
+    True
+    >>> fuzzy_score("strm", "The Stormlight Archive") > 0      # skipped letters
+    True
+    >>> fuzzy_score("storm", "Dune")                          # nothing in common
+    0.0
     """
-    items = []
-    for entry in _list(payload.get("book")):
-        if isinstance(entry, dict) and isinstance(entry.get("libraryItem"), dict):
-            items.append(entry["libraryItem"])
+    needle = needle.strip().lower()
+    haystack = haystack.strip().lower()
+    if not needle:
+        return 1.0
+    if not haystack:
+        return 0.0
 
-    for entry in _list(payload.get("series")):
-        if not isinstance(entry, dict):
-            continue
-        for book in _list(entry.get("books")):
-            if isinstance(book, dict):
-                items.append(book)
+    if needle == haystack:
+        return 1.0
+    if haystack.startswith(needle):
+        return 0.95
 
-    return items
+    if needle in haystack:
+        # a hit that starts early is a better hit
+        return 0.85 - 0.15 * (haystack.index(needle) / max(len(haystack), 1))
+
+    # every character of the needle present, in order: `strm` -> `stormlight`
+    it = iter(haystack)
+    if not all(char in it for char in needle):
+        # last resort, so a typo narrows the list instead of emptying it
+        ratio = SequenceMatcher(None, needle, haystack).ratio()
+        return ratio * 0.7 if ratio >= 0.6 else 0.0
+
+    # reward tight, early subsequences over scattered ones
+    positions = []
+    start = 0
+    for char in needle:
+        index = haystack.find(char, start)
+        positions.append(index)
+        start = index + 1
+    span = positions[-1] - positions[0] + 1
+    return 0.6 + 0.25 * (len(needle) / span)
 
 
-def search_payload_authors(payload: Dict, limit: int = AUTHOR_LIMIT) -> List[Tuple[str, str]]:
-    """The (id, name) of the authors a search payload names, capped at *limit*.
+def item_search_score(term: str, item: Dict) -> float:
+    """How well *term* matches an audiobook's title, author or series.
 
-    An author hit carries no books, so each one is a follow-up request; only the
-    first few are worth that.
+    A title match is what most queries mean, so an author or series match is
+    worth a little less - but either can still find a book.
     """
-    authors = []
-    for entry in _list(payload.get("authors")):
-        if isinstance(entry, dict) and entry.get("id"):
-            authors.append((str(entry["id"]), str(entry.get("name") or "")))
-    return authors[:limit]
+    return max(
+        fuzzy_score(term, item_title(item)),
+        fuzzy_score(term, item_author(item)) * 0.9,
+        fuzzy_score(term, item_series(item)) * 0.85,
+    )
+
+
+def search_items(
+    items: Sequence[Dict], term: str, limit: int = SEARCH_LIMIT
+) -> List[Dict]:
+    """The *items* matching *term* by title, author or series, best first."""
+    term = term.strip()
+    scored: List[Tuple[float, str, Dict]] = []
+    for item in dedupe_items(items):
+        score = item_search_score(term, item)
+        if score > 0.0:
+            scored.append((score, item_title(item).lower(), item))
+
+    scored.sort(key=lambda row: (-row[0], row[1]))
+    return [row[2] for row in scored[:limit]]
 
 
 def dedupe_items(items: Sequence[Dict]) -> List[Dict]:
@@ -558,46 +604,42 @@ def fetch_audiobook_libraries(base_url: str, token: str) -> List[Dict]:
     ]
 
 
-def fetch_library_search(
-    base_url: str, token: str, library_id: str, query: str, limit: int = SEARCH_LIMIT
-) -> Dict:
-    """Search one library's books, series and authors.
-
-    .. raises:: AudiobookshelfError
-    """
-    payload = call(
-        "GET",
-        base_url,
-        token,
-        f"api/libraries/{library_id}/search",
-        params={"q": query, "limit": limit},
-    )
-    if not isinstance(payload, dict):
-        raise AudiobookshelfError(f"{base_url} answered the search with something unexpected.")
-    return payload
-
-
-def fetch_author_items(
-    base_url: str, token: str, library_id: str, author_id: str, limit: int = SEARCH_LIMIT
+def fetch_library_items(
+    base_url: str,
+    token: str,
+    library_id: str,
+    page_size: int = ITEMS_PAGE_SIZE,
 ) -> List[Dict]:
-    """The books one author has in one library.
+    """Every item in one library, a page at a time.
+
+    Audiobookshelf pages its listing, so a library larger than one page needs
+    several requests. The loop stops on an empty or short page as well as on
+    the total, since a server may leave the total out.
 
     .. raises:: AudiobookshelfError
     """
-    payload = call(
-        "GET",
-        base_url,
-        token,
-        f"api/libraries/{library_id}/items",
-        params={"filter": f"authors.{author_id}", "limit": limit},
-    )
-
-    results = payload.get("results") if isinstance(payload, dict) else None
-    if not isinstance(results, list):
-        raise AudiobookshelfError(
-            f"{base_url} answered an author's books with something unexpected."
+    items: List[Dict] = []
+    page = 0
+    while True:
+        payload = call(
+            "GET",
+            base_url,
+            token,
+            f"api/libraries/{library_id}/items",
+            params={"limit": page_size, "page": page},
         )
-    return [item for item in results if isinstance(item, dict)]
+        results = payload.get("results") if isinstance(payload, dict) else None
+        if not isinstance(results, list):
+            raise AudiobookshelfError(
+                f"{base_url} answered a library's items with something unexpected."
+            )
+
+        items.extend(item for item in results if isinstance(item, dict))
+        total = _int(payload.get("total"))
+        if not results or len(results) < page_size or (total and len(items) >= total):
+            return items
+
+        page += 1
 
 
 def fetch_item(base_url: str, token: str, item_id: Any) -> Dict:
@@ -614,41 +656,6 @@ def fetch_item(base_url: str, token: str, item_id: Any) -> Dict:
     if not isinstance(payload, dict):
         raise AudiobookshelfError(f"{base_url} answered the item with something unexpected.")
     return payload
-
-
-def search_books(
-    base_url: str,
-    token: str,
-    query: str,
-    libraries: Sequence[Dict],
-    limit: int = SEARCH_LIMIT,
-) -> List[Dict]:
-    """Search every audiobook library and return the playable items.
-
-    An author or a series match is followed up with whatever books it is about,
-    so the list is audiobooks to play rather than the authors and series around
-    them.
-
-    .. raises:: AudiobookshelfError
-    """
-    found: List[Dict] = []
-    for library in libraries:
-        library_id = library.get("id")
-        if not library_id:
-            continue
-
-        payload = fetch_library_search(base_url, token, str(library_id), query, limit)
-        found.extend(search_payload_items(payload))
-        for author_id, _name in search_payload_authors(payload):
-            author_items = fetch_author_items(
-                base_url, token, str(library_id), author_id, limit
-            )
-            found.extend(author_items)
-
-        if len(found) >= limit:
-            break
-
-    return dedupe_items(found)[:limit]
 
 
 def fetch_item_detail(base_url: str, token: str, item: Dict) -> Dict:
@@ -728,6 +735,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         # is a good enough reason to ask Audiobookshelf again.
         self._lock = threading.Lock()
         self._libraries: Optional[Tuple[float, List[Dict]]] = None
+        # One item snapshot per library id, so a search does not refetch a
+        # whole library for every keystroke.
+        self._items: Dict[str, Tuple[float, List[Dict]]] = {}
         self._searches: Dict[str, Tuple[float, List[Dict]]] = {}
         # The key a command printed, once it has been fetched. In memory only,
         # so a key sourced from a command never touches the config on disk.
@@ -850,6 +860,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         """Drop every cached answer, so the next query asks Audiobookshelf again."""
         with self._lock:
             self._libraries = None
+            self._items = {}
             self._searches = {}
 
     def _api_key(self) -> str:
@@ -887,8 +898,27 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             self._libraries = (time.monotonic(), libraries)
         return libraries
 
+    def _library_items(self, library_id: str) -> List[Dict]:
+        """One library's items, refetched at most every ITEMS_TTL seconds.
+
+        .. raises:: AudiobookshelfError
+        """
+        with self._lock:
+            cached = self._items.get(library_id)
+        if cached is not None and time.monotonic() - cached[0] < ITEMS_TTL:
+            return cached[1]
+
+        items = fetch_library_items(self._url, self._api_key(), library_id)
+
+        with self._lock:
+            self._items[library_id] = (time.monotonic(), items)
+        return items
+
     def _search(self, term: str, libraries: Sequence[Dict]) -> List[Dict]:
         """The playable items for *term*, refetched at most every SEARCH_TTL seconds.
+
+        Every library's items are kept locally, so a search only asks the
+        server for a library it has not seen recently.
 
         .. raises:: AudiobookshelfError
         """
@@ -897,7 +927,13 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         if cached is not None and time.monotonic() - cached[0] < SEARCH_TTL:
             return cached[1]
 
-        results = search_books(self._url, self._api_key(), term, libraries)
+        items: List[Dict] = []
+        for library in libraries:
+            library_id = library.get("id")
+            if library_id:
+                items.extend(self._library_items(str(library_id)))
+
+        results = search_items(items, term)
 
         with self._lock:
             self._searches[term] = (time.monotonic(), results)

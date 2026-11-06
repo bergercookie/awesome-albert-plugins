@@ -137,6 +137,7 @@ def make_plugin(url=BASE, token=TOKEN, command="", player="cvlc"):
     plugin._player = player
     plugin._lock = threading.Lock()
     plugin._libraries = None
+    plugin._items = {}
     plugin._searches = {}
     plugin._resolved_token = None
     return plugin
@@ -223,14 +224,6 @@ def old_item(item_id="item3", title="Edgedancer"):
             "duration": 1800,
             "audioFiles": [{"ino": 7}, {"ino": 8}],
         },
-    }
-
-
-def search_payload(items=(), series=(), authors=()):
-    return {
-        "book": [{"libraryItem": item} for item in items],
-        "series": list(series),
-        "authors": list(authors),
     }
 
 
@@ -464,41 +457,55 @@ def test_fetch_audiobook_libraries_keeps_only_books(api):
     assert audiobookshelf.fetch_audiobook_libraries(BASE, TOKEN) == [library("a")]
 
 
-# -- fetch_library_search --------------------------------------------------------------------
+# -- fetch_library_items ---------------------------------------------------------------------
 
 
-def test_fetch_library_search_returns_the_payload(api):
-    api.reply = search_payload(items=[expanded_item("i1")])
-    assert audiobookshelf.fetch_library_search(BASE, TOKEN, "lib1", "storm") == api.reply
-    assert api.calls[0]["path"] == "api/libraries/lib1/search"
-    assert api.calls[0]["params"] == {"q": "storm", "limit": audiobookshelf.SEARCH_LIMIT}
-
-
-def test_fetch_library_search_rejects_an_unexpected_body(api):
-    api.reply = None
-    with pytest.raises(audiobookshelf.AudiobookshelfError, match="something unexpected"):
-        audiobookshelf.fetch_library_search(BASE, TOKEN, "lib1", "storm")
-
-
-# -- fetch_author_items ----------------------------------------------------------------------
-
-
-def test_fetch_author_items_returns_the_results(api):
-    api.reply = {"results": [minified_item("i1"), "nope", None]}
-    assert audiobookshelf.fetch_author_items(BASE, TOKEN, "lib1", "a1") == [
-        minified_item("i1")
-    ]
+def test_fetch_library_items_returns_the_results(api):
+    api.reply = {"results": [minified_item("i1"), "nope", None], "total": 1}
+    assert audiobookshelf.fetch_library_items(BASE, TOKEN, "lib1") == [minified_item("i1")]
     assert api.calls[0]["path"] == "api/libraries/lib1/items"
     assert api.calls[0]["params"] == {
-        "filter": "authors.a1",
-        "limit": audiobookshelf.SEARCH_LIMIT,
+        "limit": audiobookshelf.ITEMS_PAGE_SIZE,
+        "page": 0,
     }
 
 
-def test_fetch_author_items_rejects_an_unexpected_body(api):
-    api.reply = {"nonsense": True}
+def test_fetch_library_items_pages_until_the_total(monkeypatch):
+    pages = [
+        {"results": [minified_item("i0"), minified_item("i1")], "total": 3},
+        {"results": [minified_item("i2")], "total": 3},
+    ]
+    calls = []
+
+    def fake_call(method, base, token, path, params=None, timeout=None):
+        calls.append(dict(params))
+        return pages[len(calls) - 1]
+
+    monkeypatch.setattr(audiobookshelf, "call", fake_call)
+
+    items = audiobookshelf.fetch_library_items(BASE, TOKEN, "lib1", page_size=2)
+    assert [item["id"] for item in items] == ["i0", "i1", "i2"]
+    assert calls == [{"limit": 2, "page": 0}, {"limit": 2, "page": 1}]
+
+
+def test_fetch_library_items_stops_on_a_short_page(api):
+    api.reply = {"results": [minified_item("i1")], "total": 9}
+    assert audiobookshelf.fetch_library_items(BASE, TOKEN, "lib1", page_size=2) == [
+        minified_item("i1")
+    ]
+    assert len(api.calls) == 1
+
+
+def test_fetch_library_items_stops_on_an_empty_page(api):
+    api.reply = {"results": [], "total": 9}
+    assert audiobookshelf.fetch_library_items(BASE, TOKEN, "lib1") == []
+    assert len(api.calls) == 1
+
+
+def test_fetch_library_items_rejects_an_unexpected_body(api):
+    api.reply = None
     with pytest.raises(audiobookshelf.AudiobookshelfError, match="something unexpected"):
-        audiobookshelf.fetch_author_items(BASE, TOKEN, "lib1", "a1")
+        audiobookshelf.fetch_library_items(BASE, TOKEN, "lib1")
 
 
 # -- fetch_item ------------------------------------------------------------------------------
@@ -645,40 +652,99 @@ def test_playable_urls_appends_the_token_to_every_track():
     assert urls == [f"{BASE}/api/items/item1/file/1?token={TOKEN}"]
 
 
-# -- the search payload ----------------------------------------------------------------------
+# -- local search ----------------------------------------------------------------------------
 
 
-def test_search_payload_items_reads_book_hits():
-    payload = search_payload(items=[expanded_item("i1")])
-    assert audiobookshelf.search_payload_items(payload) == [expanded_item("i1")]
+def test_fuzzy_score_prefers_an_exact_then_prefix_then_substring_match():
+    exact = audiobookshelf.fuzzy_score("dune", "Dune")
+    prefix = audiobookshelf.fuzzy_score("dune", "Dune Messiah")
+    substring = audiobookshelf.fuzzy_score("dune", "Children of Dune")
+
+    assert exact == 1.0
+    assert prefix > substring > 0.0
 
 
-def test_search_payload_items_unwraps_series_books():
-    series = [{"series": {"id": "s1"}, "books": [old_item("i2")]}]
-    assert audiobookshelf.search_payload_items(search_payload(series=series)) == [
-        old_item("i2")
+def test_fuzzy_score_matches_a_subsequence():
+    assert audiobookshelf.fuzzy_score("strm", "The Stormlight Archive") > 0
+
+
+def test_fuzzy_score_tolerates_a_typo():
+    assert audiobookshelf.fuzzy_score("stormlightx", "The Stormlight Archive") > 0
+
+
+def test_fuzzy_score_of_a_mismatch_is_zero():
+    assert audiobookshelf.fuzzy_score("zzzz", "Dune") == 0.0
+
+
+def test_fuzzy_score_of_an_empty_needle_is_one():
+    assert audiobookshelf.fuzzy_score("", "Dune") == 1.0
+
+
+def test_item_search_score_matches_title_author_and_series():
+    item = expanded_item(
+        title="The Way of Kings",
+        author="Brandon Sanderson",
+        series="The Stormlight Archive",
+    )
+
+    assert audiobookshelf.item_search_score("way of kings", item) > 0.8
+    assert audiobookshelf.item_search_score("sanderson", item) > 0
+    assert audiobookshelf.item_search_score("stormlight", item) > 0
+
+
+def test_a_title_match_beats_an_author_match():
+    title_item = expanded_item(title="Sanderson", author="Someone Else")
+    author_item = expanded_item(title="Something Else", author="Sanderson")
+
+    assert audiobookshelf.item_search_score(
+        "sanderson", title_item
+    ) > audiobookshelf.item_search_score("sanderson", author_item)
+
+
+def test_search_items_orders_the_best_match_first():
+    items = [
+        expanded_item("i1", title="Children of Dune"),
+        expanded_item("i2", title="Dune"),
+        expanded_item("i3", title="Dune Messiah"),
     ]
 
-
-def test_search_payload_items_ignores_junk():
-    payload = {"book": ["nope", {"libraryItem": "no"}], "series": [None, {"books": [3]}]}
-    assert audiobookshelf.search_payload_items(payload) == []
+    matches = audiobookshelf.search_items(items, "dune")
+    assert [item["id"] for item in matches] == ["i2", "i3", "i1"]
 
 
-def test_search_payload_authors_returns_id_and_name():
-    payload = search_payload(authors=[{"id": "a1", "name": "Sanderson"}])
-    assert audiobookshelf.search_payload_authors(payload) == [("a1", "Sanderson")]
+def test_search_items_matches_an_author_or_a_series():
+    items = [
+        expanded_item(
+            "i1",
+            title="The Way of Kings",
+            author="Brandon Sanderson",
+            series="The Stormlight Archive",
+        ),
+        expanded_item("i2", title="Dune", author="Frank Herbert", series="Dune"),
+    ]
+
+    assert [item["id"] for item in audiobookshelf.search_items(items, "sanderson")] == ["i1"]
+    assert [item["id"] for item in audiobookshelf.search_items(items, "stormlight")] == ["i1"]
 
 
-def test_search_payload_authors_is_capped():
-    authors = [{"id": str(i), "name": "x"} for i in range(10)]
-    payload = search_payload(authors=authors)
-    assert len(audiobookshelf.search_payload_authors(payload, limit=2)) == 2
+def test_search_items_is_case_insensitive():
+    matches = audiobookshelf.search_items([expanded_item(title="Dune")], "DUNE")
+    assert [item["id"] for item in matches] == ["item1"]
 
 
-def test_search_payload_authors_skips_rows_without_an_id():
-    payload = search_payload(authors=[{"name": "x"}])
-    assert audiobookshelf.search_payload_authors(payload) == []
+def test_search_items_dedupes_and_caps_the_list():
+    items = [expanded_item("i1", title="Storm") for _ in range(3)]
+    items.extend(expanded_item(f"i{n}", title=f"Storm {n}") for n in range(2, 6))
+
+    matches = audiobookshelf.search_items(items, "storm", limit=3)
+    assert [item["id"] for item in matches] == ["i1", "i2", "i3"]
+
+
+def test_search_items_skips_non_matches():
+    assert audiobookshelf.search_items([expanded_item(title="Dune")], "zzzz") == []
+
+
+# -- dedupe_items ----------------------------------------------------------------------------
 
 
 def test_dedupe_items_keeps_the_first_of_each_id():
@@ -690,56 +756,6 @@ def test_dedupe_items_drops_items_without_an_id():
     assert audiobookshelf.dedupe_items([{"media": {}}, expanded_item("i1")]) == [
         expanded_item("i1")
     ]
-
-
-# -- search_books ----------------------------------------------------------------------------
-
-
-def test_search_books_merges_libraries_and_follows_authors(monkeypatch):
-    payloads = {
-        "lib1": search_payload(items=[expanded_item("i1")], authors=[{"id": "a1"}]),
-        "lib2": search_payload(items=[expanded_item("i2")]),
-    }
-    search_calls = []
-    author_calls = []
-
-    def fake_search(base, token, library_id, query, limit):
-        search_calls.append((library_id, query, limit))
-        return payloads[library_id]
-
-    def fake_author(base, token, library_id, author_id, limit):
-        author_calls.append((library_id, author_id))
-        return [expanded_item("i4")]
-
-    monkeypatch.setattr(audiobookshelf, "fetch_library_search", fake_search)
-    monkeypatch.setattr(audiobookshelf, "fetch_author_items", fake_author)
-
-    libs = [library("lib1"), library("lib2")]
-    items = audiobookshelf.search_books(BASE, TOKEN, "storm", libs)
-
-    assert [item["id"] for item in items] == ["i1", "i4", "i2"]
-    assert search_calls == [
-        ("lib1", "storm", audiobookshelf.SEARCH_LIMIT),
-        ("lib2", "storm", audiobookshelf.SEARCH_LIMIT),
-    ]
-    assert author_calls == [("lib1", "a1")]
-
-
-def test_search_books_caps_the_list(monkeypatch):
-    payload = search_payload(items=[expanded_item(f"i{n}") for n in range(5)])
-    monkeypatch.setattr(audiobookshelf, "fetch_library_search", lambda *a, **k: payload)
-
-    items = audiobookshelf.search_books(BASE, TOKEN, "storm", [library()], limit=3)
-    assert [item["id"] for item in items] == ["i0", "i1", "i2"]
-
-
-def test_search_books_skips_a_library_without_an_id(monkeypatch):
-    def boom(*args, **kwargs):
-        raise AssertionError("a library without an id needs no search")
-
-    monkeypatch.setattr(audiobookshelf, "fetch_library_search", boom)
-
-    assert audiobookshelf.search_books(BASE, TOKEN, "storm", [{"mediaType": "book"}]) == []
 
 
 # -- the player ------------------------------------------------------------------------------
@@ -838,7 +854,7 @@ def test_a_search_lists_audiobooks(monkeypatch, instant):
         audiobookshelf, "fetch_audiobook_libraries", lambda *a, **k: [library()]
     )
     monkeypatch.setattr(
-        audiobookshelf, "search_books", lambda base, token, term, libraries: [expanded_item()]
+        audiobookshelf, "fetch_library_items", lambda *a, **k: [expanded_item()]
     )
     plugin = make_plugin()
 
@@ -851,7 +867,7 @@ def test_a_search_without_hits_says_so(monkeypatch, instant):
     monkeypatch.setattr(
         audiobookshelf, "fetch_audiobook_libraries", lambda *a, **k: [library()]
     )
-    monkeypatch.setattr(audiobookshelf, "search_books", lambda *a, **k: [])
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", lambda *a, **k: [])
     plugin = make_plugin()
 
     items = next(plugin.items(FakeCtx("zzzz")))
@@ -864,7 +880,7 @@ def test_a_replaced_query_is_abandoned(monkeypatch):
     )
     monkeypatch.setattr(
         audiobookshelf,
-        "search_books",
+        "fetch_library_items",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not be searched")),
     )
     plugin = make_plugin()
@@ -920,15 +936,45 @@ def test_the_libraries_are_fetched_once_within_the_ttl(monkeypatch):
 def test_a_search_is_fetched_once_within_the_ttl(monkeypatch):
     calls = []
 
-    def fake_search(*args, **kwargs):
+    def fake_fetch(*args, **kwargs):
         calls.append(1)
         return []
 
-    monkeypatch.setattr(audiobookshelf, "search_books", fake_search)
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", fake_fetch)
 
     plugin = make_plugin()
     plugin._search("storm", [library()])
     plugin._search("storm", [library()])
+    assert len(calls) == 1
+
+
+def test_library_items_are_fetched_once_within_the_ttl(monkeypatch):
+    calls = []
+
+    def fake_fetch(*args, **kwargs):
+        calls.append(1)
+        return [expanded_item()]
+
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", fake_fetch)
+
+    plugin = make_plugin()
+    plugin._library_items("lib1")
+    plugin._library_items("lib1")
+    assert len(calls) == 1
+
+
+def test_a_new_search_reuses_the_item_snapshot(monkeypatch):
+    calls = []
+
+    def fake_fetch(*args, **kwargs):
+        calls.append(1)
+        return [expanded_item()]
+
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", fake_fetch)
+
+    plugin = make_plugin()
+    plugin._search("storm", [library()])
+    plugin._search("dune", [library()])
     assert len(calls) == 1
 
 
@@ -937,17 +983,19 @@ def test_forget_drops_every_cache(monkeypatch):
 
     plugin = make_plugin()
     plugin._audiobook_libraries()
+    plugin._items["lib1"] = (time.monotonic(), [])
     plugin._searches["storm"] = (time.monotonic(), [])
 
     plugin._forget()
 
     assert plugin._libraries is None
+    assert plugin._items == {}
     assert plugin._searches == {}
 
 
 def test_the_search_cache_is_bounded(monkeypatch):
     monkeypatch.setattr(audiobookshelf, "SEARCH_CACHE_SIZE", 3)
-    monkeypatch.setattr(audiobookshelf, "search_books", lambda *a, **k: [])
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", lambda *a, **k: [])
 
     plugin = make_plugin()
     for term in ("a", "b", "c", "d"):
@@ -1030,11 +1078,11 @@ def test_the_search_sends_the_command_key(monkeypatch):
     )
     seen = {}
 
-    def fake_search(base, token, term, libraries):
+    def fake_fetch(base, token, library_id):
         seen["token"] = token
         return []
 
-    monkeypatch.setattr(audiobookshelf, "search_books", fake_search)
+    monkeypatch.setattr(audiobookshelf, "fetch_library_items", fake_fetch)
     make_plugin(token="", command="pass show x")._search("storm", [library()])
     assert seen["token"] == "command-key"
 
