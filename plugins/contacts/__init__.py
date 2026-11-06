@@ -4,7 +4,6 @@ import json
 import subprocess
 import traceback
 from pathlib import Path
-from shutil import which
 from typing import Any, Dict, Iterator, List, Optional, Sequence
 
 from albert import (
@@ -14,7 +13,6 @@ from albert import (
     Notification,
     PluginInstance,
     StandardItem,
-    openUrl,
     setClipboardText,
 )
 from fuzzywuzzy import process
@@ -220,30 +218,6 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         """Return the setup items the user has to deal with first - None if there's nothing
         to set up.
         """
-        if not which("vcfxplr"):
-            return [
-                StandardItem(
-                    id=f"{self.id()}.vcfxplr-missing",
-                    icon_factory=self.makeIcon,
-                    text='"vcfxplr" is not installed.',
-                    subtext=(
-                        "You can install it via pip - <u>pip3 install --user --upgrade vcfxplr</u>"
-                    ),
-                    actions=[
-                        Action(
-                            "copy",
-                            "Copy install command",
-                            lambda: setClipboardText("pip3 install --user --upgrade vcfxplr"),
-                        ),
-                        Action(
-                            "open",
-                            'Open "vcfxplr" page',
-                            lambda: openUrl("https://github.com/bergercookie/vcfxplr"),
-                        ),
-                    ],
-                )
-            ]
-
         if self._vcf_path is None:
             return [
                 StandardItem(
