@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Vikunja task manager plugin for Albert launcher.
 
 Search, filter, complete, open and quickly add Vikunja (https://vikunja.io) tasks
@@ -18,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from albert import (
     Action,
@@ -27,7 +26,7 @@ from albert import (
     Notification,
     PluginInstance,
     StandardItem,
-    openUrl
+    openUrl,
 )
 
 md_iid = "5.0"
@@ -87,7 +86,9 @@ class VikunjaError(Exception):
 class VikunjaClient:
     """Minimal client for the parts of the Vikunja REST API this plugin needs."""
 
-    def __init__(self, base_url: str, token: str, verify_ssl: bool = True, timeout: float = 8.0):
+    def __init__(
+        self, base_url: str, token: str, verify_ssl: bool = True, timeout: float = 8.0
+    ):
         self.base_url = (base_url or "").strip().rstrip("/")
         self.token = (token or "").strip()
         self.verify_ssl = verify_ssl
@@ -108,9 +109,13 @@ class VikunjaClient:
     def _request(self, method: str, path: str, params: Optional[dict] = None,
                  body: Optional[dict] = None) -> Any:
         if not self.base_url:
-            raise VikunjaError("Vikunja base URL is not configured. Open the plugin settings to set it up.")
+            raise VikunjaError(
+                "Vikunja base URL is not configured. Open the plugin settings to set it up."
+            )
         if not self.token:
-            raise VikunjaError("Vikunja API token is not configured. Open the plugin settings to set it up.")
+            raise VikunjaError(
+                "Vikunja API token is not configured. Open the plugin settings to set it up."
+            )
 
         url = f"{self.api_root}{path}"
         if params:
@@ -127,7 +132,10 @@ class VikunjaClient:
             request.add_header("Content-Type", "application/json")
 
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout, context=self._ssl_context()) as resp:
+            context = self._ssl_context()
+            with urllib.request.urlopen(
+                request, timeout=self.timeout, context=context
+            ) as resp:
                 raw = resp.read()
                 return json.loads(raw) if raw else None
         except urllib.error.HTTPError as e:
@@ -141,10 +149,14 @@ class VikunjaClient:
             except Exception:
                 pass
             if e.code == 401:
-                raise VikunjaError("Vikunja rejected the API token (401). Check it in the plugin settings.") from e
+                raise VikunjaError(
+                    "Vikunja rejected the API token (401). Check it in the plugin settings."
+                ) from e
             raise VikunjaError(f"Vikunja API error {e.code}: {detail or e.reason}") from e
         except urllib.error.URLError as e:
-            raise VikunjaError(f"Could not reach Vikunja at {self.base_url}: {e.reason}") from e
+            raise VikunjaError(
+                f"Could not reach Vikunja at {self.base_url}: {e.reason}"
+            ) from e
         except TimeoutError as e:
             raise VikunjaError("The request to Vikunja timed out.") from e
 
@@ -196,7 +208,7 @@ class VikunjaClient:
         return tasks
 
     def get_task(self, task_id: int) -> dict:
-        return self._request("GET", f"/tasks/{task_id}")
+        return cast(dict, self._request("GET", f"/tasks/{task_id}"))
 
     def update_task(self, task_id: int, **changes) -> dict:
         # Vikunja's update endpoint replaces the whole task record, so we
@@ -205,7 +217,7 @@ class VikunjaClient:
         # the title and every other field.
         task = self.get_task(task_id)
         task.update(changes)
-        return self._request("POST", f"/tasks/{task_id}", body=task)
+        return cast(dict, self._request("POST", f"/tasks/{task_id}", body=task))
 
     def delete_task(self, task_id: int) -> Any:
         return self._request("DELETE", f"/tasks/{task_id}")
@@ -213,7 +225,7 @@ class VikunjaClient:
     def create_task(self, project_id: int, title: str, **fields) -> dict:
         body = {"title": title}
         body.update({k: v for k, v in fields.items() if v is not None})
-        return self._request("PUT", f"/projects/{project_id}/tasks", body=body)
+        return cast(dict, self._request("PUT", f"/projects/{project_id}/tasks", body=body))
 
     # -- projects --------------------------------------------------------
 
@@ -221,7 +233,10 @@ class VikunjaClient:
         return self._request("GET", "/projects", params={"per_page": per_page}) or []
 
     def search_projects(self, name: str, per_page: int = 50) -> list:
-        return self._request("GET", "/projects", params={"s": name, "per_page": per_page}) or []
+        return (
+            self._request("GET", "/projects", params={"s": name, "per_page": per_page})
+            or []
+        )
 
     # -- labels ------------------------------------------------------------
 
@@ -229,7 +244,7 @@ class VikunjaClient:
         return self._request("GET", "/labels", params={"s": name, "per_page": per_page}) or []
 
     def create_label(self, title: str) -> dict:
-        return self._request("PUT", "/labels", body={"title": title})
+        return cast(dict, self._request("PUT", "/labels", body={"title": title}))
 
     def add_label_to_task(self, task_id: int, label_id: int) -> Any:
         return self._request("PUT", f"/tasks/{task_id}/labels", body={"label_id": label_id})
@@ -326,13 +341,18 @@ def _extract_due_date(text: str, now: datetime) -> tuple:
     """Extracts a due date/time expression from `text`. Returns
     (remaining_text, datetime or None)."""
 
-    def consume(match, day_or_dt):
+    def consume(match: Any, day_or_dt: Any) -> tuple:
         remaining = text[:match.start()] + text[match.end():]
         remaining, explicit_time = _extract_time(remaining)
         if isinstance(day_or_dt, datetime):
             dt = day_or_dt
             if explicit_time:
-                dt = dt.replace(hour=explicit_time[0], minute=explicit_time[1], second=0, microsecond=0)
+                dt = dt.replace(
+                    hour=explicit_time[0],
+                    minute=explicit_time[1],
+                    second=0,
+                    microsecond=0,
+                )
         else:
             hm = explicit_time or _default_time(now)
             dt = _combine(day_or_dt, hm, now.tzinfo)
@@ -453,8 +473,8 @@ def parse_quick_add(text: str, now: Optional[datetime] = None) -> ParsedTask:
         return ParsedTask(title=text[1:-1].strip())
 
     labels = []
-    for m in LABEL_RE.finditer(text):
-        labels.append(next(g for g in m.groups() if g))
+    for label_match in LABEL_RE.finditer(text):
+        labels.append(next(g for g in label_match.groups() if g))
     text = LABEL_RE.sub(" ", text)
 
     project = None
@@ -595,7 +615,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             {
                 "type": "label",
                 "text": "Create a personal API token in Vikunja under Settings → API Tokens "
-                        "(it needs read/write access to tasks, projects and labels), then fill it "
+                        "(it needs read/write access to tasks, projects and labels), "
+                        "then fill it "
                         "in below together with your Vikunja instance's base URL.",
             },
             {
@@ -608,13 +629,16 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 "type": "lineedit",
                 "property": "api_token",
                 "label": "API token",
-                "widget_properties": {"echoMode": 2, "placeholderText": "tk_..."},  # QLineEdit::Password
+                # QLineEdit::Password
+                "widget_properties": {"echoMode": 2, "placeholderText": "tk_..."},
             },
             {
                 "type": "lineedit",
                 "property": "default_project",
                 "label": "Default project for new tasks",
-                "widget_properties": {"placeholderText": "e.g. Inbox (used when no +project is given)"},
+                "widget_properties": {
+                    "placeholderText": "e.g. Inbox (used when no +project is given)"
+                },
             },
             {
                 "type": "checkbox",
@@ -652,7 +676,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             except VikunjaError:
                 projects = []
             return {p["id"]: p.get("title", "") for p in projects}
-        return self._cached("projects", fetch)
+        return cast(dict, self._cached("projects", fetch))
 
     def _task_web_url(self, task_id) -> str:
         return f"{self._base_url}/tasks/{task_id}"
@@ -674,7 +698,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return StandardItem(
             id="vikunja-config-hint",
             text="Vikunja is not configured yet",
-            subtext="Open Albert's settings → Plugins → Vikunja to set the base URL and API token",
+            subtext=(
+                "Open Albert's settings → Plugins → Vikunja to set the base URL "
+                "and API token"
+            ),
             icon_factory=self.makeIcon,
         )
 
@@ -702,10 +729,19 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             items.append(StandardItem(
                 id=f"vikunja-nav-{key}",
                 text=text,
-                subtext=f"Type \"{key}\" (or press Tab) to list these tasks here · Enter opens Vikunja",
+                subtext=(
+                    f'Type "{key}" (or press Tab) to list these tasks here '
+                    "· Enter opens Vikunja"
+                ),
                 icon_factory=self.makeIcon,
                 input_action_text=key,
-                actions=[Action("open", "Open in Vikunja", lambda k=key: openUrl(self._filter_web_url(k)))],
+                actions=[
+                    Action(
+                        "open",
+                        "Open in Vikunja",
+                        lambda k=key: openUrl(self._filter_web_url(k)),
+                    )
+                ],
             ))
         return items
 
@@ -723,7 +759,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         if not parsed.title:
             return self._add_hint_item()
 
-        bits = [f"Project: {parsed.project or self._default_project or 'not set - configure a default'}"]
+        project = parsed.project or self._default_project or "not set - configure a default"
+        bits = [f"Project: {project}"]
         if parsed.labels:
             bits.append("Labels: " + ", ".join(parsed.labels))
         if parsed.priority:
@@ -739,7 +776,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             text=parsed.title,
             subtext=subtext,
             icon_factory=self.makeIcon,
-            actions=[Action("create", "Create task in Vikunja", self._make_add_action(raw_text))],
+            actions=[
+                Action("create", "Create task in Vikunja", self._make_add_action(raw_text))
+            ],
         )
 
     def _task_item(self, task: dict, project_map: dict):
@@ -763,7 +802,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
         labels = task.get("labels") or []
         if labels:
-            parts.append(", ".join(l.get("title", "") for l in labels))
+            parts.append(", ".join(label.get("title", "") for label in labels))
 
         project_name = project_map.get(task.get("project_id"))
         if project_name:
@@ -798,7 +837,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         try:
             self.client.update_task(task_id, done=done)
             self._cache.clear()
-            Notification(title="Vikunja", text="Marked as done" if done else "Marked as not done").send()
+            Notification(
+                title="Vikunja", text="Marked as done" if done else "Marked as not done"
+            ).send()
         except VikunjaError as e:
             print(str(e))
             Notification(title="Vikunja — error", text=str(e)).send()
@@ -807,7 +848,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         try:
             self.client.delete_task(task_id)
             self._cache.clear()
-            Notification(title="Vikunja", text=f'Deleted "{title}" (recoverable from trash for 30 days)').send()
+            Notification(
+                title="Vikunja",
+                text=f'Deleted "{title}" (recoverable from trash for 30 days)',
+            ).send()
         except VikunjaError as e:
             error(str(e))
             Notification(title="Vikunja — error", text=str(e)).send()
@@ -830,7 +874,14 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         ids = []
         for name in names:
             existing = client.search_labels(name)
-            match = next((l for l in existing if l.get("title", "").lower() == name.lower()), None)
+            match = next(
+                (
+                    label
+                    for label in existing
+                    if label.get("title", "").lower() == name.lower()
+                ),
+                None,
+            )
             if match is None:
                 match = client.create_label(name)
             ids.append(match["id"])
@@ -851,7 +902,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 for label_id in self._resolve_labels(parsed.labels):
                     self.client.add_label_to_task(task["id"], label_id)
                 self._cache.clear()
-                Notification(title="Vikunja", text=f'Created "{parsed.title}" in {project_name}').send()
+                Notification(
+                    title="Vikunja", text=f'Created "{parsed.title}" in {project_name}'
+                ).send()
             except VikunjaError as e:
                 error(str(e))
                 Notification(title="Vikunja — error", text=str(e)).send()
@@ -916,7 +969,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
         try:
             if lower == "":
-                yield self._nav_items() + [self._add_hint_item()]
+                yield [*self._nav_items(), self._add_hint_item()]
                 return
 
             if lower in FILTER_EXPRESSIONS:
@@ -925,7 +978,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 yield results or [self._empty_item(f"No {FILTER_LABELS[lower].lower()}")]
                 return
 
-            if lower in ("add", "new") or lower.startswith("add ") or lower.startswith("new "):
+            if lower in ("add", "new") or lower.startswith(("add ", "new ")):
                 raw = query.split(" ", 1)[1] if " " in query else ""
                 yield [self._add_preview_item(raw.strip())]
                 return
