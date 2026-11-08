@@ -79,6 +79,7 @@ _UNAVAILABLE = {
     "pycountry",
     "pytz",
     "requests",
+    "socketio",
     "syncall",
     "taskw",
     "thefuzz",
@@ -102,6 +103,21 @@ class _StubModule(types.ModuleType):
     def __call__(self, *args, **kwargs):
         return _StubModule(f"{self.__name__}()")
 
+    # Some plugins build a module-level lookup from a constant in a dependency,
+    # e.g. `for k, v in requests.status_codes._codes.items()`. An empty iterable
+    # keeps that importable without pretending the stub has real data.
+    def __iter__(self):
+        return iter(())
+
+    def __len__(self):
+        return 0
+
+    def __contains__(self, item):
+        return False
+
+    def __getitem__(self, key):
+        return _StubModule(f"{self.__name__}[{key!r}]")
+
 
 class _StubLoader:
     def create_module(self, spec):
@@ -114,6 +130,37 @@ class _StubLoader:
         if module.__name__ == "gi":
             module.require_version = lambda *a, **k: None
             module.require_foreign = lambda *a, **k: None
+        # emoji_picker refuses to load unless this looks like em-keyboard rather
+        # than the unrelated `empy` module that also installs an `em`.
+        if module.__name__ == "em":
+            module.parse_emojis = lambda *a, **k: {}
+        # Several plugins catch requests' exception classes, and their tests
+        # raise the same classes. A bare stub is not an exception, so give the
+        # stand-in the hierarchy the code is written against.
+        if module.__name__ == "requests":
+
+            class RequestException(Exception):
+                pass
+
+            class ConnectionError(RequestException):
+                pass
+
+            class Timeout(RequestException):
+                pass
+
+            class HTTPError(RequestException):
+                pass
+
+            module.RequestException = RequestException
+            module.ConnectionError = ConnectionError
+            module.Timeout = Timeout
+            module.HTTPError = HTTPError
+            module.exceptions = types.SimpleNamespace(
+                RequestException=RequestException,
+                ConnectionError=ConnectionError,
+                Timeout=Timeout,
+                HTTPError=HTTPError,
+            )
 
 
 def _is_installed(root: str) -> bool:
