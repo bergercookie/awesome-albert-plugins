@@ -120,8 +120,33 @@ def test_search_matches_a_word_from_the_middle_of_a_title(monkeypatch):
 
     assert [item.text for item in items] == ["Review the quarterly budget spreadsheet"]
     assert client.calls == [
-        {"filter_expr": "done = false", "search": "budget", "per_page": 100}
+        {"filter_expr": "done = false", "search": "budget", "per_page": 100},
+        {"filter_expr": "done = false", "search": None, "per_page": 100},
     ]
+
+
+def test_fold_ignores_case_and_greek_tonos():
+    assert vikunja._fold("ΜΑΡΜΑΡΑ") == "μαρμαρα"  # noqa: RUF001
+    assert vikunja._fold("μάρμαρα") == "μαρμαρα"
+    assert vikunja._fold("Μάρμαρα") == "μαρμαρα"
+
+
+def test_search_is_case_and_tonos_insensitive(monkeypatch):
+    class _AccentSensitiveClient:
+        """Simulates a server whose search does not fold accents: the server
+        returns nothing for the unaccented query, so the task can only be found
+        by the local pass."""
+
+        def get_all_tasks(self, filter_expr=None, search=None, per_page=100, max_pages=20):
+            if search is not None:
+                return []
+            return [_task(1, "Μάρμαρα στην παραλία")]
+
+    plugin = _search_plugin(monkeypatch, _AccentSensitiveClient())
+
+    items = plugin._fetch_search("ΜΑΡΜΑΡΑ", {})  # noqa: RUF001
+
+    assert [item.text for item in items] == ["Μάρμαρα στην παραλία"]
 
 
 def test_search_falls_back_to_local_fuzzy_matching_for_typos(monkeypatch):

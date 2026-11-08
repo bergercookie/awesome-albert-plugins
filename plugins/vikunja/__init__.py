@@ -10,6 +10,7 @@ import re
 import ssl
 import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -495,17 +496,25 @@ def _parse_api_datetime(value: Optional[str]):
     return dt.astimezone()
 
 
+def _fold(text: str) -> str:
+    """Case-folds and strips diacritics so search ignores case and accents,
+    including Greek tonos: "μαρμαρα" and "μάρμαρα" compare equal."""
+    decomposed = unicodedata.normalize("NFD", (text or "").casefold())
+    return "".join(char for char in decomposed if not unicodedata.combining(char))
+
+
 def _fuzzy_score(query: str, haystacks: list) -> float:
     """Scores `query` against each (text, weight) haystack: an exact substring
     hit scores highest, otherwise the best per-word similarity ratio is used
     (below a similarity floor this counts as no match, to avoid short queries
-    spuriously matching unrelated long text)."""
-    q = query.lower().strip()
+    spuriously matching unrelated long text). Matching ignores case and
+    diacritics, including Greek tonos."""
+    q = _fold(query).strip()
     if not q:
         return 0.0
     best = 0.0
     for text, weight in haystacks:
-        text = (text or "").lower()
+        text = _fold(text)
         if not text:
             continue
         if q in text:
@@ -871,24 +880,30 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return scored
 
     def _fetch_search(self, query: str, project_map: dict) -> list:
-        # Let the server match titles and descriptions across all tasks instead
-        # of downloading one page and matching locally - a task can be anywhere
-        # in the collection, not just on the first page.
-        tasks = self._cached(
-            f"search:{query.lower()}",
+        # Ask the server first so tasks past the first page are considered, and
+        # merge in a local scan of the open tasks: the server's search depends
+        # on the database collation and may treat accented and unaccented text
+        # as different, while our local matcher folds case and diacritics.
+        server_tasks = self._cached(
+            f"search:{query.casefold()}",
             lambda: self.client.get_all_tasks(
                 filter_expr="done = false", search=query, per_page=100
             ),
         )
+        local_tasks = self._cached(
+            "search:all-open",
+            lambda: self.client.get_all_tasks(filter_expr="done = false", per_page=100),
+        )
+        tasks = []
+        seen = set()
+        for task in server_tasks + local_tasks:
+            task_id = task.get("id")
+            if task_id in seen:
+                continue
+            seen.add(task_id)
+            tasks.append(task)
+
         scored = self._score_tasks(query, tasks)
-        if not scored:
-            # The server search is substring based, so a typo returns nothing.
-            # Fall back to a local fuzzy pass so typo'd queries still match.
-            tasks = self._cached(
-                "search:all-open",
-                lambda: self.client.get_all_tasks(filter_expr="done = false", per_page=100),
-            )
-            scored = self._score_tasks(query, tasks)
         return [self._task_item(t, project_map) for _, t in scored[:30]]
 
     def items(self, ctx):
