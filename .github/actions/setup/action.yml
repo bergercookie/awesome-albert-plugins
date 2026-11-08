@@ -22,4 +22,11 @@ runs:
       shell: bash
       run: |
         eval "$(devbox shellenv --init-hook)"
+        # The init hook builds .venv, but it can run before `just` is on the
+        # PATH (or be skipped when a Python-only .venv already exists). Make
+        # sure the tooling is really there before later steps call `just`.
+        if [ ! -x .venv/bin/ruff ] || [ ! -x .venv/bin/mypy ] || [ ! -x .venv/bin/pytest ]; then
+          [ -x .venv/bin/python ] || python -m venv .venv
+          just install-tools
+        fi
         echo "$PATH" | tr ':' '\n' >> "$GITHUB_PATH"
