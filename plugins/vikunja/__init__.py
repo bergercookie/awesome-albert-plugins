@@ -150,9 +150,10 @@ class VikunjaClient:
     # -- tasks ---------------------------------------------------------
 
     def get_tasks(self, filter_expr: Optional[str] = None, search: Optional[str] = None,
-                   per_page: int = 100) -> list:
+                   per_page: int = 100, page: int = 1) -> list:
         params = {
             "per_page": per_page,
+            "page": page,
             "sort_by": ["due_date", "priority"],
             "order_by": ["asc", "desc"],
         }
@@ -161,6 +162,37 @@ class VikunjaClient:
         if search:
             params["s"] = search
         return self._request("GET", "/tasks", params=params) or []
+
+    def get_all_tasks(self, filter_expr: Optional[str] = None, search: Optional[str] = None,
+                      per_page: int = 100, max_pages: int = 20) -> list:
+        """Fetches every page of a task query.
+
+        Vikunja caps ``per_page`` at its configured ``maxitemsperpage`` (50 by
+        default), so asking for 200 tasks silently returns only the first page.
+        That made a search miss any task past the first page regardless of
+        where in the title the query appeared. Walk the pages instead, and
+        deduplicate by id in case the server's tie-breaking reorders results
+        between requests.
+        """
+        tasks = []
+        seen = set()
+        for page in range(1, max_pages + 1):
+            batch = self.get_tasks(
+                filter_expr=filter_expr, search=search, per_page=per_page, page=page
+            )
+            if not batch:
+                break
+            added = 0
+            for task in batch:
+                task_id = task.get("id")
+                if task_id in seen:
+                    continue
+                seen.add(task_id)
+                tasks.append(task)
+                added += 1
+            if added == 0:
+                break
+        return tasks
 
     def get_task(self, task_id: int) -> dict:
         return self._request("GET", f"/tasks/{task_id}")
@@ -598,6 +630,9 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         if cached and now - cached[0] < CACHE_TTL_SECONDS:
             return cached[1]
         value = fn()
+        if key not in self._cache and len(self._cache) >= 64:
+            oldest = min(self._cache, key=lambda k: self._cache[k][0])
+            del self._cache[oldest]
         self._cache[key] = (now, value)
         return value
 
@@ -822,17 +857,38 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         )
         return [self._task_item(t, project_map) for t in tasks]
 
-    def _fetch_search(self, query: str, project_map: dict) -> list:
-        tasks = self._cached("search:all-open", lambda: self.client.get_tasks(filter_expr="done = false", per_page=200))
+    @staticmethod
+    def _score_tasks(query: str, tasks: list) -> list:
         scored = []
-        for t in tasks:
+        for task in tasks:
             score = _fuzzy_score(query, [
-                (t.get("title"), 1.0),
-                (_strip_html(t.get("description") or ""), 0.6),
+                (task.get("title"), 1.0),
+                (_strip_html(task.get("description") or ""), 0.6),
             ])
             if score >= 0.3:
-                scored.append((score, t))
+                scored.append((score, task))
         scored.sort(key=lambda st: st[0], reverse=True)
+        return scored
+
+    def _fetch_search(self, query: str, project_map: dict) -> list:
+        # Let the server match titles and descriptions across all tasks instead
+        # of downloading one page and matching locally - a task can be anywhere
+        # in the collection, not just on the first page.
+        tasks = self._cached(
+            f"search:{query.lower()}",
+            lambda: self.client.get_all_tasks(
+                filter_expr="done = false", search=query, per_page=100
+            ),
+        )
+        scored = self._score_tasks(query, tasks)
+        if not scored:
+            # The server search is substring based, so a typo returns nothing.
+            # Fall back to a local fuzzy pass so typo'd queries still match.
+            tasks = self._cached(
+                "search:all-open",
+                lambda: self.client.get_all_tasks(filter_expr="done = false", per_page=100),
+            )
+            scored = self._score_tasks(query, tasks)
         return [self._task_item(t, project_map) for _, t in scored[:30]]
 
     def items(self, ctx):

@@ -86,8 +86,11 @@ project.
   tasks near midnight look off by an hour or two, that's a timezone mismatch
   between the server and where you are; there's no per-request override wired
   up here.
-- Search fetches your open (not-done) tasks and fuzzy-matches them locally,
-  so it also matches on description text, not just the title.
+- Search asks Vikunja's own task search (so it matches any part of a title or
+  description across all open tasks, not just the first page) and then
+  fuzzy-ranks the response locally. If the server finds no substring match (for
+  example because of a typo), it falls back to fuzzy-matching your open tasks
+  locally.
 - "in 3 months" / "in 2 years" use a flat 30-/365-day approximation rather
   than true calendar months/years.
 - Marking a task done/not-done re-fetches the task first and sends the whole
