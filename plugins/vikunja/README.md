@@ -24,6 +24,8 @@ Query, filter, complete and quickly add [Vikunja](https://vikunja.io) tasks from
      Grant it read/write on tasks, projects and labels.
    - **Default project** — which project new tasks go into when you don't
      specify one with `+project`.
+   - **Default reminder offset before the due date** — used when you type
+     `remindme` without a duration. Defaults to `30m`.
    - **Verify TLS certificate** — turn off only if your instance uses a
      self-signed certificate.
 
@@ -72,8 +74,23 @@ shows a desktop notification once it's done (or if something went wrong).
 If no `+project` is given, the task goes into your configured default
 project.
 
+**Reminders** — add `remindme` to a new task, or to a search query to attach a
+reminder to an existing task. The offset is relative to the task's due date:
+
+- `v add Call dentist remindme tomorrow` — 30 minutes before the due date by
+  default
+- `v add Call dentist remindme 1h tomorrow` — 1 hour before the due date
+- `v invoice remindme 30m` — search for "invoice", then **Enter** on the result
+  to set the reminder
+
+If a task has no due date, the reminder is set relative to now instead (e.g.
+`remindme 30m` means 30 minutes from now). Reminders are delivered by Vikunja
+(in-app or email, depending on your instance and user settings).
+
 **Acting on a task** — select any task (from a filter or a search) to get:
 
+- **Set reminder** — shown when the query contains `remindme`; keeps any
+  existing reminders on the task
 - **Mark as done** / **Mark as not done** (toggles)
 - **Open in Vikunja** — opens the task in your browser
 - **Delete task** — Vikunja soft-deletes for 30 days, so this is recoverable

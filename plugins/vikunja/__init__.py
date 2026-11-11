@@ -44,7 +44,12 @@ DEFAULT_TRIGGER = "v "
 CONFIG_BASE_URL = "base_url"
 CONFIG_API_TOKEN = "api_token"
 CONFIG_DEFAULT_PROJECT = "default_project"
+CONFIG_DEFAULT_REMINDER_OFFSET = "default_reminder_offset"
 CONFIG_VERIFY_SSL = "verify_ssl"
+
+DEFAULT_REMINDER_OFFSET = "30m"
+DEFAULT_REMINDER_OFFSET_SECONDS = 30 * 60
+REMINDME_KEYWORD = "remindme"
 
 CACHE_TTL_SECONDS = 2.0
 
@@ -219,6 +224,14 @@ class VikunjaClient:
         task.update(changes)
         return cast(dict, self._request("POST", f"/tasks/{task_id}", body=task))
 
+    def add_reminder(self, task_id: int, offset_seconds: int, now: datetime) -> dict:
+        task = self.get_task(task_id)
+        due = _parse_api_datetime(task.get("due_date"))
+        reminders = list(task.get("reminders") or [])
+        reminders.append(_build_reminder(due, offset_seconds, now))
+        task["reminders"] = reminders
+        return cast(dict, self._request("POST", f"/tasks/{task_id}", body=task))
+
     def delete_task(self, task_id: int) -> Any:
         return self._request("DELETE", f"/tasks/{task_id}")
 
@@ -264,11 +277,25 @@ class ParsedTask:
     labels: list = field(default_factory=list)
     priority: Optional[int] = None
     due: Optional[datetime] = None
+    reminder_offset: Optional[int] = None
 
 
 LABEL_RE = re.compile(r"\*(?:\"([^\"]+)\"|'([^']+)'|(\S+))")
 PROJECT_RE = re.compile(r"\+(?:\"([^\"]+)\"|'([^']+)'|(\S+))")
 PRIORITY_RE = re.compile(r"(?<!\S)!([1-5])(?!\S)")
+
+REMINDME_RE = re.compile(rf"\b{REMINDME_KEYWORD}\b", re.IGNORECASE)
+REMINDER_DURATION_RE = re.compile(
+    r"^\s+(?:in\s+)?(\d+)\s*"
+    r"(minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|w)\b"
+    r"(?:\s+(?:before|prior(?:\s+to)?))?",
+    re.IGNORECASE,
+)
+DURATION_RE = re.compile(
+    r"^\s*(\d+)\s*"
+    r"(minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|w)?\s*$",
+    re.IGNORECASE,
+)
 
 WEEKDAYS = {
     "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
@@ -295,6 +322,58 @@ END_OF_MONTH_RE = re.compile(r"\bend\s+of\s+month\b", re.IGNORECASE)
 ISO_DATE_RE = re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b")
 SLASH_DATE_RE = re.compile(r"\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b")
 DOT_DATE_RE = re.compile(r"\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\b")
+
+
+def _duration_seconds(amount: int, unit: Optional[str]) -> int:
+    unit = (unit or "m").lower()
+    if unit.startswith("min") or unit == "m":
+        return amount * 60
+    if unit.startswith("h"):
+        return amount * 3600
+    if unit.startswith("d"):
+        return amount * 86400
+    return amount * 7 * 86400
+
+
+def _parse_duration(value: str) -> Optional[int]:
+    match = DURATION_RE.match(value or "")
+    if not match:
+        return None
+    return _duration_seconds(int(match.group(1)), match.group(2))
+
+
+def _format_duration(seconds: int) -> str:
+    seconds = abs(int(seconds))
+    for unit_seconds, suffix in ((86400, "d"), (3600, "h"), (60, "m")):
+        if seconds and seconds % unit_seconds == 0:
+            return f"{seconds // unit_seconds}{suffix}"
+    return f"{seconds}s"
+
+
+def _extract_reminder(text: str, default_offset: int) -> tuple:
+    match = REMINDME_RE.search(text)
+    if not match:
+        return text, None
+    rest = text[match.end():]
+    duration = REMINDER_DURATION_RE.match(rest)
+    if duration:
+        offset = _duration_seconds(int(duration.group(1)), duration.group(2))
+        rest = rest[duration.end():]
+    else:
+        offset = default_offset
+    return (text[:match.start()] + rest).strip(), offset
+
+
+def _build_reminder(
+    due: Optional[datetime], offset_seconds: int, now: datetime
+) -> dict:
+    if due is not None:
+        return {
+            "reminder": (due - timedelta(seconds=offset_seconds)).isoformat(),
+            "relative_period": -int(offset_seconds),
+            "relative_to": "due_date",
+        }
+    return {"reminder": (now + timedelta(seconds=offset_seconds)).isoformat()}
 
 
 def _default_time(now: datetime) -> tuple:
@@ -460,17 +539,25 @@ def _extract_due_date(text: str, now: datetime) -> tuple:
     return text, None
 
 
-def parse_quick_add(text: str, now: Optional[datetime] = None) -> ParsedTask:
+def parse_quick_add(
+    text: str,
+    now: Optional[datetime] = None,
+    default_reminder_offset: int = DEFAULT_REMINDER_OFFSET_SECONDS,
+) -> ParsedTask:
     """Parses Vikunja "Quick Add Magic" syntax out of free-form task text:
     +project, *label (quote multi-word ones), !1..!5 priority, and natural
     language due dates ("tomorrow", "in 3 days", "next monday", "23/12", ...).
-    Wrapping the whole text in quotes disables all parsing.
+    A "remindme" keyword adds a reminder offset before the due date (or from
+    now if the task has no due date); a bare "remindme" uses the configured
+    default. Wrapping the whole text in quotes disables all parsing.
     """
     now = now or datetime.now().astimezone()
     text = text.strip()
 
     if len(text) >= 2 and ((text[0] == text[-1] == '"') or (text[0] == text[-1] == "'")):
         return ParsedTask(title=text[1:-1].strip())
+
+    text, reminder_offset = _extract_reminder(text, default_reminder_offset)
 
     labels = []
     for label_match in LABEL_RE.finditer(text):
@@ -493,7 +580,14 @@ def parse_quick_add(text: str, now: Optional[datetime] = None) -> ParsedTask:
 
     title = WHITESPACE_RE.sub(" ", text).strip(" -,.")
 
-    return ParsedTask(title=title, project=project, labels=labels, priority=priority, due=due)
+    return ParsedTask(
+        title=title,
+        project=project,
+        labels=labels,
+        priority=priority,
+        due=due,
+        reminder_offset=reminder_offset,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -561,6 +655,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         self._base_url = self.readConfig(CONFIG_BASE_URL, str) or ""
         self._api_token = self.readConfig(CONFIG_API_TOKEN, str) or ""
         self._default_project = self.readConfig(CONFIG_DEFAULT_PROJECT, str) or ""
+        self._default_reminder_offset = (
+            self.readConfig(CONFIG_DEFAULT_REMINDER_OFFSET, str)
+            or DEFAULT_REMINDER_OFFSET
+        )
         verify = self.readConfig(CONFIG_VERIFY_SSL, bool)
         self._verify_ssl = True if verify is None else verify
 
@@ -570,7 +668,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return DEFAULT_TRIGGER
 
     def synopsis(self, query):
-        return "today | overdue | all | add <task text> | <search text>"
+        return "today | overdue | all | add <task text> | <search text> [remindme <offset>]"
 
     # -- config, bound to the settings widget below -----------------------
 
@@ -600,6 +698,22 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
     def default_project(self, value):
         self._default_project = (value or "").strip()
         self.writeConfig(CONFIG_DEFAULT_PROJECT, self._default_project)
+
+    @property
+    def default_reminder_offset(self):
+        return self._default_reminder_offset
+
+    @default_reminder_offset.setter
+    def default_reminder_offset(self, value):
+        self._default_reminder_offset = (
+            (value or "").strip() or DEFAULT_REMINDER_OFFSET
+        )
+        self.writeConfig(CONFIG_DEFAULT_REMINDER_OFFSET, self._default_reminder_offset)
+
+    @property
+    def default_reminder_offset_seconds(self) -> int:
+        seconds = _parse_duration(self._default_reminder_offset)
+        return DEFAULT_REMINDER_OFFSET_SECONDS if seconds is None else seconds
 
     @property
     def verify_ssl(self):
@@ -639,6 +753,12 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 "widget_properties": {
                     "placeholderText": "e.g. Inbox (used when no +project is given)"
                 },
+            },
+            {
+                "type": "lineedit",
+                "property": "default_reminder_offset",
+                "label": "Default reminder offset before the due date",
+                "widget_properties": {"placeholderText": DEFAULT_REMINDER_OFFSET},
             },
             {
                 "type": "checkbox",
@@ -753,9 +873,21 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self.makeIcon,
         )
 
+    def _remindme_hint_item(self):
+        default = _format_duration(self.default_reminder_offset_seconds)
+        return StandardItem(
+            id="vikunja-remindme-hint",
+            text="Type a task to set a reminder for",
+            subtext=(
+                f'e.g. "invoice remindme 1h" · without a duration it reminds '
+                f"{default} before the due date"
+            ),
+            icon_factory=self.makeIcon,
+        )
+
     def _add_preview_item(self, raw_text: str, no_matches: bool = False):
         now = datetime.now().astimezone()
-        parsed = parse_quick_add(raw_text, now)
+        parsed = parse_quick_add(raw_text, now, self.default_reminder_offset_seconds)
         if not parsed.title:
             return self._add_hint_item()
 
@@ -767,6 +899,12 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             bits.append(PRIORITY_NAMES.get(parsed.priority, f"Priority {parsed.priority}"))
         if parsed.due:
             bits.append("Due " + parsed.due.strftime("%a %d %b %H:%M"))
+        if parsed.reminder_offset is not None:
+            offset = _format_duration(parsed.reminder_offset)
+            if parsed.due:
+                bits.append(f"Reminder {offset} before due")
+            else:
+                bits.append(f"Reminder in {offset} (no due date)")
         subtext = "Create task in Vikunja · " + "  ·  ".join(bits)
         if no_matches:
             subtext = "No matching tasks · " + subtext
@@ -781,7 +919,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             ],
         )
 
-    def _task_item(self, task: dict, project_map: dict):
+    def _task_item(self, task: dict, project_map: dict, reminder_offset=None):
         done = bool(task.get("done"))
         title = task.get("title") or "(untitled task)"
         due_dt = _parse_api_datetime(task.get("due_date"))
@@ -795,6 +933,13 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             parts.append(f"Overdue · due {when}" if due_dt < now else f"Due {when}")
         else:
             parts.append("No due date")
+
+        if reminder_offset is not None:
+            offset = _format_duration(reminder_offset)
+            if due_dt:
+                parts.append(f"Reminder {offset} before due")
+            else:
+                parts.append(f"Reminder in {offset} (no due date)")
 
         priority = task.get("priority") or 0
         if priority and not done:
@@ -815,20 +960,33 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         task_id = task["id"]
         complete_text = "Mark as not done" if done else "Mark as done"
 
+        actions = []
+        if reminder_offset is not None:
+            offset = _format_duration(reminder_offset)
+            action_text = (
+                f"Remind {offset} before due" if due_dt else f"Remind in {offset}"
+            )
+            actions.append(Action(
+                "set-reminder",
+                action_text,
+                lambda tid=task_id, o=reminder_offset: self._set_reminder(tid, o),
+            ))
+        actions.extend([
+            Action("toggle-done", complete_text,
+                   lambda tid=task_id, d=done: self._toggle_done(tid, not d)),
+            Action("open", "Open in Vikunja",
+                   lambda tid=task_id: openUrl(self._task_web_url(tid))),
+            Action("delete", "Delete task",
+                   lambda tid=task_id, t=title: self._delete_task(tid, t)),
+        ])
+
         return StandardItem(
             id=f"vikunja-task-{task_id}",
             text=title,
             subtext="  ·  ".join(parts),
             icon_factory=self.makeIcon,
             input_action_text=title,
-            actions=[
-                Action("toggle-done", complete_text,
-                       lambda tid=task_id, d=done: self._toggle_done(tid, not d)),
-                Action("open", "Open in Vikunja",
-                       lambda tid=task_id: openUrl(self._task_web_url(tid))),
-                Action("delete", "Delete task",
-                       lambda tid=task_id, t=title: self._delete_task(tid, t)),
-            ],
+            actions=actions,
         )
 
     # -- actions --------------------------------------------------------
@@ -852,6 +1010,23 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 title="Vikunja",
                 text=f'Deleted "{title}" (recoverable from trash for 30 days)',
             ).send()
+        except VikunjaError as e:
+            error(str(e))
+            Notification(title="Vikunja — error", text=str(e)).send()
+
+    def _set_reminder(self, task_id, offset_seconds):
+        try:
+            now = datetime.now().astimezone()
+            task = self.client.add_reminder(task_id, offset_seconds, now)
+            self._cache.clear()
+            due = _parse_api_datetime(task.get("due_date"))
+            offset = _format_duration(offset_seconds)
+            text = (
+                f"Reminder set {offset} before the due date"
+                if due
+                else f"Reminder set in {offset} (task has no due date)"
+            )
+            Notification(title="Vikunja", text=text).send()
         except VikunjaError as e:
             error(str(e))
             Notification(title="Vikunja — error", text=str(e)).send()
@@ -890,7 +1065,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
     def _make_add_action(self, raw_text: str):
         def _do_add():
             now = datetime.now().astimezone()
-            parsed = parse_quick_add(raw_text, now)
+            parsed = parse_quick_add(raw_text, now, self.default_reminder_offset_seconds)
             try:
                 project_id, project_name = self._resolve_project(parsed.project)
                 task = self.client.create_task(
@@ -898,6 +1073,11 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                     parsed.title,
                     due_date=parsed.due.isoformat() if parsed.due else None,
                     priority=parsed.priority or 0,
+                    reminders=(
+                        [_build_reminder(parsed.due, parsed.reminder_offset, now)]
+                        if parsed.reminder_offset is not None
+                        else None
+                    ),
                 )
                 for label_id in self._resolve_labels(parsed.labels):
                     self.client.add_label_to_task(task["id"], label_id)
@@ -932,7 +1112,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         scored.sort(key=lambda st: st[0], reverse=True)
         return scored
 
-    def _fetch_search(self, query: str, project_map: dict) -> list:
+    def _fetch_search(self, query: str, project_map: dict, reminder_offset=None) -> list:
         # Ask the server first so tasks past the first page are considered, and
         # merge in a local scan of the open tasks: the server's search depends
         # on the database collation and may treat accented and unaccented text
@@ -957,7 +1137,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             tasks.append(task)
 
         scored = self._score_tasks(query, tasks)
-        return [self._task_item(t, project_map) for _, t in scored[:30]]
+        return [
+            self._task_item(t, project_map, reminder_offset)
+            for _, t in scored[:30]
+        ]
 
     def items(self, ctx):
         query = ctx.query.strip()
@@ -983,8 +1166,20 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 yield [self._add_preview_item(raw.strip())]
                 return
 
+            search_query, reminder_offset = _extract_reminder(
+                query, self.default_reminder_offset_seconds
+            )
+            if not search_query:
+                yield [self._remindme_hint_item()]
+                return
+
             project_map = self._project_map()
-            results = self._fetch_search(query, project_map)
+            if reminder_offset is None:
+                results = self._fetch_search(search_query, project_map)
+            else:
+                results = self._fetch_search(
+                    search_query, project_map, reminder_offset=reminder_offset
+                )
             yield results or [self._add_preview_item(query, no_matches=True)]
 
         except VikunjaError as e:
