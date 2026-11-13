@@ -166,16 +166,6 @@ def download_logo_for_code(code: str) -> bytes:
 # plugin main functions -----------------------------------------------------------------------
 
 
-def get_uniq_elements(seq):
-    """Return only the unique elements off the list - Preserve the order.
-
-    .. ref:: https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-whilst-preserving-order
-    """
-    seen = set()
-    seen_add = seen.add
-    return [x for x in seq if not (x in seen or seen_add(x))]
-
-
 # supplementary functions ---------------------------------------------------------------------
 
 
@@ -311,6 +301,30 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             ],
         )
 
+    def get_as_state_item(self, state: str) -> StandardItem:
+        """Return an item for a US state - ready to be rendered by Albert."""
+        iana_tz = us_states_to_tz[state]
+        utc_dt = pytz.utc.localize(datetime.utcnow())
+        dst_dt = utc_dt.astimezone(pytz.timezone(iana_tz))
+
+        text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
+        subtext = f"[{iana_tz}] | {state} (State)"
+
+        return StandardItem(
+            id=f"timezones-state-{iana_tz}",
+            icon_factory=self.makeIcon,
+            text=text,
+            subtext=subtext,
+            input_action_text=iana_tz,
+            actions=[
+                Action(
+                    "open",
+                    "Open timezone info",
+                    lambda u=iana_tz: openUrl(f"https://en.wikipedia.org/wiki/{u}"),
+                ),
+            ],
+        )
+
     def save_data(self, data: str, data_name: str):
         """Save a piece of data in the configuration directory."""
         with open(self.config_path / data_name, "w") as f:
@@ -332,104 +346,46 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
 
             query_str = ctx.query.strip().lower()
 
-            # search for cities in both keys and values
-            matched = []
+            # Score every candidate - cities matched via their full key or
+            # value, and US states - so that they can all be ranked by match
+            # quality instead of appending states after all the cities.
+            city_scores = {}
 
-            # Search in full_name_to_city keys (format: "USTexasAustin")
-            matched.extend([
-                elem for elem in process.extract(query_str, full_name_to_city.keys(), limit=8)
-            ])
+            for choice, score in process.extract(
+                query_str, full_name_to_city.keys(), limit=8
+            ):
+                city = full_name_to_city[choice]
+                city_scores[city] = max(city_scores.get(city, 0), score)
 
-            # Search in full_name_to_city values (city names like "Austin")
-            matched.extend([
-                elem for elem in process.extract(query_str, full_name_to_city.values(), limit=8)
-            ])
+            for city, score in process.extract(
+                query_str, full_name_to_city.values(), limit=8
+            ):
+                city_scores[city] = max(city_scores.get(city, 0), score)
 
-            print(matched)
-
-            # Get unique cities from keys
-            unique_cities_from_keys = get_uniq_elements(
-                [full_name_to_city[m[0]] for m in matched if m[0] in full_name_to_city]
+            state_scores = dict(
+                process.extract(query_str, list(us_states_to_tz.keys()), limit=8)
             )
 
-            # Get unique cities from values
-            unique_cities_from_values = get_uniq_elements(
-                [m[0] for m in matched if m[0] in full_name_to_city.values()]
-            )
-
-            # Combine both lists
-            unique_cities_matched = get_uniq_elements(unique_cities_from_keys + unique_cities_from_values)
-
-            # add own timezone:
-            if local_tz_str in unique_cities_matched:
-                unique_cities_matched.remove(local_tz_str)
-                unique_cities_matched.insert(0, local_tz_str)
-            results.extend([self.get_as_item(m) for m in unique_cities_matched])
-
-            # search for US states
-            matched_states = [
-                elem for elem in process.extract(query_str, list(us_states_to_tz.keys()), limit=8)
+            candidates = [
+                (score, "city", city) for city, score in city_scores.items()
             ]
-            unique_states_matched = get_uniq_elements([m[0] for m in matched_states])
+            candidates += [
+                (score, "state", state) for state, score in state_scores.items()
+            ]
+            candidates.sort(key=lambda candidate: candidate[0], reverse=True)
 
-            # create items for US states
-            for state in unique_states_matched:
-                iana_tz = us_states_to_tz[state]
-                utc_dt = pytz.utc.localize(datetime.utcnow())
-                dst_tz = pytz.timezone(iana_tz)
-                dst_dt = utc_dt.astimezone(dst_tz)
+            local_index = None
+            for _, kind, name in candidates:
+                if kind == "city":
+                    results.append(self.get_as_item(name))
+                    if name == local_tz_str:
+                        local_index = len(results) - 1
+                else:
+                    results.append(self.get_as_state_item(name))
 
-                text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
-                subtext = f"[{iana_tz}] | {state} (State)"
-
-                results.append(
-                    StandardItem(
-                        id=f"timezones-state-{iana_tz}",
-                        icon_factory=self.makeIcon,
-                        text=text,
-                        subtext=subtext,
-                        input_action_text=iana_tz,
-                        actions=[
-                            Action("open", "Open timezone info", lambda u=iana_tz: openUrl(f"https://en.wikipedia.org/wiki/{u}")),
-                        ],
-                    )
-                )
-
-            # prioritize exact matches at the top
-            if query_str in us_states_to_tz:
-                state = query_str
-                iana_tz = us_states_to_tz[state]
-                utc_dt = pytz.utc.localize(datetime.utcnow())
-                dst_tz = pytz.timezone(iana_tz)
-                dst_dt = utc_dt.astimezone(dst_tz)
-
-                text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
-                subtext = f"[{iana_tz}] | {state} (State)"
-
-                # Insert at the beginning if not already present
-                exact_match_item = StandardItem(
-                    id=f"timezones-state-exact-{iana_tz}",
-                    icon_factory=self.makeIcon,
-                    text=text,
-                    subtext=subtext,
-                    input_action_text=iana_tz,
-                    actions=[
-                        Action("open", "Open timezone info", lambda u=iana_tz: openUrl(f"https://en.wikipedia.org/wiki/{u}")),
-                    ],
-                )
-
-                # Check if we already have this exact match
-                if not any(item.id == f"timezones-state-exact-{iana_tz}" for item in results):
-                    results.insert(0, exact_match_item)
-
-            if query_str in full_name_to_city.values():
-                city = query_str
-                exact_match_item = self.get_as_item(city)
-                exact_match_item.id = f"timezones-city-exact-{city}"
-
-                # Check if we already have this exact match
-                if not any(item.id == f"timezones-city-exact-{city}" for item in results):
-                    results.insert(0, exact_match_item)
+            # Keep the local timezone on top so it is easy to compare against.
+            if local_index is not None:
+                results.insert(0, results.pop(local_index))
 
         except Exception:  # user to report error
             trace = traceback.format_exc()
