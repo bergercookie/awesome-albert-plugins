@@ -46,6 +46,60 @@ country_to_cities = {
 }
 countries = list(country_to_code.keys())
 
+# US states -> timezone mapping
+us_states_to_tz = {
+    "Alabama": "America/Chicago",
+    "Alaska": "America/Anchorage",
+    "Arizona": "America/Phoenix",
+    "Arkansas": "America/Chicago",
+    "California": "America/Los_Angeles",
+    "Colorado": "America/Denver",
+    "Connecticut": "America/New_York",
+    "Delaware": "America/New_York",
+    "Florida": "America/New_York",
+    "Georgia": "America/New_York",
+    "Hawaii": "Pacific/Honolulu",
+    "Idaho": "America/Boise",
+    "Illinois": "America/Chicago",
+    "Indiana": "America/Indianapolis",
+    "Iowa": "America/Chicago",
+    "Kansas": "America/Chicago",
+    "Kentucky": "America/New_York",
+    "Louisiana": "America/Chicago",
+    "Maine": "America/New_York",
+    "Maryland": "America/New_York",
+    "Massachusetts": "America/New_York",
+    "Michigan": "America/Detroit",
+    "Minnesota": "America/Chicago",
+    "Mississippi": "America/Chicago",
+    "Missouri": "America/Chicago",
+    "Montana": "America/Denver",
+    "Nebraska": "America/Chicago",
+    "Nevada": "America/Los_Angeles",
+    "New Hampshire": "America/New_York",
+    "New Jersey": "America/New_York",
+    "New Mexico": "America/Phoenix",
+    "New York": "America/New_York",
+    "North Carolina": "America/New_York",
+    "North Dakota": "America/Chicago",
+    "Ohio": "America/New_York",
+    "Oklahoma": "America/Chicago",
+    "Oregon": "America/Los_Angeles",
+    "Pennsylvania": "America/New_York",
+    "Rhode Island": "America/New_York",
+    "South Carolina": "America/New_York",
+    "South Dakota": "America/Chicago",
+    "Tennessee": "America/Chicago",
+    "Texas": "America/Chicago",
+    "Utah": "America/Denver",
+    "Vermont": "America/New_York",
+    "Virginia": "America/New_York",
+    "Washington": "America/Los_Angeles",
+    "West Virginia": "America/New_York",
+    "Wisconsin": "America/Chicago",
+    "Wyoming": "America/Denver",
+}
+
 
 def get_local_tz_name() -> str:
     """IANA name of the local timezone, or "" if it can't be determined.
@@ -75,6 +129,25 @@ full_name_to_city = {
     f"{city_to_code[city]}{country.replace(' ', '')}{get_pretty_city_name(city)}": city
     for country in countries
     for city in country_to_cities[country]
+}
+
+# timezone abbreviation -> IANA timezone name mapping
+TZ_ABBREV_TO_IANA = {
+    "UTC": "Etc/UTC",
+    "GMT": "Etc/GMT",
+    "CST": "America/Chicago",
+    "CDT": "America/Chicago",
+    "EST": "America/New_York",
+    "EDT": "America/New_York",
+    "MST": "America/Denver",
+    "MDT": "America/Denver",
+    "PST": "America/Los_Angeles",
+    "PDT": "America/Los_Angeles",
+    "JST": "Asia/Tokyo",
+    "ET": "America/New_York",
+    "CT": "America/Chicago",
+    "PT": "America/Los_Angeles",
+    "MT": "America/Denver",
 }
 
 
@@ -222,9 +295,14 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         subtext = f"[{code}] | {city}"
         url = f"https://www.zeitverschiebung.net/en/timezone/{city.replace('/', '--').lower()}"
 
+        def icon_factory():
+            if code == "US":
+                return Icon.image(self.get_logo_path_for_code("US"))
+            return Icon.image(self.get_logo_path_for_code(code))
+
         return StandardItem(
             id=f"timezones-{city}",
-            icon_factory=lambda c=code: Icon.image(self.get_logo_path_for_code(c)),
+            icon_factory=icon_factory,
             text=text,
             subtext=subtext,
             input_action_text=city,
@@ -252,22 +330,106 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         try:
             self.fetch_logos()
 
-            query_str = ctx.query.strip()
+            query_str = ctx.query.strip().lower()
 
-            matched = [
+            # search for cities in both keys and values
+            matched = []
+
+            # Search in full_name_to_city keys (format: "USTexasAustin")
+            matched.extend([
                 elem for elem in process.extract(query_str, full_name_to_city.keys(), limit=8)
-            ]
+            ])
+
+            # Search in full_name_to_city values (city names like "Austin")
+            matched.extend([
+                elem for elem in process.extract(query_str, full_name_to_city.values(), limit=8)
+            ])
+
             print(matched)
 
-            unique_cities_matched = get_uniq_elements(
-                [full_name_to_city[m[0]] for m in matched]
+            # Get unique cities from keys
+            unique_cities_from_keys = get_uniq_elements(
+                [full_name_to_city[m[0]] for m in matched if m[0] in full_name_to_city]
             )
+
+            # Get unique cities from values
+            unique_cities_from_values = get_uniq_elements(
+                [m[0] for m in matched if m[0] in full_name_to_city.values()]
+            )
+
+            # Combine both lists
+            unique_cities_matched = get_uniq_elements(unique_cities_from_keys + unique_cities_from_values)
 
             # add own timezone:
             if local_tz_str in unique_cities_matched:
                 unique_cities_matched.remove(local_tz_str)
                 unique_cities_matched.insert(0, local_tz_str)
             results.extend([self.get_as_item(m) for m in unique_cities_matched])
+
+            # search for US states
+            matched_states = [
+                elem for elem in process.extract(query_str, list(us_states_to_tz.keys()), limit=8)
+            ]
+            unique_states_matched = get_uniq_elements([m[0] for m in matched_states])
+
+            # create items for US states
+            for state in unique_states_matched:
+                iana_tz = us_states_to_tz[state]
+                utc_dt = pytz.utc.localize(datetime.utcnow())
+                dst_tz = pytz.timezone(iana_tz)
+                dst_dt = utc_dt.astimezone(dst_tz)
+
+                text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
+                subtext = f"[{iana_tz}] | {state} (State)"
+
+                results.append(
+                    StandardItem(
+                        id=f"timezones-state-{iana_tz}",
+                        icon_factory=self.makeIcon,
+                        text=text,
+                        subtext=subtext,
+                        input_action_text=iana_tz,
+                        actions=[
+                            Action("open", "Open timezone info", lambda u=iana_tz: openUrl(f"https://en.wikipedia.org/wiki/{u}")),
+                        ],
+                    )
+                )
+
+            # prioritize exact matches at the top
+            if query_str in us_states_to_tz:
+                state = query_str
+                iana_tz = us_states_to_tz[state]
+                utc_dt = pytz.utc.localize(datetime.utcnow())
+                dst_tz = pytz.timezone(iana_tz)
+                dst_dt = utc_dt.astimezone(dst_tz)
+
+                text = f'{dst_dt.strftime("%Y-%m-%d %H:%M %z (%Z)")}'
+                subtext = f"[{iana_tz}] | {state} (State)"
+
+                # Insert at the beginning if not already present
+                exact_match_item = StandardItem(
+                    id=f"timezones-state-exact-{iana_tz}",
+                    icon_factory=self.makeIcon,
+                    text=text,
+                    subtext=subtext,
+                    input_action_text=iana_tz,
+                    actions=[
+                        Action("open", "Open timezone info", lambda u=iana_tz: openUrl(f"https://en.wikipedia.org/wiki/{u}")),
+                    ],
+                )
+
+                # Check if we already have this exact match
+                if not any(item.id == f"timezones-state-exact-{iana_tz}" for item in results):
+                    results.insert(0, exact_match_item)
+
+            if query_str in full_name_to_city.values():
+                city = query_str
+                exact_match_item = self.get_as_item(city)
+                exact_match_item.id = f"timezones-city-exact-{city}"
+
+                # Check if we already have this exact match
+                if not any(item.id == f"timezones-city-exact-{city}" for item in results):
+                    results.insert(0, exact_match_item)
 
         except Exception:  # user to report error
             trace = traceback.format_exc()
