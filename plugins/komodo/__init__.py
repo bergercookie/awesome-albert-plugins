@@ -1,12 +1,12 @@
-"""Komodo - control the containers, stacks, resource syncs and procedures of a
-running Komodo (https://komo.do) server.
+"""Komodo - control the repositories, containers, stacks, resource syncs and
+procedures of a running Komodo (https://komo.do) server.
 
-The empty query lists everything Komodo knows about - containers, stacks,
-resource syncs and procedures - and anything typed narrows that list by name.
-Every result carries the actions that make sense for its kind:
-start/stop/restart/pause for containers and stacks, deploy and image pulls for
-stacks, image pulls for containers, refresh/execute for resource syncs and run
-for procedures.
+The empty query lists everything Komodo knows about - repositories, containers,
+stacks, resource syncs and procedures - and anything typed narrows that list by
+name. Every result carries the actions that make sense for its kind:
+git pulls for repositories, start/stop/restart/pause for containers and stacks,
+deploy and image pulls for stacks, image pulls for containers, refresh/execute
+for resource syncs and run for procedures.
 
 Everything goes through Komodo's REST API, authenticated with an API key and
 secret pair, and nothing but that one server is ever contacted.
@@ -37,7 +37,8 @@ md_iid = "5.0"
 md_version = "0.1"
 md_name = "Komodo"
 md_description = (
-    "Control the containers, stacks, resource syncs and procedures of a running Komodo server"
+    "Control the repositories, containers, stacks, resource syncs and procedures of a "
+    "running Komodo server"
 )
 md_license = "MIT"
 md_url = (
@@ -65,10 +66,10 @@ HTTP_TIMEOUT = 10
 # How long a command that prints the API key or secret may take. A password
 # manager that has to be unlocked can be slow, but not this slow.
 KEY_COMMAND_TIMEOUT = 30
-# How long the merged list of containers/stacks/syncs/procedures is reused
+# How long the merged list of repos/containers/stacks/syncs/procedures is reused
 # before Komodo is asked again. Short enough that a change made in Komodo's own
 # UI shows up here almost immediately, long enough that typing a search term
-# does not cost four HTTP round trips per keystroke.
+# does not cost five HTTP round trips per keystroke.
 ENTRIES_TTL = 5.0
 USER_AGENT = "awesome-albert-plugins/komodo"
 
@@ -148,10 +149,30 @@ PROCEDURE_STATE_LABELS = {
     "Unknown": "Never run",
 }
 
+# RepoState, as of Komodo's entities/repo.rs - like the two states above, no
+# `rename_all`, so PascalCase.
+REPO_STATE_CATEGORY = {
+    "Cloning": "restarting",
+    "Pulling": "restarting",
+    "Building": "restarting",
+    "Ok": "running",
+    "Failed": "error",
+    "Unknown": "unknown",
+}
+
+REPO_STATE_LABELS = {
+    "Cloning": "Cloning",
+    "Pulling": "Pulling",
+    "Building": "Building",
+    "Ok": "Up to date",
+    "Failed": "Failed",
+    "Unknown": "Unknown status",
+}
+
 # The order entries of equal search score are shown in - stacks first, since
 # they are usually what you are looking for, then containers, then syncs, then
-# procedures.
-KIND_PRIORITY = {"stack": 0, "container": 1, "sync": 2, "procedure": 3}
+# procedures, then repositories.
+KIND_PRIORITY = {"stack": 0, "container": 1, "sync": 2, "procedure": 3, "repo": 4}
 
 
 # plugin main functions -----------------------------------------------------------------------
@@ -206,6 +227,15 @@ def procedure_page_url(base_url: str, procedure_id: str) -> str:
     'http://localhost:9120/procedures/673e1f2b9c1d4a0012ab34cd'
     """
     return join_url(base_url, f"procedures/{quote(procedure_id, safe='')}")
+
+
+def repo_page_url(base_url: str, repo_id: str) -> str:
+    """Deep link to a repository's page in the Komodo web UI.
+
+    >>> repo_page_url("http://localhost:9120", "673e1f2b9c1d4a0012ab34cd")
+    'http://localhost:9120/repos/673e1f2b9c1d4a0012ab34cd'
+    """
+    return join_url(base_url, f"repos/{quote(repo_id, safe='')}")
 
 
 def container_page_url(base_url: str, server_id: str, container: str) -> str:
@@ -422,6 +452,17 @@ def fetch_procedures(base_url: str, api_key: str, api_secret: str) -> List[Dict]
     if not isinstance(payload, list):
         raise KomodoError(f"{base_url} answered the procedure list with something unexpected.")
     return [procedure for procedure in payload if isinstance(procedure, dict)]
+
+
+def fetch_repos(base_url: str, api_key: str, api_secret: str) -> List[Dict]:
+    """Every git repository configured in Komodo.
+
+    .. raises:: KomodoError
+    """
+    payload = call("POST", base_url, api_key, api_secret, "read/ListRepos", {"limit": 0})
+    if not isinstance(payload, list):
+        raise KomodoError(f"{base_url} answered the repo list with something unexpected.")
+    return [repo for repo in payload if isinstance(repo, dict)]
 
 
 def fetch_container_resource(
@@ -680,9 +721,9 @@ def fuzzy_score(needle: str, haystack: str) -> float:
 
 
 class Entry(NamedTuple):
-    """One row of the merged container/stack/sync/procedure list."""
+    """One row of the merged repo/container/stack/sync/procedure list."""
 
-    kind: str  # "stack", "container", "sync" or "procedure"
+    kind: str  # "stack", "container", "sync", "procedure" or "repo"
     key: str  # unique within its kind, used to build the StandardItem id
     search_text: str  # what a query is matched against
     data: Dict
@@ -693,6 +734,7 @@ def build_entries(
     containers: Sequence[Dict],
     syncs: Sequence[Dict],
     procedures: Sequence[Dict] = (),
+    repos: Sequence[Dict] = (),
 ) -> List[Entry]:
     """Turn the raw API responses into one flat, uniform list."""
     entries: List[Entry] = []
@@ -719,6 +761,14 @@ def build_entries(
         name = str(procedure.get("name") or "")
         entries.append(Entry("procedure", str(procedure.get("id") or ""), name, procedure))
 
+    for repo in repos:
+        info = repo_info(repo)
+        name = str(repo.get("name") or "")
+        server = str(info.get("server_name") or "")
+        git_repo = str(info.get("repo") or "")
+        search_text = " ".join(part for part in (name, server, git_repo) if part)
+        entries.append(Entry("repo", str(repo.get("id") or ""), search_text, repo))
+
     return entries
 
 
@@ -726,7 +776,8 @@ def search_entries(entries: Sequence[Entry], term: str) -> List[Entry]:
     """The *entries* matching *term*, best first.
 
     An empty *term* keeps every entry, grouped by kind (stacks, then
-    containers, then syncs, then procedures) and alphabetical within each group.
+    containers, then syncs, then procedures, then repos) and alphabetical within
+    each group.
     """
     term = term.strip()
 
@@ -859,6 +910,51 @@ def procedure_subtext(procedure: Dict) -> str:
         parts.append(f"{stages} stage" + ("" if stages == 1 else "s"))
 
     return " | ".join(parts)
+
+
+def repo_info(repo: Dict) -> Dict:
+    info = repo.get("info")
+    return info if isinstance(info, dict) else {}
+
+
+def repo_state_category(repo: Dict) -> str:
+    return REPO_STATE_CATEGORY.get(str(repo_info(repo).get("state") or ""), "unknown")
+
+
+def repo_subtext(repo: Dict) -> str:
+    info = repo_info(repo)
+    parts = [
+        "Repository",
+        REPO_STATE_LABELS.get(str(info.get("state") or ""), "Unknown status"),
+    ]
+
+    server = info.get("server_name")
+    if server:
+        parts.append(str(server))
+
+    git_repo = str(info.get("repo") or "").strip()
+    if git_repo:
+        branch = str(info.get("branch") or "").strip()
+        parts.append(f"{git_repo}@{branch}" if branch else git_repo)
+
+    latest = info.get("latest_hash")
+    if latest:
+        parts.append(str(latest))
+
+    return " | ".join(parts)
+
+
+def repo_source_url(repo: Dict) -> str:
+    """The git provider link configured for *repo*, if it is a web URL.
+
+    >>> repo_source_url({"info": {"repo_link": "https://github.com/owner/project"}})
+    'https://github.com/owner/project'
+    >>> repo_source_url({"info": {"repo_link": "file:///etc/passwd"}})
+    ''
+    """
+    link = str(repo_info(repo).get("repo_link") or "").strip()
+    parsed = urlparse(link)
+    return link if parsed.scheme in ("http", "https") and parsed.netloc else ""
 
 
 # main plugin class --------------------------------------------------------------------------
@@ -1019,7 +1115,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return "komo "
 
     def synopsis(self, query):
-        return "a container, stack, sync or procedure name, or nothing for everything"
+        return "a repo, container, stack, sync or procedure name, or nothing for everything"
 
     # -- secrets and cache ------------------------------------------------------------------
 
@@ -1066,8 +1162,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return secret
 
     def _entries_list(self) -> List[Entry]:
-        """The merged container/stack/sync/procedure list, refetched at most every
-        ENTRIES_TTL seconds.
+        """The merged repo/container/stack/sync/procedure list, refetched at most
+        every ENTRIES_TTL seconds.
 
         .. raises:: KomodoError
         """
@@ -1083,6 +1179,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             fetch_containers(self._url, api_key, api_secret),
             fetch_syncs(self._url, api_key, api_secret),
             fetch_procedures(self._url, api_key, api_secret),
+            fetch_repos(self._url, api_key, api_secret),
         )
 
         with self._lock:
@@ -1169,6 +1266,8 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return None
 
     def _entry_item(self, ctx, entry: Entry) -> StandardItem:
+        if entry.kind == "repo":
+            return self._repo_item(ctx, entry.data)
         if entry.kind == "stack":
             return self._stack_item(ctx, entry.data)
         if entry.kind == "container":
@@ -1176,6 +1275,35 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         if entry.kind == "procedure":
             return self._procedure_item(ctx, entry.data)
         return self._sync_item(ctx, entry.data)
+
+    def _repo_item(self, ctx, repo: Dict) -> StandardItem:
+        repo_id = str(repo.get("id") or "")
+        name = str(repo.get("name") or repo_id)
+        page = repo_page_url(self._url, repo_id)
+        source = repo_source_url(repo)
+
+        actions = [Action("open", "Open in browser", lambda url=page: openUrl(url))]
+        if source:
+            actions.append(
+                Action("source", "Open source in browser", lambda url=source: openUrl(url))
+            )
+        actions.extend(
+            [
+                Action(
+                    "pull", f"Pull {name}", lambda i=repo_id, n=name: self._pull_repo(i, n)
+                ),
+                Action("reload", "Reload the list", self._forget),
+            ]
+        )
+
+        return StandardItem(
+            id=f"{self.id()}.repo-{repo_id}",
+            icon_factory=self._make_icon(repo_state_category(repo)),
+            text=name,
+            subtext=repo_subtext(repo),
+            input_action_text=f"{ctx.trigger}{name}",
+            actions=actions,
+        )
 
     def _stack_item(self, ctx, stack: Dict) -> StandardItem:
         stack_id = str(stack.get("id") or "")
@@ -1314,7 +1442,10 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             id=f"{self.id()}.no-match",
             icon_factory=self.makeIcon,
             text=f'Nothing on Komodo matches "{term}"',
-            subtext="Searches containers, stacks, resource syncs and procedures by name",
+            subtext=(
+                "Searches repos, containers, stacks, resource syncs and procedures by name "
+                "(repos also by their git repository)"
+            ),
             input_action_text="",
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
@@ -1326,7 +1457,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return StandardItem(
             id=f"{self.id()}.empty",
             icon_factory=self.makeIcon,
-            text="Komodo has no containers, stacks, resource syncs or procedures yet",
+            text="Komodo has no repos, containers, stacks, resource syncs or procedures yet",
             input_action_text="",
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
@@ -1387,6 +1518,18 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 self._url, self._api_key(), self._api_secret(), server_id, container
             ),
             f"Pulled the image of {container}",
+        )
+
+    def _pull_repo(self, repo_id: str, name: str) -> None:
+        self._async(
+            lambda: run_action(
+                self._url,
+                self._api_key(),
+                self._api_secret(),
+                "execute/PullRepo",
+                {"repo": repo_id},
+            ),
+            f"Pulled repo {name}",
         )
 
     def _refresh_sync(self, sync_id: str, name: str) -> None:

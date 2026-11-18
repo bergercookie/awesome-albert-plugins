@@ -48,6 +48,18 @@ def test_procedure_page_url():
     )
 
 
+def test_repo_page_url():
+    assert komodo.repo_page_url("http://localhost:9120", "abc123") == (
+        "http://localhost:9120/repos/abc123"
+    )
+
+
+def test_repo_page_url_encodes_the_id():
+    assert komodo.repo_page_url("http://localhost:9120", "a/b") == (
+        "http://localhost:9120/repos/a%2Fb"
+    )
+
+
 def test_container_page_url_links_to_its_server():
     assert komodo.container_page_url("http://localhost:9120", "srv1", "nginx") == (
         "http://localhost:9120/servers/srv1/container/nginx"
@@ -161,6 +173,13 @@ def test_procedure_state_category_maps_every_known_state():
         assert category in komodo.STATE_ICONS
 
 
+def test_repo_state_category_maps_every_known_state():
+    for state in ("Cloning", "Pulling", "Building", "Ok", "Failed", "Unknown"):
+        category = komodo.repo_state_category({"info": {"state": state}})
+        assert category in komodo.STATE_ICONS
+    assert komodo.repo_state_category({}) == "unknown"
+
+
 def test_every_state_has_an_icon_file_on_disk():
     # a typo in STATE_ICONS would leave albert with no icon and no error
     for state, filename in komodo.STATE_ICONS.items():
@@ -213,6 +232,31 @@ def test_procedure_subtext_without_info():
     assert komodo.procedure_subtext({}) == "Procedure | Unknown status"
 
 
+def test_repo_subtext_includes_state_server_repository_and_latest_hash():
+    repo = {
+        "info": {
+            "state": "Pulling",
+            "server_name": "homelab",
+            "repo": "bergercookie/awesome-albert-plugins",
+            "branch": "master",
+            "latest_hash": "abc123",
+        }
+    }
+    assert komodo.repo_subtext(repo) == (
+        "Repository | Pulling | homelab | bergercookie/awesome-albert-plugins@master | abc123"
+    )
+
+
+def test_repo_subtext_without_info():
+    assert komodo.repo_subtext({}) == "Repository | Unknown status"
+
+
+def test_repo_source_url_ignores_missing_and_non_web_links():
+    assert komodo.repo_source_url({}) == ""
+    non_web = {"info": {"repo_link": "git@github.com:owner/repo.git"}}
+    assert komodo.repo_source_url(non_web) == ""
+
+
 # -- fuzzy_score ------------------------------------------------------------------------------
 
 
@@ -250,12 +294,24 @@ def _procedure(name, procedure_id=None):
     return {"id": procedure_id or name, "name": name, "info": {}}
 
 
+def _repo(name, git_repo="", server="", repo_id=None):
+    return {
+        "id": repo_id or name,
+        "name": name,
+        "info": {"repo": git_repo, "server_name": server},
+    }
+
+
 def test_build_entries_covers_every_kind():
     entries = komodo.build_entries(
-        [_stack("media")], [_container("nginx")], [_sync("infra")], [_procedure("backup")]
+        [_stack("media")],
+        [_container("nginx")],
+        [_sync("infra")],
+        [_procedure("backup")],
+        [_repo("plugins")],
     )
     kinds = {entry.kind for entry in entries}
-    assert kinds == {"stack", "container", "sync", "procedure"}
+    assert kinds == {"stack", "container", "sync", "procedure", "repo"}
 
 
 def test_search_entries_empty_term_groups_by_kind_then_name():
@@ -264,6 +320,7 @@ def test_search_entries_empty_term_groups_by_kind_then_name():
         [_container("beta")],
         [_sync("gamma")],
         [_procedure("delta")],
+        [_repo("epsilon")],
     )
     names = [(entry.kind, entry.data["name"]) for entry in komodo.search_entries(entries, "")]
     assert names == [
@@ -272,6 +329,7 @@ def test_search_entries_empty_term_groups_by_kind_then_name():
         ("container", "beta"),
         ("sync", "gamma"),
         ("procedure", "delta"),
+        ("repo", "epsilon"),
     ]
 
 
@@ -287,6 +345,14 @@ def test_search_entries_also_matches_the_server_name():
     )
     matches = komodo.search_entries(entries, "raspberrypi")
     assert [entry.data["name"] for entry in matches] == ["web"]
+
+
+def test_search_entries_also_matches_the_git_repository_of_a_repo():
+    entries = komodo.build_entries(
+        [], [], [], [], [_repo("plugins", git_repo="bergercookie/awesome-albert-plugins")]
+    )
+    matches = komodo.search_entries(entries, "awesome-albert")
+    assert [entry.kind for entry in matches] == ["repo"]
 
 
 def test_search_entries_drops_entries_that_do_not_match():
@@ -352,6 +418,63 @@ def test_run_procedure_executes_it(monkeypatch):
     plugin._async = lambda work, note: work()
     plugin._run_procedure("pr1", "backup")
     assert calls == [("execute/RunProcedure", {"procedure": "pr1"})]
+
+
+def test_repo_item_offers_opening_source_pulling_and_reloading():
+    plugin = komodo.Plugin()
+    item = plugin._repo_item(
+        _Ctx(),
+        {
+            "id": "rp1",
+            "name": "plugins",
+            "info": {
+                "state": "Ok",
+                "repo_link": "https://github.com/bergercookie/awesome-albert-plugins",
+            },
+        },
+    )
+    actions = {action.id: action.text for action in item.actions}
+    assert list(actions) == ["open", "source", "pull", "reload"]
+    assert actions["open"] == "Open in browser"
+    assert actions["source"] == "Open source in browser"
+    assert actions["pull"] == "Pull plugins"
+
+
+def test_repo_item_without_a_repo_link_has_no_source_action():
+    item = komodo.Plugin()._repo_item(_Ctx(), {"id": "rp1", "name": "plugins", "info": {}})
+    assert [action.id for action in item.actions] == ["open", "pull", "reload"]
+
+
+def test_pull_repo_executes_it(monkeypatch):
+    calls = []
+    monkeypatch.setattr(komodo, "run_action", lambda *args: calls.append(args[3:]))
+    monkeypatch.setattr(komodo, "notify", lambda msg: None)
+
+    plugin = komodo.Plugin()
+    plugin._async = lambda work, note: work()
+    plugin._pull_repo("rp1", "plugins")
+    assert calls == [("execute/PullRepo", {"repo": "rp1"})]
+
+
+def test_fetch_repos_reads_the_komodo_repo_list(monkeypatch):
+    fake = _fake_call({"read/ListRepos": [{"id": "rp1", "name": "plugins"}, None]})
+    monkeypatch.setattr(komodo, "call", fake)
+    assert komodo.fetch_repos("http://localhost:9120", "key", "secret") == [
+        {"id": "rp1", "name": "plugins"}
+    ]
+    assert fake.calls == [("read/ListRepos", {"limit": 0})]
+
+
+def test_entries_list_includes_repos(monkeypatch):
+    repo = _repo("plugins", server="homelab")
+    monkeypatch.setattr(komodo, "fetch_stacks", lambda *args: [])
+    monkeypatch.setattr(komodo, "fetch_containers", lambda *args: [])
+    monkeypatch.setattr(komodo, "fetch_syncs", lambda *args: [])
+    monkeypatch.setattr(komodo, "fetch_procedures", lambda *args: [])
+    monkeypatch.setattr(komodo, "fetch_repos", lambda *args: [repo])
+
+    entries = komodo.Plugin()._entries_list()
+    assert [(entry.kind, entry.data) for entry in entries] == [("repo", repo)]
 
 
 def _fake_call(payloads):

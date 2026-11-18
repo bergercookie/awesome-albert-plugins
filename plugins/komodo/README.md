@@ -2,39 +2,50 @@
 
 ## Description
 
-Control the containers, stacks, resource syncs and procedures of a running
-[Komodo](https://github.com/moghtech/komodo) server without leaving the keyboard.
+Control the repositories, containers, stacks, resource syncs and procedures of a
+running [Komodo](https://github.com/moghtech/komodo) server without leaving the
+keyboard.
 
 Type `komo ` with nothing after it and you get everything Komodo knows about -
-containers, stacks, resource syncs and procedures - grouped by kind. Anything you
-type instead narrows that list by name, across all four kinds at once.
+repositories, containers, stacks, resource syncs and procedures - grouped by kind.
+Anything you type instead narrows that list by name, across all five kinds at once.
 
 ## Usage
 
-`komo ` lists every container, stack, resource sync and procedure, stacks first,
-then containers, then resource syncs, then procedures, each alphabetical. Type to filter - `komo medi`
-narrows the list down to anything named `media`. The match is fuzzy, so `komo
-mdia` still finds it, and a typo still finds the entry you meant. A container or
-stack is also found by the name of the server it runs on, so `komo raspberrypi`
-lists everything on that server.
+`komo ` lists every repository, container, stack, resource sync and procedure,
+stacks first, then containers, then resource syncs, then procedures, then
+repositories, each alphabetical. Type to filter - `komo medi` narrows the list down
+to anything named `media`. The match is fuzzy, so `komo mdia` still finds it, and a
+typo still finds the entry you meant. A container, stack or repository is also found
+by the name of the server it sits on, so `komo raspberrypi` lists everything on that
+server. A repository is found by its git repository path too, e.g. `komo
+awesome-albert-plugins`.
 
 Every row shows its kind, state and a couple of useful details in its subtext, e.g.
-`Stack | homelab | RUNNING | web, db` or `Resource Sync | Changes pending | 3
-changes`. The icon reflects the state too: green for running/healthy, orange for
-in-progress or needs-attention, gray for stopped, red for an error state.
+`Stack | homelab | RUNNING | web, db`, `Resource Sync | Changes pending | 3 changes`
+or `Repository | Up to date | homelab | owner/project@main | abc123`. The icon
+reflects the state too: green for running/healthy, orange for in-progress or
+needs-attention, gray for stopped, red for an error state.
 
 The actions on each kind, reached with the usual Albert
 <kbd>ALT</kbd>/<kbd>CTRL</kbd>/<kbd>SHIFT</kbd> + <kbd>ENTER</kbd> combinations:
 
 | Kind | Actions |
 | ---- | ------- |
+| Repository | `Open in browser`, `Open source in browser` (when a git link is configured), `Pull`, `Reload the list` |
 | Container | `Open in browser`, `Start`, `Stop`, `Restart`, `Pull image`, `Pause`, `Unpause` |
 | Stack | `Open in browser`, `Deploy`, `Pull images`, `Start`, `Stop`, `Restart`, `Pause`, `Unpause` |
 | Resource Sync | `Open in browser`, `Refresh`, `Execute` |
 | Procedure | `Open in browser`, `Run` |
 
 `Open in browser` is always the first action, so `komo home` plus
-<kbd>ENTER</kbd> takes you straight to that entry's page in the Komodo web UI.
+<kbd>ENTER</kbd> takes you straight to that entry's page in the Komodo web UI. For
+a repository, `Open source in browser` opens the git provider link configured in
+Komodo instead (only http(s) links are accepted).
+
+`Pull` on a repository is Komodo's own `PullRepo`: a `git pull` on the server (or
+builder) the repository is attached to, followed by its configured `on_pull`
+command. It does not rebuild or redeploy anything by itself.
 
 `Pull images` is Komodo's own `docker compose pull` for the whole stack: the
 images of all of its services are pulled. `Pull image` pulls the image of the
@@ -106,7 +117,7 @@ row as an error you can retry.
 
 ## Notes
 
-- The container, stack, resource sync and procedure list is cached in memory for 5 seconds,
+- The repository, container, stack, resource sync and procedure list is cached in memory for 5 seconds,
   so backspacing or retyping a search does not re-query Komodo on every keystroke.
   Triggering an action clears the cache, so the list reflects the change on the
   very next query.
