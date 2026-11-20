@@ -21,6 +21,25 @@ by the name of the server it sits on, so `komo raspberrypi` lists everything on 
 server. A repository is found by its git repository path too, e.g. `komo
 awesome-albert-plugins`.
 
+Start the query with a kind to see only that kind:
+
+| Query | Shows |
+| ----- | ----- |
+| `komo repo` / `komo repos` / `komo repository` | only repositories |
+| `komo container` / `komo containers` / `komo cont` | only containers |
+| `komo stack` / `komo stacks` | only stacks |
+| `komo sync` / `komo syncs` / `komo resource sync` | only resource syncs |
+| `komo procedure` / `komo procedures` / `komo proc` | only procedures |
+
+The kind word combines with a search term: `komo repo media` lists the repositories
+matching `media`, and `komo sync awesome-albert` lists the resource syncs matching
+`awesome-albert`. The kind only counts as the first word; `komo my repo` searches
+for names matching `my repo` across all kinds.
+
+Press <kbd>TAB</kbd> to cycle the kind filter instead of completing the selected
+entry's name: `repo` → `container` → `stack` → `sync` → `proc` → `repo`. The search
+term is kept, so <kbd>TAB</kbd> on `komo repo media` gives `komo container media`.
+
 Every row shows its kind, state and a couple of useful details in its subtext, e.g.
 `Stack | homelab | RUNNING | web, db`, `Resource Sync | Changes pending | 3 changes`
 or `Repository | Up to date | homelab | owner/project@main | abc123`. The icon

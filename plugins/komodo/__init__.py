@@ -3,7 +3,9 @@ procedures of a running Komodo (https://komo.do) server.
 
 The empty query lists everything Komodo knows about - repositories, containers,
 stacks, resource syncs and procedures - and anything typed narrows that list by
-name. Every result carries the actions that make sense for its kind:
+name. Starting the query with a kind's name (`repo`, `container`, `stack`, `sync`
+or `procedure`) filters the list to that kind, so `komo repo` shows only the
+repositories. Every result carries the actions that make sense for its kind:
 git pulls for repositories, start/stop/restart/pause for containers and stacks,
 deploy and image pulls for stacks, image pulls for containers, refresh/execute
 for resource syncs and run for procedures.
@@ -173,6 +175,49 @@ REPO_STATE_LABELS = {
 # they are usually what you are looking for, then containers, then syncs, then
 # procedures, then repositories.
 KIND_PRIORITY = {"stack": 0, "container": 1, "sync": 2, "procedure": 3, "repo": 4}
+
+KIND_PLURAL = {
+    "repo": "repositories",
+    "stack": "stacks",
+    "container": "containers",
+    "sync": "resource syncs",
+    "procedure": "procedures",
+}
+
+# A query starting with one of these words filters the list to that kind, e.g.
+# `komo repo` lists only repositories and `komo repo media` only those matching
+# `media`. The rest of the query is matched as usual.
+KIND_KEYWORDS = {
+    "repo": "repo",
+    "repos": "repo",
+    "repository": "repo",
+    "repositories": "repo",
+    "stack": "stack",
+    "stacks": "stack",
+    "container": "container",
+    "containers": "container",
+    "cont": "container",
+    "sync": "sync",
+    "syncs": "sync",
+    "resource sync": "sync",
+    "resource syncs": "sync",
+    "procedure": "procedure",
+    "procedures": "procedure",
+    "proc": "procedure",
+    "procs": "procedure",
+}
+
+# The order TAB cycles the kind filter through, and the word written into the
+# query for each kind. A cycle that excludes the unfiltered list, so TAB always
+# lands on a kind.
+KIND_CYCLE = ("repo", "container", "stack", "sync", "procedure")
+KIND_CYCLE_WORDS = {
+    "repo": "repo",
+    "container": "container",
+    "stack": "stack",
+    "sync": "sync",
+    "procedure": "proc",
+}
 
 
 # plugin main functions -----------------------------------------------------------------------
@@ -772,17 +817,72 @@ def build_entries(
     return entries
 
 
-def search_entries(entries: Sequence[Entry], term: str) -> List[Entry]:
+def parse_query(query: str) -> Tuple[Optional[str], str]:
+    """Split *query* into an optional kind filter and the remaining search term.
+
+    The filter is only recognized as the first word(s) of the query, so a kind
+    name further in is just part of the search term.
+
+    >>> parse_query("")
+    (None, '')
+    >>> parse_query("repo")
+    ('repo', '')
+    >>> parse_query("repos media")
+    ('repo', 'media')
+    >>> parse_query("resource sync infra")
+    ('sync', 'infra')
+    >>> parse_query("media")
+    (None, 'media')
+    >>> parse_query("my repo")
+    (None, 'my repo')
+    """
+    words = query.strip().split()
+    if not words:
+        return None, ""
+
+    # try the longest keyword first, so `resource sync` wins over `resource`
+    for size in (2, 1):
+        if len(words) < size:
+            continue
+        keyword = " ".join(word.lower() for word in words[:size])
+        kind = KIND_KEYWORDS.get(keyword)
+        if kind is not None:
+            return kind, " ".join(words[size:])
+
+    return None, " ".join(words)
+
+
+def next_kind(kind: Optional[str]) -> str:
+    """The kind TAB cycles to after *kind*, or the first kind when unfiltered.
+
+    >>> next_kind(None)
+    'repo'
+    >>> next_kind("repo")
+    'container'
+    >>> next_kind("procedure")
+    'repo'
+    """
+    if kind is None:
+        return KIND_CYCLE[0]
+    index = KIND_CYCLE.index(kind)
+    return KIND_CYCLE[(index + 1) % len(KIND_CYCLE)]
+
+
+def search_entries(
+    entries: Sequence[Entry], term: str, kind: Optional[str] = None
+) -> List[Entry]:
     """The *entries* matching *term*, best first.
 
     An empty *term* keeps every entry, grouped by kind (stacks, then
     containers, then syncs, then procedures, then repos) and alphabetical within
-    each group.
+    each group. A *kind* keeps only entries of that kind.
     """
     term = term.strip()
 
     scored: List[Tuple[float, int, str, Entry]] = []
     for entry in entries:
+        if kind is not None and entry.kind != kind:
+            continue
         score = 1.0 if not term else fuzzy_score(term, entry.search_text)
         if score > 0.0:
             scored.append(
@@ -1115,7 +1215,21 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
         return "komo "
 
     def synopsis(self, query):
-        return "a repo, container, stack, sync or procedure name, or nothing for everything"
+        return (
+            "nothing for everything, a kind (repo, container, stack, sync, procedure) "
+            "to filter, or a name"
+        )
+
+    def _tab_query(self, ctx) -> str:
+        """The query TAB puts into the input line: the next kind filter.
+
+        Albert keeps the trigger itself and replaces the query with this, so it
+        must not include the trigger. The search term is kept, so
+        `komo repo media` cycles to `komo container media`.
+        """
+        kind, term = parse_query(ctx.query)
+        query = KIND_CYCLE_WORDS[next_kind(kind)]
+        return f"{query} {term}" if term else query
 
     # -- secrets and cache ------------------------------------------------------------------
 
@@ -1195,16 +1309,20 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
                 yield [setup]
                 return
 
-            term = ctx.query.strip()
+            kind, term = parse_query(ctx.query)
             entries = self._entries_list()
             if not ctx.isValid:
                 return
 
-            matches = search_entries(entries, term)
+            matches = search_entries(entries, term, kind)
             results = [self._entry_item(ctx, entry) for entry in matches]
 
             if not results:
-                results = [self._no_match_item(term) if term else self._empty_item()]
+                results = [
+                    self._no_match_item(term, kind, ctx)
+                    if term
+                    else self._empty_item(kind, ctx)
+                ]
 
             yield results
 
@@ -1301,7 +1419,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self._make_icon(repo_state_category(repo)),
             text=name,
             subtext=repo_subtext(repo),
-            input_action_text=f"{ctx.trigger}{name}",
+            input_action_text=self._tab_query(ctx),
             actions=actions,
         )
 
@@ -1338,7 +1456,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self._make_icon(stack_state_category(stack)),
             text=name,
             subtext=stack_subtext(stack),
-            input_action_text=f"{ctx.trigger}{name}",
+            input_action_text=self._tab_query(ctx),
             actions=actions,
         )
 
@@ -1382,7 +1500,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self._make_icon(container_state_category(container)),
             text=name,
             subtext=container_subtext(container),
-            input_action_text=f"{ctx.trigger}{name}",
+            input_action_text=self._tab_query(ctx),
             actions=actions,
         )
 
@@ -1409,7 +1527,7 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self._make_icon(sync_state_category(sync)),
             text=name,
             subtext=sync_subtext(sync),
-            input_action_text=f"{ctx.trigger}{name}",
+            input_action_text=self._tab_query(ctx),
             actions=actions,
         )
 
@@ -1433,32 +1551,42 @@ class Plugin(PluginInstance, GeneratorQueryHandler):
             icon_factory=self._make_icon(procedure_state_category(procedure)),
             text=name,
             subtext=procedure_subtext(procedure),
-            input_action_text=f"{ctx.trigger}{name}",
+            input_action_text=self._tab_query(ctx),
             actions=actions,
         )
 
-    def _no_match_item(self, term: str) -> StandardItem:
+    def _no_match_item(
+        self, term: str, kind: Optional[str], ctx
+    ) -> StandardItem:
+        what = f"Nothing among the {KIND_PLURAL[kind]} matches" if kind else (
+            "Nothing on Komodo matches"
+        )
         return StandardItem(
             id=f"{self.id()}.no-match",
             icon_factory=self.makeIcon,
-            text=f'Nothing on Komodo matches "{term}"',
+            text=f'{what} "{term}"',
             subtext=(
                 "Searches repos, containers, stacks, resource syncs and procedures by name "
                 "(repos also by their git repository)"
             ),
-            input_action_text="",
+            input_action_text=self._tab_query(ctx),
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
                 Action("reload", "Reload the list", self._forget),
             ],
         )
 
-    def _empty_item(self) -> StandardItem:
+    def _empty_item(self, kind: Optional[str], ctx) -> StandardItem:
+        text = (
+            f"Komodo has no {KIND_PLURAL[kind]} yet"
+            if kind
+            else "Komodo has no repos, containers, stacks, resource syncs or procedures yet"
+        )
         return StandardItem(
             id=f"{self.id()}.empty",
             icon_factory=self.makeIcon,
-            text="Komodo has no repos, containers, stacks, resource syncs or procedures yet",
-            input_action_text="",
+            text=text,
+            input_action_text=self._tab_query(ctx),
             actions=[
                 Action("open", "Open Komodo", lambda: openUrl(self._url)),
                 Action("reload", "Reload the list", self._forget),

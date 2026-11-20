@@ -360,6 +360,86 @@ def test_search_entries_drops_entries_that_do_not_match():
     assert komodo.search_entries(entries, "nope") == []
 
 
+# -- kind filtering ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "query, expected",
+    [
+        ("", (None, "")),
+        ("   ", (None, "")),
+        ("repo", ("repo", "")),
+        ("repos", ("repo", "")),
+        ("repository", ("repo", "")),
+        ("repositories media", ("repo", "media")),
+        ("stack", ("stack", "")),
+        ("container media", ("container", "media")),
+        ("cont", ("container", "")),
+        ("cont media", ("container", "media")),
+        ("sync", ("sync", "")),
+        ("resource sync", ("sync", "")),
+        ("resource syncs infra", ("sync", "infra")),
+        ("proc", ("procedure", "")),
+        ("procedures backup", ("procedure", "backup")),
+        ("media", (None, "media")),
+        ("my repo", (None, "my repo")),
+    ],
+)
+def test_parse_query_recognizes_a_leading_kind(query, expected):
+    assert komodo.parse_query(query) == expected
+
+
+@pytest.mark.parametrize(
+    "kind, expected",
+    [
+        (None, "repo"),
+        ("repo", "container"),
+        ("container", "stack"),
+        ("stack", "sync"),
+        ("sync", "procedure"),
+        ("procedure", "repo"),
+    ],
+)
+def test_next_kind_cycles_through_every_kind(kind, expected):
+    assert komodo.next_kind(kind) == expected
+
+
+def test_search_entries_filters_by_kind():
+    entries = komodo.build_entries(
+        [_stack("media")],
+        [_container("media")],
+        [_sync("media")],
+        [_procedure("media")],
+        [_repo("media")],
+    )
+    kinds = {entry.kind for entry in komodo.search_entries(entries, "", "repo")}
+    assert kinds == {"repo"}
+
+
+def test_search_entries_filters_by_kind_and_term():
+    entries = komodo.build_entries(
+        [_stack("media")],
+        [_container("nginx")],
+        [_sync("media")],
+        [],
+        [_repo("media"), _repo("other")],
+    )
+    matches = komodo.search_entries(entries, "media", "repo")
+    assert [entry.data["name"] for entry in matches] == ["media"]
+
+
+def test_search_entries_filter_without_a_term_keeps_the_kind_order():
+    entries = komodo.build_entries(
+        [_stack("zzz")],
+        [_container("aaa")],
+        [],
+        [],
+        [],
+    )
+    matches = komodo.search_entries(entries, "", "container")
+    assert [entry.data["name"] for entry in matches] == ["aaa"]
+
+
 # -- update_error ---------------------------------------------------------------------------
 
 
@@ -384,6 +464,34 @@ class _Ctx:
     """The little of Albert's query context the items ask for."""
 
     trigger = "komo "
+    query = ""
+
+
+def _tab_query(query):
+    ctx = _Ctx()
+    ctx.query = query
+    return komodo.Plugin()._tab_query(ctx)
+
+
+def test_tab_cycles_the_kind_filter():
+    assert _tab_query("") == "repo"
+    assert _tab_query("repo") == "container"
+    assert _tab_query("container") == "stack"
+    assert _tab_query("stack") == "sync"
+    assert _tab_query("sync") == "proc"
+    assert _tab_query("proc") == "repo"
+
+
+def test_tab_keeps_the_search_term():
+    assert _tab_query("repo media") == "container media"
+
+
+def test_items_use_the_tab_filter_as_their_input_action():
+    plugin = komodo.Plugin()
+    ctx = _Ctx()
+    ctx.query = "repo"
+    item = plugin._repo_item(ctx, {"id": "rp1", "name": "media", "info": {}})
+    assert item.input_action_text == "container"
 
 
 def test_stack_item_offers_pulling_the_images():
