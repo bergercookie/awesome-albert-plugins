@@ -2,6 +2,10 @@
   "_comments": "Add more stations from here: http://wiki.secondlife.com/wiki/Music_streams#Jazz_and_Vintage",
   "all": [
     {
+      "url": "http://radiostreaming.ert.gr/ert-erasport",
+      "name": "ERA Sport"
+    },
+    {
       "url": "https://www.internet-radio.com/servers/tools/playlistgenerator/?u=http://us4.internet-radio.com:8193/listen.pls&t=.m3u",
       "name": "Internet Radio - Deeply Beautiful Chillout Music - A Heavenly World of Sound",
       "homepage": "https://www.internet-radio.com/stations/ambient/"
